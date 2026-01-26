@@ -21,3 +21,27 @@ jobs:
         run: npm run build --if-present
       - name: Lint
         run: npm run lint --if-present
+      - name: Install Railway CLI
+        run: |
+          curl -sSL https://railway.app/install.sh | sh
+
+      - name: Deploy to Railway (preprod)
+        if: success()
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT: ${{ secrets.RAILWAY_PROJECT }}
+          RAILWAY_PREPROD_ENV: ${{ secrets.RAILWAY_PREPROD_ENV }}
+        run: |
+          if [ -z "${RAILWAY_TOKEN}" ]; then
+            echo "RAILWAY_TOKEN not set — skipping deploy. Set the secret in repo settings.";
+            exit 1;
+          fi
+          railway login --apiKey "${RAILWAY_TOKEN}"
+          if [ -n "${RAILWAY_PROJECT}" ]; then
+            railway link --project "${RAILWAY_PROJECT}" || true
+          fi
+          if [ -n "${RAILWAY_PREPROD_ENV}" ]; then
+            railway up --environment "${RAILWAY_PREPROD_ENV}" --branch preprod --detach || railway deploy --environment "${RAILWAY_PREPROD_ENV}"
+          else
+            railway up --branch preprod --detach || railway deploy
+          fi

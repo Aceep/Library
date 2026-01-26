@@ -1,0 +1,35 @@
+name: Deploy to Railway (production)
+
+on:
+  push:
+    branches: [ production ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Railway CLI
+        run: |
+          # This installs the Railway CLI. You can replace this with a preferred install method.
+          curl -sSL https://railway.app/install.sh | sh
+
+      - name: Deploy via Railway CLI
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT: ${{ secrets.RAILWAY_PROJECT }}
+        run: |
+          if [ -z "${RAILWAY_TOKEN}" ]; then
+            echo "RAILWAY_TOKEN not set — skipping deploy. Set the secret in repo settings.";
+            exit 1;
+          fi
+          railway login --apiKey "${RAILWAY_TOKEN}"
+          if [ -n "${RAILWAY_PROJECT}" ]; then
+            railway link --project "${RAILWAY_PROJECT}" || true
+          fi
+          # Attempt to deploy/promote — adjust command to your Railway workflow if needed
+          railway up --branch production --detach || railway deploy

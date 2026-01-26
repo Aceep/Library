@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Login.css'
 
-const CORRECT_PASSWORD = 'library2026' // Change this to your desired password
+const CORRECT_PASSWORD = 'Crepe@davidson1' // Change this to your desired password
 
 export default function Login() {
   const [password, setPassword] = useState('')

@@ -22,6 +22,7 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT: ${{ secrets.RAILWAY_PROJECT }}
+          RAILWAY_PROD_ENV: ${{ secrets.RAILWAY_PROD_ENV }}
         run: |
           if [ -z "${RAILWAY_TOKEN}" ]; then
             echo "RAILWAY_TOKEN not set — skipping deploy. Set the secret in repo settings.";
@@ -31,5 +32,9 @@ jobs:
           if [ -n "${RAILWAY_PROJECT}" ]; then
             railway link --project "${RAILWAY_PROJECT}" || true
           fi
-          # Attempt to deploy/promote — adjust command to your Railway workflow if needed
-          railway up --branch production --detach || railway deploy
+          # Attempt to deploy/promote — prefer targeting the explicit prod environment if provided
+          if [ -n "${RAILWAY_PROD_ENV}" ]; then
+            railway up --environment "${RAILWAY_PROD_ENV}" --branch production --detach || railway deploy --environment "${RAILWAY_PROD_ENV}"
+          else
+            railway up --branch production --detach || railway deploy
+          fi

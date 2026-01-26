@@ -4,7 +4,7 @@ A full-featured single-page application with password protection, routing, and 3
 
 ## Features
 
-- 🔒 **Password Protection** - Secure login page (default password: `library2026`)
+- 🔒 **Password Protection** - Secure login page (default password: ``)
 - 🎨 **4 Collection Types**:
   - 📚 **Library** - 3D bookshelf with rotating books
   - 📼 **Movies** - VHS cassette collection with 3D visualization
@@ -109,7 +109,7 @@ npm run preview   # Preview production build
 Simple session-based auth using `sessionStorage`. Change the password in [src/pages/Login.tsx](src/pages/Login.tsx):
 
 ```typescript
-const CORRECT_PASSWORD = 'library2026' // Change this
+const CORRECT_PASSWORD = '' // Change this
 ```
 
 ## Customization

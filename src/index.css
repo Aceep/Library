@@ -1,15 +1,23 @@
 :root {
-  /* Color palette */
-  --primary-color: #4a90e2;
-  --secondary-color: #9b59b6;
+  /* Vibrant color palette */
+  --primary-color: #ff6b9d;
+  --secondary-color: #c44569;
+  --accent-1: #ffa502;
+  --accent-2: #26de81;
+  --accent-3: #4bcffa;
+  --accent-4: #a55eea;
   --bg-color: #0f1419;
-  --card-bg: #1a1f2e;
+  --card-bg: linear-gradient(135deg, #1e2a3a 0%, #2d1b4e 100%);
   --header-bg: #141921;
   --input-bg: #222836;
-  --border-color: #2d3748;
+  --border-color: #3d4f6f;
   --hover-bg: #2a3142;
-  --text-color: #e2e8f0;
-  --text-secondary: #a0aec0;
+  --text-color: #fff;
+  --text-secondary: #b8c5d6;
+  --glow-pink: rgba(255, 107, 157, 0.4);
+  --glow-blue: rgba(75, 207, 250, 0.4);
+  --glow-green: rgba(38, 222, 129, 0.4);
+  --glow-purple: rgba(165, 94, 234, 0.4);
 }
 
 * {
@@ -23,9 +31,18 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg-color);
+  background: linear-gradient(135deg, #0f1419 0%, #1a1435 50%, #0f1419 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite;
   color: var(--text-color);
   line-height: 1.6;
+  overflow-x: hidden;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 code {

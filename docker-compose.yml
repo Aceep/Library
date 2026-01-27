@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  library:
+    image: node:18-bullseye-slim
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    container_name: personal-library
+    restart: unless-stopped
+    environment:
+      - CHOKIDAR_USEPOLLING=true

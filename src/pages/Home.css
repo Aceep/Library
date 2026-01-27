@@ -11,16 +11,40 @@
 .home-title {
   font-size: 3rem;
   margin: 0 0 1rem;
-  background: linear-gradient(135deg, #4a90e2 0%, #9b59b6 100%);
+  background: linear-gradient(135deg, #ff6b9d 0%, #ffa502 25%, #26de81 50%, #4bcffa 75%, #a55eea 100%);
+  background-size: 300% 300%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: rainbowShift 8s ease infinite, titleBounce 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px var(--glow-pink));
+}
+
+@keyframes rainbowShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes titleBounce {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
 }
 
 .home-subtitle {
   font-size: 1.2rem;
-  opacity: 0.7;
+  opacity: 0.9;
   margin: 0;
+  background: linear-gradient(90deg, #4bcffa 0%, #a55eea 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
 }
 
 .cards-grid {
@@ -28,6 +52,18 @@
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
   padding: 1rem;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {

@@ -7,7 +7,7 @@ export default function Home() {
     <Layout>
       <div className="home-container">
         <header className="home-header">
-          <h1 className="home-title">Personalal Library</h1>
+          <h1 className="home-title">Personal Library</h1>
           <p className="home-subtitle">Choose your collection</p>
         </header>
         

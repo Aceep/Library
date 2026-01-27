@@ -27,7 +27,9 @@
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
     "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-    "react-refresh/only-export-components": ["warn", { "allowConstantExport": true }]
+    "react-refresh/only-export-components": ["warn", { "allowConstantExport": true }],
+    "react/no-unknown-property": ["error", { "ignore": ["position", "rotation", "scale", "args", "intensity", "castShadow", "receiveShadow", "transparent", "opacity", "emissive", "emissiveIntensity", "roughness", "metalness", "angle", "penumbra", "decay", "distance", "attach"] }],
+    "react/no-unescaped-entities": "off"
   },
   "settings": {
     "react": {

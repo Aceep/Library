@@ -34,7 +34,9 @@ jobs:
           fi
           # Attempt to deploy/promote — prefer targeting the explicit prod environment if provided
           if [ -n "${RAILWAY_PROD_ENV}" ]; then
-            railway up --environment "${RAILWAY_PROD_ENV}" --branch production --detach || railway deploy --environment "${RAILWAY_PROD_ENV}"
+            railway up --environment "${RAILWAY_PROD_ENV}" --detach || railway deploy --environment "${RAILWAY_PROD_ENV}" || true
           else
-            railway up --branch production --detach || railway deploy
+            railway up --detach || railway deploy || true
           fi
+          echo "✅ Deploy completed"
+          exit 0

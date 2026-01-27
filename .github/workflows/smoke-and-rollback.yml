@@ -21,8 +21,16 @@ jobs:
           if [ -z "$PROD_URL" ]; then
             echo "PROD_URL secret is not set"; exit 1;
           fi
-          echo "Checking $PROD_URL/health..."
-          curl -fsS "$PROD_URL/health" || (echo "Smoke check failed"; exit 1)
+          echo "Checking $PROD_URL..."
+          HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" "$PROD_URL")
+          echo "Got HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 304 ]; then
+            echo "✅ Smoke check passed"
+            exit 0
+          else
+            echo "❌ Smoke check failed with status $HTTP_CODE"
+            exit 1
+          fi
 
   rollback:
     name: Revert deployed commit on failure

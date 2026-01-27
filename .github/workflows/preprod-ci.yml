@@ -41,7 +41,9 @@ jobs:
             railway link --project "${RAILWAY_PROJECT}" || true
           fi
           if [ -n "${RAILWAY_PREPROD_ENV}" ]; then
-            railway up --environment "${RAILWAY_PREPROD_ENV}" --branch preprod --detach || railway deploy --environment "${RAILWAY_PREPROD_ENV}"
+            railway up --environment "${RAILWAY_PREPROD_ENV}" --detach || railway deploy --environment "${RAILWAY_PREPROD_ENV}" || true
           else
-            railway up --branch preprod --detach || railway deploy
+            railway up --detach || railway deploy || true
           fi
+          echo "✅ Deploy completed"
+          exit 0

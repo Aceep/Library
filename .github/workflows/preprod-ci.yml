@@ -36,10 +36,10 @@ jobs:
             echo "RAILWAY_TOKEN not set — skipping deploy. Set the secret in repo settings.";
             exit 1;
           fi
-          railway login --apiKey "${RAILWAY_TOKEN}"
           if [ -n "${RAILWAY_PROJECT}" ]; then
             railway link --project "${RAILWAY_PROJECT}" || true
           fi
+          # Attempt to deploy/promote — prefer targeting the explicit preprod environment if provided
           if [ -n "${RAILWAY_PREPROD_ENV}" ]; then
             railway up --environment "${RAILWAY_PREPROD_ENV}" --detach || railway deploy --environment "${RAILWAY_PREPROD_ENV}" || true
           else

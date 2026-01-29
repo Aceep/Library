@@ -149,3 +149,41 @@
   box-shadow: 0 8px 25px var(--glow-pink);
   background: linear-gradient(135deg, #ff7bad 0%, #ffb520 100%);
 }
+
+/* Shake animation for wrong password */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+
+.login-box.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.login-input.input-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.login-error-box {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.login-error {
+  color: #fca5a5;
+  margin: 0;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.login-hint {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  opacity: 0.5;
+  text-align: center;
+}

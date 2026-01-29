@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import Header from './Header'
 import './Layout.css'
 
 interface LayoutProps {
@@ -11,16 +11,7 @@ interface LayoutProps {
 export default function Layout({ children, showBackButton = false, title }: LayoutProps) {
   return (
     <div className="layout">
-      {(showBackButton || title) && (
-        <header className="layout-header">
-          {showBackButton && (
-            <Link to="/" className="back-button">
-              ← Back to Home
-            </Link>
-          )}
-          {title && <h1 className="layout-title">{title}</h1>}
-        </header>
-      )}
+      <Header showBackButton={showBackButton} title={title} />
       <main className="layout-content">{children}</main>
     </div>
   )

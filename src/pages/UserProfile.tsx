@@ -4,8 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchFollowers, fetchFollowing, fetchUser } from '../api/endpoints'
 import type { UserSummary } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
+import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
+import type { UserDetail } from '../api/schema'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
+import MemberLibrary from '../components/MemberLibrary'
+import Showcase from '../components/Showcase'
 import { useSession } from '../session/SessionContext'
 import styles from './UserProfile.module.css'
 
@@ -71,6 +75,21 @@ function Profile({ id }: { id: string }) {
         <Counter label="Abonnés" value={data.followers_count} />
       </dl>
 
+      {/* La répartition ne vient qu'avec le profil détaillé — l'annuaire ne la
+          porte pas. Elle dit en un coup d'œil ce qu'un total ne dit pas :
+          quelqu'un qui suit trente livres et deux films n'est pas quelqu'un
+          qui en suit seize de chaque. */}
+      {data.tracked_count > 0 ? (
+        <Breakdown counts={data.counts} />
+      ) : null}
+
+      <Showcase
+        userId={id}
+        pseudo={user.pseudo}
+        showcase={data.showcase}
+        isMe={isMe}
+      />
+
       {isMe ? (
         <p className={styles.compareLink}>
           <Link to="/mon-compte">Modifier ma couleur, mon avatar ou mon mot de passe</Link>
@@ -105,6 +124,43 @@ function Profile({ id }: { id: string }) {
       </nav>
 
       <RelationList key={tab} userId={id} tab={tab} meId={me.id} />
+
+      {/* Le compteur « œuvres suivies » ne s'ouvrait sur rien : la moitié de
+          l'aller-retour manquait. On savait déplier « qui suit cette œuvre »,
+          pas « quelles œuvres suit ce membre ». */}
+      <MemberLibrary
+        userId={id}
+        pseudo={user.pseudo}
+        isMe={isMe}
+        me={me}
+        trackedCount={data.tracked_count}
+      />
+    </div>
+  )
+}
+
+/**
+ * La bibliothèque d'un membre en deux répartitions : par type et par statut.
+ *
+ * Les types à zéro sont tus — cinq lignes dont trois vides ne renseignent
+ * personne. Les trois statuts, eux, restent toujours affichés : « rien de
+ * terminé » est une information, contrairement à « aucun jeu ».
+ */
+function Breakdown({ counts }: { counts: UserDetail['counts'] }) {
+  return (
+    <div className={styles.breakdown}>
+      <ul className={styles.chips}>
+        {MEDIA_TYPES.filter((type) => counts.by_type[type] > 0).map((type) => (
+          <li key={type} className={styles.chip}>
+            <span className={styles.chipValue}>{counts.by_type[type]}</span>
+            {typeLabelPlural(type)}
+          </li>
+        ))}
+      </ul>
+      <p className={styles.statusLine}>
+        {counts.by_status.todo} à voir · {counts.by_status.doing} en cours ·{' '}
+        {counts.by_status.done} terminé{counts.by_status.done > 1 ? 's' : ''}
+      </p>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import type { components } from './types'
+import type { components, paths } from './types'
 
 type S = components['schemas']
 
@@ -19,6 +19,33 @@ export type SearchResult = S['SearchResult']
 export type HomeResponse = S['HomeResponse']
 export type CompareResponse = S['CompareResponse']
 export type RefreshResponse = S['RefreshResponse']
+
+/**
+ * Une entrée de journal : une fois qu'une œuvre a été lue ou vue.
+ *
+ * Elle n'a pas de schéma nommé dans le contrat — elle est déclarée en ligne
+ * dans chaque route. On la dérive donc de la route de lecture plutôt que de la
+ * réécrire : si le back ajoute un champ, il apparaît ici tout seul.
+ *
+ * `finished_at` est la seule date obligatoire : on se souvient d'avoir fini
+ * bien plus souvent que d'avoir commencé, et c'est elle qui ordonne le journal.
+ */
+export type LogEntry =
+  paths['/media/{id}/log']['get']['responses'][200]['content']['application/json']['items'][number]
+
+/**
+ * Le profil détaillé d'un membre — ce que rend `GET /users/:id`, et lui seul.
+ *
+ * Il porte deux choses que l'annuaire n'a pas : `counts`, la répartition de sa
+ * bibliothèque, et `showcase`, les œuvres qu'il met en avant. L'annuaire s'en
+ * passe délibérément — quarante répartitions par page pour un chiffre que
+ * personne n'affiche.
+ */
+export type UserDetail =
+  paths['/users/{id}']['get']['responses'][200]['content']['application/json']
+
+/** La vitrine : jusqu'à huit œuvres, tous types confondus, dans son ordre à lui. */
+export type Showcase = UserDetail['showcase']
 
 export type MediaType = MediaSummary['type']
 export type TrackingStatus = UserTracking['status']
@@ -87,6 +114,24 @@ const STATUS_LABELS: Record<TrackingStatus, string> = {
 }
 
 export const statusLabel = (status: TrackingStatus) => STATUS_LABELS[status]
+
+/**
+ * Comment se compte une fois, selon le type. `times` vaut le même entier
+ * partout, mais « 3 lectures » et « 3 parties » ne se disent pas pareil.
+ *
+ * Le nom est toujours employé derrière un nombre, jamais derrière un article :
+ * ça évite d'avoir à accorder « une lecture » et « un visionnage ».
+ */
+const TIMES_NOUNS: Record<MediaType, [string, string]> = {
+  movie: ['visionnage', 'visionnages'],
+  tv: ['visionnage', 'visionnages'],
+  book: ['lecture', 'lectures'],
+  comic_series: ['lecture', 'lectures'],
+  game: ['partie', 'parties'],
+}
+
+export const timesNoun = (type: MediaType, times: number) =>
+  TIMES_NOUNS[type][times > 1 ? 1 : 0]
 
 /**
  * Les types dont le statut est **dérivé** des éléments cochés.

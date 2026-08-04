@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { TrackingPatch } from '../api/endpoints'
-import { isDerivedStatusType, statusLabel } from '../api/schema'
+import { isDerivedStatusType, statusLabel, timesNoun } from '../api/schema'
 import type {
   Account,
   FollowedTracking,
@@ -349,6 +349,16 @@ function ReadOnlyTracking({
             <div className={styles.readonlyRow}>
               <dt>Note</dt>
               <dd>{tracking.rating}/10</dd>
+            </div>
+          ) : null}
+          {/* Le détail de son journal se lit par `GET /media/:id/log?user_id`,
+              mais le compte suffit ici : « deux fois » dit déjà quelque chose. */}
+          {tracking.times > 1 ? (
+            <div className={styles.readonlyRow}>
+              <dt>Fois</dt>
+              <dd>
+                {tracking.times} {timesNoun(type, tracking.times)}
+              </dd>
             </div>
           ) : null}
           {tracking.owned ? (

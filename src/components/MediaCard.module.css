@@ -1,0 +1,107 @@
+/**
+ * Une œuvre dans un rayon : une couverture posée sur la pierre, un titre
+ * composé, puis la pile de suivi lue comme des annotations de catalogue.
+ * Aucun cadre, aucune ombre — c'est le filet de la pile qui structure.
+ */
+.card {
+  display: flex;
+}
+
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.cardLink:hover .cardTitle {
+  color: var(--ink-muted);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.cardTitle {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.cardYear {
+  font: var(--caption);
+  color: var(--ink-faint);
+}
+
+/* ---- La pile de suivi ---- */
+
+.trackings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  border-top: var(--rule-w) solid var(--rule);
+  padding-top: var(--s-3);
+}
+
+.trackingLine {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-size: 13px;
+  min-width: 0;
+}
+
+/* Le point est le seul cercle de l'interface. */
+.trackingDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-dot);
+  flex: none;
+  align-self: center;
+}
+
+.trackingName {
+  color: var(--ink-soft);
+  flex: none;
+}
+
+.trackingTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+/* « Un chiffre, pas une pastille » — composé, dans la couleur du membre. */
+.rating {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  color: var(--identity, var(--ink-soft));
+}
+
+.owned {
+  font: var(--eyebrow);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.notTracked {
+  color: var(--ink-faint);
+}
+
+/* Les suiveurs hors abonnements : un nombre, jamais des noms. */
+.othersLine {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  padding-left: calc(7px + var(--s-2));
+}

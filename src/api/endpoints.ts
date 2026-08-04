@@ -5,6 +5,7 @@ import type {
   EpisodeDetail,
   HomeResponse,
   LibraryItem,
+  LogEntry,
   MediaDetail,
   MediaSource,
   MediaType,
@@ -13,7 +14,9 @@ import type {
   SearchResult,
   SeriesAggregate,
   Session,
+  Showcase,
   TrackingStatus,
+  UserDetail,
   UserRole,
   UserTracking,
   VolumeDetail,
@@ -80,6 +83,51 @@ export const fetchLibrary = (
     signal,
   )
 
+/**
+ * La bibliothèque d'**un membre** — ce que `tracked_count` compte, déplié.
+ *
+ * La réponse a exactement la forme de `GET /media`, et la même carte s'affiche
+ * donc des deux côtés. Trois différences comptent tout de même :
+ *
+ * - **`status`, `owned` et `favorite` portent sur *son* suivi à lui**, pas sur
+ *   le mien. C'est le seul endroit de l'API où ces filtres changent de sujet ;
+ *   les libellés de l'écran doivent le dire, sans quoi on croit filtrer le sien
+ *   et on filtre le nôtre.
+ * - **Le tri par défaut est `rating`**, pas `added` : on vient voir ce qu'il a
+ *   préféré, pas ce qu'il vient d'ajouter.
+ * - **Il est toujours détaillé dans `tracking.following`**, que je le suive ou
+ *   non, et ne compte alors pas dans `others`. Sans ça sa propre page cacherait
+ *   ses propres notes derrière un résumé.
+ */
+export type MemberLibrarySort = LibrarySort | 'rating'
+
+export interface MemberLibraryFilters {
+  type?: MediaType
+  /** Sur **son** statut à lui. */
+  status?: TrackingStatus | null
+  /** Sur **ses** coups de cœur à lui. */
+  favorite?: boolean | null
+  sort?: MemberLibrarySort
+}
+
+export const fetchMemberLibrary = (
+  userId: string,
+  filters: MemberLibraryFilters,
+  cursor: string | null,
+  signal?: AbortSignal,
+) =>
+  api.get<Page<LibraryItem>>(
+    `/users/${userId}/media`,
+    {
+      type: filters.type,
+      status: filters.status ?? undefined,
+      favorite: filters.favorite ? 'true' : undefined,
+      sort: filters.sort ?? 'rating',
+      cursor: cursor ?? undefined,
+    },
+    signal,
+  )
+
 export const fetchMediaDetail = (id: string, signal?: AbortSignal) =>
   api.get<MediaDetail>(`/media/${id}`, undefined, signal)
 
@@ -114,6 +162,73 @@ export const updateTracking = (id: string, patch: TrackingPatch) =>
 
 /** Retirer l'œuvre de ma bibliothèque. Le geste courant. Répond 204. */
 export const deleteTracking = (id: string) => api.delete<void>(`/media/${id}/tracking`)
+
+/* ------------------------------------------------------------------ */
+/* Journal                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * L'historique daté, à côté du résumé courant.
+ *
+ * `user_media` dit ce qu'on pense d'une œuvre **maintenant** ; le journal dit
+ * ce qu'on en a pensé **chaque fois**. Une œuvre pouvait être terminée, elle ne
+ * pouvait pas l'avoir été deux fois : `finished_at` écrasait la date d'avant.
+ *
+ * Trois choses à ne pas perdre de vue :
+ *
+ * - Passer une œuvre à `done` crée l'entrée **toute seule** ; `addLogEntry` ne
+ *   sert qu'aux fois que l'application n'a pas vues — une relecture ancienne.
+ * - Une entrée ne touche **jamais** aux épisodes ni aux tomes cochés. Relire un
+ *   manga ne remet pas quarante tomes à zéro.
+ * - La note d'une entrée remonte au suivi **si l'entrée est la plus récente**.
+ *   L'inverse n'existe pas : corriger la note de l'œuvre ne réécrit pas
+ *   l'histoire. C'est pourquoi chaque écriture renvoie le suivi recalculé.
+ */
+export const fetchLog = (
+  mediaId: string,
+  userId: string | null,
+  cursor: string | null,
+  signal?: AbortSignal,
+) =>
+  api.get<Page<LogEntry>>(
+    `/media/${mediaId}/log`,
+    { user_id: userId ?? undefined, cursor: cursor ?? undefined },
+    signal,
+  )
+
+/** Ce que renvoie toute écriture de journal : l'entrée, et le suivi recalculé. */
+export interface LogWriteResult {
+  entry: LogEntry
+  tracking: UserTracking
+}
+
+/**
+ * « Je l'ai revu. » `finished_at` est obligatoire — c'est elle qui date et
+ * ordonne l'entrée. Une date de début postérieure à la fin est refusée en 400.
+ *
+ * L'œuvre entre dans ma bibliothèque si elle n'y était pas : enregistrer une
+ * lecture vaut suivi.
+ */
+export interface NewLogEntry {
+  finished_at: string
+  started_at?: string | null
+  rating?: number | null
+  comment?: string | null
+}
+
+export const addLogEntry = (mediaId: string, body: NewLogEntry) =>
+  api.post<LogWriteResult>(`/media/${mediaId}/log`, body)
+
+/** Correction d'un fait daté : seuls les champs envoyés bougent. */
+export const updateLogEntry = (entryId: string, patch: Partial<NewLogEntry>) =>
+  api.patch<LogWriteResult>(`/log/${entryId}`, patch)
+
+/**
+ * Supprimer une entrée corrige un souvenir, pas un avis : la note de l'œuvre ne
+ * bouge pas. Le suivi revient tout de même dans la réponse, `times` en moins.
+ */
+export const deleteLogEntry = (entryId: string) =>
+  api.delete<{ tracking: UserTracking }>(`/log/${entryId}`)
 
 /**
  * Supprimer l'œuvre pour tout le monde. Peut être refusé en `409` — le message
@@ -399,7 +514,24 @@ export const fetchUsers = (
   )
 
 export const fetchUser = (id: string, signal?: AbortSignal) =>
-  api.get<UserSummary>(`/users/${id}`, undefined, signal)
+  api.get<UserDetail>(`/users/${id}`, undefined, signal)
+
+/**
+ * Poser sa vitrine — **remplacement complet**, jamais un ajout ni un retrait.
+ *
+ * L'API n'offre pas trois routes séparées, et c'est un choix : à deux onglets
+ * ouverts, ajouter et déplacer produiraient des positions incohérentes. Ici la
+ * dernière écriture gagne, entièrement ; un tableau vide vide la vitrine.
+ *
+ * Les trois refus possibles sont tous en `400` et tous **complets** — rien
+ * n'est écrit à moitié : plus de huit œuvres, un identifiant répété, ou une
+ * œuvre absente de la bibliothèque commune.
+ *
+ * Il n'existe aucune route pour poser la vitrine de quelqu'un d'autre,
+ * administrateur compris. D'où `/me/` dans le chemin, et pas d'identifiant.
+ */
+export const setShowcase = (mediaIds: string[]) =>
+  api.put<{ showcase: Showcase }>('/me/showcase', { media_ids: mediaIds })
 
 /**
  * S'abonner, ou se désabonner. Les deux gestes renvoient l'état **après**

@@ -4,6 +4,7 @@ import ErrorNotice from './components/ErrorNotice'
 import ComingSoon from './pages/ComingSoon'
 import Compare from './pages/Compare'
 import AdminInvitations from './pages/AdminInvitations'
+import AdminUsers from './pages/AdminUsers'
 import Dashboard from './pages/Dashboard'
 import Invitation from './pages/Invitation'
 import Login from './pages/Login'
@@ -66,6 +67,7 @@ function GatedApp() {
           <Route path="membres/:id" element={<UserProfile />} />
           <Route path="comparer" element={<Compare />} />
           <Route path="administration/invitations" element={<AdminInvitations />} />
+          <Route path="administration/membres" element={<AdminUsers />} />
           <Route
             path="musique"
             element={

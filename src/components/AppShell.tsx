@@ -57,9 +57,14 @@ export default function AppShell() {
 
           <div className={styles.account}>
             {isAdmin ? (
-              <NavLink to="/administration/invitations" className={styles.adminLink}>
-                Inviter
-              </NavLink>
+              <span className={styles.adminGroup}>
+                <NavLink to="/administration/invitations" className={styles.adminLink}>
+                  Inviter
+                </NavLink>
+                <NavLink to="/administration/membres" className={styles.adminLink}>
+                  Comptes
+                </NavLink>
+              </span>
             ) : null}
             <NavLink to="/recherche" className={styles.searchLink}>
               Ajouter une œuvre

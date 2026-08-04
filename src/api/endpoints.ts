@@ -1,4 +1,4 @@
-import { api, ApiError } from './client'
+import { api, ApiError, request } from './client'
 import type {
   Account,
   CompareResponse,
@@ -14,6 +14,7 @@ import type {
   SeriesAggregate,
   Session,
   TrackingStatus,
+  UserRole,
   UserTracking,
   VolumeDetail,
 } from './schema'
@@ -322,6 +323,58 @@ export const fetchInvitations = (
  */
 export const revokeInvitation = (id: string) =>
   api.delete<Invitation>(`/admin/invitations/${id}`)
+
+/* ------------------------------------------------------------------ */
+/* Administration des comptes                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Régénère un lien de mot de passe pour un membre qui a perdu le sien.
+ * Même mécanique que les invitations : le serveur n'envoie rien, c'est à
+ * l'administrateur de transmettre le lien.
+ */
+export const createPasswordReset = (
+  userId: string,
+  body: { expires_in_hours?: number; note?: string },
+) =>
+  api.post<{ invitation: Invitation; token: string; url: string | null }>(
+    `/admin/users/${userId}/password-reset`,
+    body,
+  )
+
+/**
+ * Désactiver un compte : le geste normal quand quelqu'un s'en va.
+ *
+ * Il ne peut plus se connecter et sort des listes, mais **tout ce qu'il a
+ * écrit reste en place et lui reste attribué**. `409` si on tente sur son
+ * propre compte. `reason` alimente le journal et n'est jamais rendue au membre.
+ */
+export const deactivateUser = (userId: string, reason?: string) =>
+  api.post<{ user: Account }>(`/admin/users/${userId}/deactivate`, reason ? { reason } : {})
+
+export const reactivateUser = (userId: string) =>
+  api.post<{ user: Account }>(`/admin/users/${userId}/reactivate`)
+
+/** `409` si le geste laisserait la médiathèque sans administrateur. */
+export const setUserRole = (userId: string, role: UserRole) =>
+  api.patch<{ user: Account }>(`/admin/users/${userId}/role`, { role })
+
+/**
+ * Suppression définitive. **Irréversible**, et à ne pas confondre avec la
+ * désactivation : elle emporte par cascade le compte, son suivi, ses notes,
+ * ses critiques, ses cochages et ses abonnements. Rien n'est conservé, rien
+ * n'est anonymisé — c'est ce qui la rend utilisable par quelqu'un qui demande
+ * l'effacement de ses données.
+ *
+ * `confirm_pseudo` doit porter le pseudo exact : toute autre valeur répond
+ * `400` sans rien supprimer, pour qu'un clic sur la mauvaise ligne d'une liste
+ * ne puisse effacer personne.
+ */
+export const deleteUser = (userId: string, confirmPseudo: string) =>
+  request<void>(`/admin/users/${userId}`, {
+    method: 'DELETE',
+    body: { confirm_pseudo: confirmPseudo },
+  })
 
 /**
  * L'annuaire des membres.

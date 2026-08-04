@@ -126,6 +126,19 @@ export default function TrackingPanel({
         Je le possède
       </label>
 
+      {/* Le coup de cœur est **à côté** de la note, jamais au-dessus d'un
+          seuil : un film à 7 qu'on adore n'est pas un film à 9 qu'on admire.
+          Il s'écrit sur les cinq types, y compris ceux à statut dérivé. */}
+      <label className={styles.checkbox}>
+        <input
+          type="checkbox"
+          checked={tracking.favorite}
+          onChange={(event) => onPatch({ favorite: event.target.checked })}
+          disabled={isSaving}
+        />
+        Coup de cœur
+      </label>
+
       <div className={styles.field}>
         <span className={styles.fieldLabel}>Ma note</span>
         <div className={styles.ratings}>
@@ -304,6 +317,14 @@ export function FollowedTrackings({
               note moyenne <strong>{others.average_rating}/10</strong>
             </span>
           ) : null}
+          {/* « 2 des 5 autres l'ont adoré » dit quelque chose qu'une moyenne
+              de 7,4 ne dit pas. */}
+          {others.favorites > 0 ? (
+            <span className={styles.average}>
+              dont <strong>{others.favorites}</strong> qui l'
+              {others.favorites > 1 ? 'ont' : 'a'} adoré
+            </span>
+          ) : null}
         </p>
       ) : null}
     </section>
@@ -359,6 +380,12 @@ function ReadOnlyTracking({
               <dd>
                 {tracking.times} {timesNoun(type, tracking.times)}
               </dd>
+            </div>
+          ) : null}
+          {tracking.favorite ? (
+            <div className={styles.readonlyRow}>
+              <dt>Coup de cœur</dt>
+              <dd>{account.pseudo} l'a adoré</dd>
             </div>
           ) : null}
           {tracking.owned ? (

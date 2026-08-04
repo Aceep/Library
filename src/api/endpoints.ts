@@ -59,6 +59,8 @@ export interface LibraryFilters {
   type?: MediaType
   status?: TrackingStatus | null
   owned?: boolean | null
+  /** Coup de cœur — indépendant de la note, et non un seuil de note. */
+  favorite?: boolean | null
   sort?: LibrarySort
 }
 
@@ -78,6 +80,7 @@ export const fetchLibrary = (
       type: filters.type,
       status: filters.status ?? undefined,
       owned: filters.owned ?? undefined,
+      favorite: filters.favorite ? 'true' : undefined,
       sort: filters.sort ?? 'added',
       cursor: cursor ?? undefined,
     },
@@ -146,6 +149,13 @@ export const fetchMediaDetail = (id: string, signal?: AbortSignal) =>
 export interface TrackingPatch {
   owned?: boolean
   status?: TrackingStatus
+  /**
+   * Coup de cœur. Accepté sur les cinq types, **y compris ceux dont le statut
+   * est dérivé** — contrairement à `status`, il n'a rien à voir avec ce qui est
+   * coché, et rien à voir non plus avec la note : un film à 7 qu'on adore n'est
+   * pas un film à 9 qu'on admire.
+   */
+  favorite?: boolean
   rating?: number | null
   review?: string | null
   started_at?: string | null

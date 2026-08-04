@@ -1,0 +1,315 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.intro {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: var(--space-4);
+}
+
+.eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.lede {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.lede a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.quiet {
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+}
+
+/* ---- Liste ---- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background: var(--paper-raised);
+}
+
+/* Un compte désactivé se distingue sans disparaître. */
+.row[data-deactivated='true'] {
+  background: var(--paper-sunken);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+  color: var(--ink);
+  flex-wrap: wrap;
+}
+
+.tag,
+.tagStrong {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+}
+
+.tag {
+  color: var(--ink-muted);
+  border: 1px solid var(--rule-strong);
+}
+
+.tagStrong {
+  color: var(--paper);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.tagQuiet {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.counts {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* ---- Actions courantes ---- */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.action {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.action:hover:not(:disabled) {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.action:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+/* ---- Suppression : en retrait, jamais alignée avec le reste ---- */
+
+.danger {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+}
+
+.dangerLink {
+  font: inherit;
+  font-size: var(--text-xs);
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.dangerLink:hover {
+  color: var(--danger);
+}
+
+.dangerPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background: var(--paper);
+}
+
+.dangerText {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  line-height: 1.6;
+  max-width: 62ch;
+}
+
+.dangerField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dangerLabel {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.dangerLabel code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--paper-sunken);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+  color: var(--ink);
+}
+
+.dangerField input {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  max-width: 20rem;
+}
+
+.dangerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dangerButton {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: var(--danger);
+  color: var(--paper);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.dangerButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ghost {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: transparent;
+  color: var(--ink-muted);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+/* ---- Lien de mot de passe fraîchement créé ---- */
+
+.created {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--ink-faint);
+  border-left: 3px solid var(--ink);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  background: var(--paper-raised);
+}
+
+.createdTitle {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+}
+
+.createdNote {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  max-width: 56ch;
+}
+
+.createdUrl {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.createdActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.primary {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}
+
+.moreButton {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-5);
+  cursor: pointer;
+}

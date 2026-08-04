@@ -138,3 +138,8 @@
   background: var(--paper-sunken);
   color: var(--ink);
 }
+
+.adminGroup {
+  display: inline-flex;
+  gap: var(--space-2);
+}

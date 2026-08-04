@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createInvitation, fetchInvitations, revokeInvitation } from '../api/endpoints'
 import type { Invitation, InvitationStatus } from '../api/endpoints'
@@ -82,6 +82,10 @@ function Panel() {
         <p className={styles.lede}>
           L'inscription se fait sur invitation, et le serveur n'envoie aucun courriel&nbsp;: tu
           fabriques un lien ici, puis tu le transmets par le moyen que tu veux.
+        </p>
+        <p className={styles.lede}>
+          Pour agir sur un compte existant, va aux{' '}
+          <Link to="/administration/membres">comptes</Link>.
         </p>
       </header>
 

@@ -105,3 +105,12 @@
   color: var(--ink-muted);
   padding-left: calc(7px + var(--s-2));
 }
+
+/* Le coup de cœur : composé comme la possession, mais dans la couleur du
+   membre — c'est un jugement, pas un fait matériel. */
+.favorite {
+  font: var(--eyebrow);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--identity, var(--ink-soft));
+}

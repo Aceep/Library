@@ -13,6 +13,7 @@ import {
 import type { TrackingPatch } from '../api/endpoints'
 import { typeLabel } from '../api/schema'
 import type { MediaDetail as MediaDetailType, RefreshResponse } from '../api/schema'
+import Availability from '../components/Availability'
 import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
 import MediaLog from '../components/MediaLog'
@@ -172,6 +173,12 @@ function Detail({ id }: { id: string }) {
           type={detail.type}
         />
       </div>
+
+      {/* Où regarder : films et séries seulement — le champ n'existe pas sur
+          les autres types, et la route y répond 400. */}
+      {detail.type === 'movie' || detail.type === 'tv' ? (
+        <Availability mediaId={id} initial={detail.availability} />
+      ) : null}
 
       {/* Le journal est à côté du suivi, pas dedans : le suivi dit ce que j'en
           pense maintenant, le journal ce que j'en ai pensé chaque fois. */}

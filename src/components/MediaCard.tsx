@@ -99,6 +99,8 @@ function TrackingLine({
           {tracking.rating !== null ? (
             <span className={styles.rating}>{tracking.rating}</span>
           ) : null}
+          {/* Signe distinct de la note, pas un seuil de note. */}
+          {tracking.favorite ? <span className={styles.favorite}>Coup de cœur</span> : null}
           {tracking.owned ? <span className={styles.owned}>Possédé</span> : null}
           {/* « Du neuf » n'a de sens que là où du contenu peut s'ajouter. */}
           {tracking.has_new_content && isDerivedStatusType(type) ? <NewContentBadge /> : null}

@@ -35,6 +35,12 @@ export const queryKeys = {
    * panneau ne peut pas afficher un compte à jour au-dessus d'une liste d'avant.
    */
   log: (mediaId: string, userId: string | null) => ['media', mediaId, 'log', userId] as const,
+  /**
+   * Où regarder. Hors du préfixe `media` volontairement : ces données ne
+   * dépendent d'aucune écriture de suivi, et n'ont donc aucune raison d'être
+   * rejetées du cache quand on coche un épisode.
+   */
+  availability: (mediaId: string) => ['availability', mediaId] as const,
   episodes: (seasonId: string) => ['episodes', seasonId] as const,
   volumes: (mediaId: string) => ['volumes', mediaId] as const,
   search: (type: string, params: unknown) => ['search', type, params] as const,

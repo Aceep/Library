@@ -39,9 +39,16 @@ function Library({ type }: { type: MediaType }) {
   const { user } = useSession()
   const [status, setStatus] = useState<TrackingStatus | null>(null)
   const [ownedOnly, setOwnedOnly] = useState(false)
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [sort, setSort] = useState<LibrarySort>('added')
 
-  const filters: LibraryFilters = { type, status, owned: ownedOnly ? true : null, sort }
+  const filters: LibraryFilters = {
+    type,
+    status,
+    owned: ownedOnly ? true : null,
+    favorite: favoritesOnly ? true : null,
+    sort,
+  }
 
   const { data, isPending, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
@@ -55,7 +62,7 @@ function Library({ type }: { type: MediaType }) {
     })
 
   const items = data?.pages.flatMap((page) => page.items) ?? []
-  const filtered = status !== null || ownedOnly
+  const filtered = status !== null || ownedOnly || favoritesOnly
 
   return (
     <div className={styles.page}>
@@ -86,6 +93,15 @@ function Library({ type }: { type: MediaType }) {
             onChange={(event) => setOwnedOnly(event.target.checked)}
           />
           Possédés seulement
+        </label>
+
+        <label className={styles.toggle}>
+          <input
+            type="checkbox"
+            checked={favoritesOnly}
+            onChange={(event) => setFavoritesOnly(event.target.checked)}
+          />
+          Mes coups de cœur
         </label>
 
         <label className={styles.sort}>

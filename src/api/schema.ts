@@ -47,6 +47,26 @@ export type UserDetail =
 /** La vitrine : jusqu'à huit œuvres, tous types confondus, dans son ordre à lui. */
 export type Showcase = UserDetail['showcase']
 
+/**
+ * Où regarder un film ou une série. **Films et séries seulement** — la route
+ * répond `400` sur un livre, un manga ou un jeu, et le champ n'existe pas sur
+ * leur fiche.
+ *
+ * Les cinq tableaux sont toujours présents, vides s'il n'y a rien. Le bloc
+ * entier, lui, est nullable : cache froid, aucune plateforme dans ce pays, ou
+ * source injoignable — trois cas, une seule réponse `200`, jamais une erreur.
+ *
+ * `attribution` voyage **dans** la donnée et non dans une constante du front :
+ * l'afficher est une condition d'utilisation de l'API TMDB, et le bloc ne peut
+ * donc pas être dessiné sans avoir la mention sous la main.
+ */
+export type Availability = NonNullable<
+  paths['/media/{id}/availability']['get']['responses'][200]['content']['application/json']['availability']
+>
+
+/** Une plateforme : identifiant TMDB, nom, logo. */
+export type WatchProvider = Availability['subscription'][number]
+
 export type MediaType = MediaSummary['type']
 export type TrackingStatus = UserTracking['status']
 export type MediaSource = MediaSummary['source']

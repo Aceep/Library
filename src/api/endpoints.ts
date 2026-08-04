@@ -1,6 +1,7 @@
 import { api, ApiError, request } from './client'
 import type {
   Account,
+  Availability,
   CompareResponse,
   EpisodeDetail,
   HomeResponse,
@@ -58,6 +59,8 @@ export interface LibraryFilters {
   type?: MediaType
   status?: TrackingStatus | null
   owned?: boolean | null
+  /** Coup de cœur — indépendant de la note, et non un seuil de note. */
+  favorite?: boolean | null
   sort?: LibrarySort
 }
 
@@ -77,6 +80,7 @@ export const fetchLibrary = (
       type: filters.type,
       status: filters.status ?? undefined,
       owned: filters.owned ?? undefined,
+      favorite: filters.favorite ? 'true' : undefined,
       sort: filters.sort ?? 'added',
       cursor: cursor ?? undefined,
     },
@@ -145,6 +149,13 @@ export const fetchMediaDetail = (id: string, signal?: AbortSignal) =>
 export interface TrackingPatch {
   owned?: boolean
   status?: TrackingStatus
+  /**
+   * Coup de cœur. Accepté sur les cinq types, **y compris ceux dont le statut
+   * est dérivé** — contrairement à `status`, il n'a rien à voir avec ce qui est
+   * coché, et rien à voir non plus avec la note : un film à 7 qu'on adore n'est
+   * pas un film à 9 qu'on admire.
+   */
+  favorite?: boolean
   rating?: number | null
   review?: string | null
   started_at?: string | null
@@ -235,6 +246,28 @@ export const deleteLogEntry = (entryId: string) =>
  * du back explique alors pourquoi, et il est affiché tel quel.
  */
 export const deleteMedia = (id: string) => api.delete<void>(`/media/${id}`)
+
+/**
+ * Où regarder un film ou une série.
+ *
+ * **La fiche ne passe jamais d'appel sortant** : elle sert son bloc depuis le
+ * cache seul, ce qui garantit qu'une panne de TMDB ne peut ni la ralentir ni
+ * l'empêcher de s'afficher. Sur cache froid elle rend donc `null`, et c'est
+ * cette route-ci qui va vraiment chercher — et qui réchauffe le cache pour six
+ * heures.
+ *
+ * `refresh` court-circuite le cache. **Réservé à un geste explicite** : ces
+ * données changent d'un jour à l'autre, pas d'une seconde à l'autre.
+ *
+ * `400` sur un livre, un manga ou un jeu : TMDB ne couvre que les films et les
+ * séries.
+ */
+export const fetchAvailability = (id: string, refresh = false, signal?: AbortSignal) =>
+  api.get<{ availability: Availability | null }>(
+    `/media/${id}/availability`,
+    { refresh: refresh ? 'true' : undefined },
+    signal,
+  )
 
 /** Recherche de nouveautés auprès de la source. Manuel, jamais automatique. */
 export const refreshMedia = (id: string) => api.post<RefreshResponse>(`/media/${id}/refresh`)

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from './components/AppShell'
 import ErrorNotice from './components/ErrorNotice'
+import About from './pages/About'
 import ComingSoon from './pages/ComingSoon'
 import Compare from './pages/Compare'
 import AdminInvitations from './pages/AdminInvitations'
@@ -66,6 +67,9 @@ function GatedApp() {
           <Route path="membres" element={<Members />} />
           <Route path="membres/:id" element={<UserProfile />} />
           <Route path="comparer" element={<Compare />} />
+          {/* Les attributions de sources vivent ici : TMDB exige que la leur
+              figure quelque part dans l'application, logo compris. */}
+          <Route path="a-propos" element={<About />} />
           <Route path="administration/invitations" element={<AdminInvitations />} />
           <Route path="administration/membres" element={<AdminUsers />} />
           <Route

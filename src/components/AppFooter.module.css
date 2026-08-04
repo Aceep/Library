@@ -1,0 +1,21 @@
+.footer {
+  border-top: 1px solid var(--rule);
+  margin-top: var(--space-8);
+  padding: var(--space-4) var(--page-margin, var(--space-5));
+  display: flex;
+  justify-content: center;
+}
+
+.link {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.link:hover {
+  color: var(--ink-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

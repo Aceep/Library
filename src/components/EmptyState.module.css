@@ -1,0 +1,26 @@
+.empty {
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius-lg);
+  background: var(--paper-raised);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  color: var(--ink-soft);
+}
+
+.note {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  max-width: 44ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.action {
+  margin-top: var(--space-4);
+}

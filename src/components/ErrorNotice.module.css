@@ -1,0 +1,40 @@
+.error,
+.notice {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-raised);
+}
+
+.error {
+  border-left: 3px solid var(--danger);
+}
+
+.notice {
+  border-left: 3px solid var(--ink-faint);
+}
+
+.message {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.retry {
+  flex: none;
+  background: none;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.retry:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}

@@ -1,0 +1,234 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.intro {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: var(--space-4);
+}
+
+.eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.loading {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+/* ---- Filtres ---- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.filterGroup {
+  display: flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.chip {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.chip + .chip {
+  border-left: 1px solid var(--rule);
+}
+
+.chip:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.toggle,
+.sort {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.sort select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}
+
+/* ---- Grille ---- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-5);
+}
+
+.card {
+  display: flex;
+}
+
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.cardLink:hover .cardTitle {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.cardTitle {
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+  line-height: 1.25;
+}
+
+.cardYear {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  margin-top: calc(var(--space-2) * -1);
+}
+
+/* ---- Les deux suivis côte à côte ---- */
+
+.trackings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-2);
+}
+
+.trackingLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  min-width: 0;
+}
+
+.trackingDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.trackingName {
+  color: var(--ink-muted);
+  flex: none;
+}
+
+.trackingTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rating {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.owned {
+  color: var(--ink-muted);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+}
+
+.notTracked {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* ---- Pagination ---- */
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-3);
+}
+
+.moreButton {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-5);
+  cursor: pointer;
+}
+
+.moreButton:hover:not(:disabled) {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.moreButton:disabled {
+  cursor: default;
+  color: var(--ink-faint);
+}
+
+.end {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  padding-top: var(--space-3);
+}
+
+.emptyAction {
+  display: inline-block;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.emptyAction:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}

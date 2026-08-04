@@ -1,0 +1,240 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.loading {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.breadcrumb {
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.breadcrumb a:hover {
+  color: var(--ink);
+}
+
+/* ---- En-tête ---- */
+
+.header {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: var(--space-6);
+}
+
+.headerCover {
+  width: 180px;
+  flex: none;
+}
+
+.headerBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  line-height: 1.15;
+}
+
+.originalTitle {
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+  font-style: italic;
+  margin-top: calc(var(--space-4) * -1 + var(--space-1));
+}
+
+.meta {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  margin-top: calc(var(--space-4) * -1 + var(--space-1));
+}
+
+.summary {
+  font-size: var(--text-base);
+  color: var(--ink-soft);
+  max-width: 62ch;
+  line-height: 1.6;
+}
+
+/* ---- Progression des deux comptes ---- */
+
+.progressPair {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 32rem;
+}
+
+.progressLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.progressName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  width: 6rem;
+  flex: none;
+}
+
+.progressDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.progressLine > *:last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- Source et rafraîchissement ---- */
+
+.sourceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-4);
+}
+
+.source {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.refreshButton {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.refreshButton:hover:not(:disabled) {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.refreshButton:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.refreshResult {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+/* ---- Les deux panneaux de suivi ---- */
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+/* ---- Suppression définitive ---- */
+
+.danger {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-5);
+}
+
+.dangerLink {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.dangerLink:hover {
+  color: var(--danger);
+}
+
+.dangerConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  max-width: 52rem;
+}
+
+.dangerText {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.dangerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dangerButton {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: var(--danger);
+  color: var(--paper);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ghost {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: transparent;
+  color: var(--ink-muted);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.dangerError {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}

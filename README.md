@@ -134,6 +134,13 @@ erreurs, ou des affichages faux.
 | `POST /admin/invitations` renvoie `url: null` | Tant que `PUBLIC_APP_URL` n'est pas configurée côté serveur. Le front compose alors le lien depuis sa propre adresse. |
 | `DELETE /admin/users/:id` exige `confirm_pseudo` | Le pseudo exact, sinon `400` sans rien supprimer — pour qu'un clic sur la mauvaise ligne n'efface personne. |
 | Les comptes désactivés ne se masquent pas | Hors annuaire par défaut, mais leurs critiques restent sur les fiches et leur restent attribuées. Mention discrète, jamais un effacement. |
+| **L'attribution à TMDB et à JustWatch est obligatoire** | Ce sont des **conditions d'utilisation de l'API TMDB**, pas des politesses : un manquement leur donne le droit de couper la clé, donc les films, les séries **et toutes les jaquettes**. La mention TMDB et leur logo sont dans `/a-propos`, joignable depuis le pied de page. Celle de JustWatch doit accompagner **chaque** œuvre dont on affiche les plateformes : elle est rendue depuis `attribution`, dans la donnée, et n'apparaît donc jamais sans elle. |
+| `availability` est nul très souvent, et ce n'est pas une erreur | La fiche ne passe **jamais** d'appel sortant : elle sert le bloc depuis le cache seul. Sur cache froid il vaut `null`, et c'est `GET /media/:id/availability` qui va chercher. Cache froid, aucune plateforme dans le pays, ou source injoignable : trois cas, une réponse `200`, aucun écran d'erreur. |
+| Passer une œuvre à `done` crée l'entrée de journal **toute seule** | Y compris quand le statut est dérivé — cocher le dernier épisode journalise. D'où la clé `log` préfixée par celle de la fiche : invalider `media(id)` emporte le journal. |
+| La note d'une entrée de journal remonte au suivi **si l'entrée est la plus récente** | L'inverse n'existe pas : corriger la note de l'œuvre ne réécrit pas l'histoire. Chaque écriture de journal renvoie donc le suivi recalculé, qu'on range tel quel. |
+| `favorite` s'écrit sur **les cinq types**, `status` non | Le coup de cœur n'a rien à voir avec ce qui est coché, ni avec la note. Affiché comme un signe distinct, jamais comme un seuil de note. |
+| `PUT /me/showcase` **remplace** la vitrine entière | Ni ajout, ni retrait : l'éditeur travaille sur un brouillon local et n'écrit qu'une fois. Les refus sont complets — rien n'est écrit à moitié. |
+| Sur `GET /users/:id/media`, `status`, `owned` et `favorite` portent sur **son** suivi à lui | Seul endroit de l'API où ces filtres changent de sujet. L'écran le rappelle en toutes lettres, sans quoi on filtre « en cours » en croyant voir le sien. |
 
 ## Organisation
 
@@ -144,12 +151,13 @@ src/
               keys.ts (clés de cache), cache.ts (rangement des agrégats),
               colors.ts (distance perceptuelle des couleurs d'identité)
   session/    SessionContext.tsx — qui je suis, et `isAdmin`
-  components/ AppShell, Cover, ProgressBar, StatusBadge, TrackingPanel,
-              MediaMetadata, SeasonList, VolumeGrid, FollowButton,
-              IdentityDot, ErrorNotice, EmptyState
+  components/ AppShell, AppFooter, Cover, MediaCard, ProgressBar, StatusBadge,
+              TrackingPanel, MediaMetadata, MediaLog, Availability, SeasonList,
+              VolumeGrid, Showcase, MemberLibrary, FollowButton, IdentityDot,
+              ErrorNotice, EmptyState
   pages/      Login, Dashboard, TypeLibrary, MediaDetail, Search, Compare,
-              Members, UserProfile, MyAccount, Invitation, AdminInvitations,
-              ComingSoon
+              Members, UserProfile, MyAccount, About, Invitation,
+              AdminInvitations, AdminUsers, ComingSoon
   styles/     tokens.css, global.css
 ```
 
@@ -163,11 +171,12 @@ par un lien reçu, sans compte.
 |---|---|
 | `/` | Accueil : en-cours par type, fil attribué des comptes suivis |
 | `/bibliotheque/:type` | Un rayon, filtrable, paginé au curseur |
-| `/media/:id` | Fiche : métadonnées, mon suivi, ceux des abonnements, saisons ou tomes |
+| `/media/:id` | Fiche : métadonnées, mon suivi, ceux des abonnements, saisons ou tomes, mon journal daté, et — films et séries — où regarder |
 | `/recherche` | Chercher chez les sources externes et ajouter |
 | `/comparer` | Comparaison avec un compte suivi, au choix |
-| `/membres` · `/membres/:id` | L'annuaire, les profils, s'abonner |
+| `/membres` · `/membres/:id` | L'annuaire, les profils, s'abonner ; sur un profil : sa vitrine, la répartition de sa bibliothèque, et sa bibliothèque dépliée |
 | `/mon-compte` | Couleur d'identité, avatar, mot de passe |
+| `/a-propos` | D'où viennent les fiches — **les attributions de sources y sont obligatoires**, TMDB comprise |
 | `/administration/invitations` | Fabriquer et révoquer des liens d'invitation (admin) |
 | `/invitation/:token` | **Publique** : créer son compte, ou changer son mot de passe |
 

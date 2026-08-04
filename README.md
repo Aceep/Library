@@ -186,6 +186,16 @@ npm run lint       # zéro avertissement toléré
 npm run build      # tsc --noEmit puis vite build
 ```
 
+Les deux tournent en intégration continue sur `main` et sur chaque proposition
+de fusion (`.github/workflows/ci.yml`), sur la version de Node lue dans
+`.nvmrc`. `npm ci` y est préféré à `npm install` : il installe exactement le
+lockfile et échoue s'il diverge de `package.json`, au lieu de le réécrire.
+
+**Rien n'est déployé automatiquement.** Les workflows de déploiement de
+l'ancienne infrastructure sont conservés hors service dans
+[`docs/deploiement/`](docs/deploiement/README.md), avec ce qu'il faudrait pour
+les réactiver.
+
 Deux règles ESLint sont désactivées volontairement :
 `react/no-unescaped-entities` (l'interface est en français, les apostrophes sont
 partout) et `react-refresh/only-export-components` (co-localiser un contexte et

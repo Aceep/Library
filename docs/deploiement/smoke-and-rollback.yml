@@ -1,0 +1,62 @@
+name: Smoke Test and Automated Rollback
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Railway (production)"]
+    types: [completed]
+
+jobs:
+  smoke:
+    name: Smoke test production
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Wait for service warmup
+        run: sleep 10
+
+      - name: Run smoke check
+        env:
+          PROD_URL: ${{ secrets.PROD_URL }}
+        run: |
+          if [ -z "$PROD_URL" ]; then
+            echo "PROD_URL secret is not set"; exit 1;
+          fi
+          echo "Checking $PROD_URL..."
+          HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" "$PROD_URL")
+          echo "Got HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 304 ]; then
+            echo "✅ Smoke check passed"
+            exit 0
+          else
+            echo "❌ Smoke check failed with status $HTTP_CODE"
+            exit 1
+          fi
+
+  rollback:
+    name: Revert deployed commit on failure
+    needs: smoke
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure git for push
+        env:
+          GIT_TOKEN: ${{ secrets.PAT }}
+        run: |
+          if [ -z "$GIT_TOKEN" ]; then
+            echo "PAT secret not set - cannot push revert"; exit 1;
+          fi
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${GIT_TOKEN}@github.com/${{ github.repository }}
+          git fetch origin production
+
+      - name: Revert the deployed commit
+        run: |
+          set -e
+          BAD_SHA=${{ github.event.workflow_run.head_sha }}
+          echo "Reverting commit $BAD_SHA on production"
+          git checkout production
+          git revert --no-edit "$BAD_SHA" || true
+          git push origin production

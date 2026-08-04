@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { coverSrc } from '../api/covers'
 import type { MediaType } from '../api/schema'
 import { typeLabel } from '../api/schema'
 import styles from './Cover.module.css'
@@ -30,15 +31,20 @@ export default function Cover({
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
   const className = `${styles.cover} ${styles[size]}`
 
-  if (url && url !== brokenUrl) {
+  // Les jaquettes recopiées par l'API arrivent en URL absolue, composée depuis
+  // une base qui n'est pas forcément joignable d'ici. On la ramène à un chemin
+  // relatif pour passer par le proxy.
+  const src = coverSrc(url)
+
+  if (src && src !== brokenUrl) {
     return (
       <div className={className}>
         <img
-          src={url}
+          src={src}
           alt=""
           className={styles.image}
           loading="lazy"
-          onError={() => setBrokenUrl(url)}
+          onError={() => setBrokenUrl(src)}
         />
       </div>
     )

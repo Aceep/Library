@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchHome } from '../api/endpoints'
@@ -33,7 +34,7 @@ export default function Dashboard() {
     <div className={styles.page}>
       <header className={styles.intro}>
         <p className={styles.eyebrow}>Bonjour {user.pseudo}</p>
-        <h1 className={styles.title}>En cours</h1>
+        <h1 className={styles.title}>Ce qui est ouvert, et ce que le cercle a marqué</h1>
       </header>
 
       {groups.length === 0 ? (
@@ -47,32 +48,45 @@ export default function Dashboard() {
           }
         />
       ) : (
-        <div className={styles.groups}>
-          {groups.map((group) => (
-            <section key={group.type} className={styles.group}>
-              <h2 className={styles.groupTitle}>{typeLabelPlural(group.type)}</h2>
-              <ul className={styles.entries}>
-                {group.entries.map((entry) => (
-                  <InProgressCard
-                    key={entry.media.id}
-                    entry={entry}
-                    type={group.type}
-                    color={user.identity_color}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        /* 01 — les en-cours, en trois colonnes inégales : la première œuvre de
+           chaque rayon pèse plus que les deux suivantes. */
+        <section className={styles.section}>
+          <div>
+            <div className={styles.sectionNumber}>01</div>
+            <div className={styles.sectionKicker}>En cours</div>
+          </div>
+          <div className={styles.groups}>
+            {groups.map((group) => (
+              <div key={group.type}>
+                <h2 className={styles.groupTitle}>{typeLabelPlural(group.type)}</h2>
+                <ul className={styles.entries}>
+                  {group.entries.map((entry) => (
+                    <InProgressCard
+                      key={entry.media.id}
+                      entry={entry}
+                      type={group.type}
+                      color={user.identity_color}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Un fil, plus une colonne : chaque entrée porte son auteur et sa
           couleur, puisqu'il n'y a plus de partenaire unique. */}
       <section className={styles.partnerSection}>
+        <div>
+          <div className={styles.sectionNumber}>02</div>
+          <div className={styles.sectionKicker}>Le carnet</div>
+        </div>
+        <div>
         <h2 className={styles.partnerTitle}>
           {data.following_count > 0
-            ? `Chez les ${data.following_count} comptes que tu suis`
-            : 'Chez les autres'}
+            ? `Le carnet du cercle · ${data.following_count} comptes suivis`
+            : 'Le carnet du cercle'}
         </h2>
         {data.feed.length === 0 ? (
           <p className={styles.quiet}>
@@ -87,6 +101,7 @@ export default function Dashboard() {
             ))}
           </ul>
         )}
+        </div>
       </section>
     </div>
   )
@@ -147,7 +162,13 @@ const ACTIVITY_VERB: Record<FeedEntry['kind'], string> = {
 
 function ActivityRow({ item }: { item: FeedEntry }) {
   return (
-    <li className={styles.activityRow}>
+    // La couleur du membre arrive en runtime et ne descend que par `--identity` :
+    // elle n'est jamais écrite en CSS. Ici elle teinte la note, composée en
+    // Newsreader comme un chiffre de notice.
+    <li
+      className={styles.activityRow}
+      style={{ '--identity': item.user.identity_color } as CSSProperties}
+    >
       {/* Deux liens distincts plutôt qu'un lien dans un lien : l'auteur mène à
           son profil, le reste de la ligne mène à l'œuvre. */}
       <Link

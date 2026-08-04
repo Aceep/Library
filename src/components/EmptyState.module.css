@@ -1,26 +1,30 @@
+/**
+ * « Le silence est un état. » Quand rien ne s'est passé, la page le dit en
+ * Newsreader et s'arrête là : plus de cadre en pointillés, plus de boîte
+ * centrée — un filet haut, un titre composé, une phrase, et le reste est du
+ * blanc assumé.
+ */
 .empty {
-  padding: var(--space-7) var(--space-4);
-  text-align: center;
-  border: 1px dashed var(--rule-strong);
-  border-radius: var(--radius-lg);
-  background: var(--paper-raised);
+  padding: var(--space-5) 0 var(--space-7);
+  border-top: var(--rule-w) solid var(--rule);
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: var(--text-lg);
-  color: var(--ink-soft);
+  font-size: var(--text-xl);
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
 }
 
 .note {
   margin-top: var(--space-2);
   font-size: var(--text-sm);
   color: var(--ink-muted);
-  max-width: 44ch;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: 52ch;
 }
 
 .action {
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
 }

@@ -1,21 +1,23 @@
+/**
+ * « La zone dangereuse n'est jamais un aplat rouge : un filet gauche de 2px et
+ * un mot. » Plus de boîte, plus de fond : le message est posé sur la page,
+ * tenu par un seul filet.
+ */
 .error,
 .notice {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-4);
-  border-radius: var(--radius);
-  border: 1px solid var(--rule-strong);
-  background: var(--paper-raised);
+  padding: var(--space-2) 0 var(--space-2) var(--space-4);
 }
 
 .error {
-  border-left: 3px solid var(--danger);
+  border-left: var(--rule-w-strong) solid var(--signal-danger);
 }
 
 .notice {
-  border-left: 3px solid var(--ink-faint);
+  border-left: var(--rule-w-strong) solid var(--status-doing);
 }
 
 .message {
@@ -24,17 +26,24 @@
   max-width: var(--measure);
 }
 
+.error .message {
+  color: var(--signal-danger);
+}
+
+/* Contrôle : 44px de cible, rayon nul, un filet qui se ferme au survol. */
 .retry {
   flex: none;
+  min-height: 44px;
   background: none;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--text-sm);
+  border: var(--rule-w) solid var(--rule);
+  border-radius: var(--radius-0);
+  padding: var(--space-3) var(--space-4);
+  font: var(--caption);
   color: var(--ink-soft);
+  transition: border-color var(--dur-2) var(--ease-page);
 }
 
 .retry:hover {
-  background: var(--paper-sunken);
+  border-color: var(--ink-muted);
   color: var(--ink);
 }

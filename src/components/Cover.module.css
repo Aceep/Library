@@ -1,9 +1,12 @@
+/**
+ * « Jamais de bordure, jamais de rayon, jamais d'ombre : une image posée sur la
+ * pierre. » Le ratio 2:3 est celui de la grille.
+ */
 .cover {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius);
-  background: var(--paper-sunken);
-  border: 1px solid var(--rule);
+  border-radius: var(--radius-0);
+  background: var(--surface-sunken);
   aspect-ratio: 2 / 3;
   flex: none;
 }
@@ -27,59 +30,51 @@
   display: block;
 }
 
-/* Repli : teinte dérivée du type, initiale du titre. */
+/**
+ * Repli typographique — le cas nominal, puisque `cover_url` ment souvent.
+ *
+ * Une seule surface creuse : les teintes par type ont sauté avec le reste de
+ * la chromie décorative. Le type se lit en petites capitales en haut, le titre
+ * est composé en Newsreader en bas, comme une notice de catalogue.
+ */
 .fallback {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2);
-  text-align: center;
-}
-
-.fallback[data-type='movie'] {
-  background: #efe6dc;
-}
-
-.fallback[data-type='tv'] {
-  background: #e4e8ea;
-}
-
-.fallback[data-type='book'] {
-  background: #eae6da;
-}
-
-.fallback[data-type='comic_series'] {
-  background: #eee3e3;
-}
-
-.fallback[data-type='game'] {
-  background: #e3e9e3;
-}
-
-.initial {
-  font-family: var(--font-serif);
-  font-size: 1.75em;
-  line-height: 1;
-  color: var(--ink-soft);
-}
-
-.sm .initial {
-  font-size: 1.1rem;
-}
-
-.lg .initial {
-  font-size: 3rem;
+  padding: var(--space-3);
+  background: var(--surface-sunken);
 }
 
 .typeTag {
-  font-size: var(--text-xs);
-  letter-spacing: 0.08em;
+  font: var(--eyebrow);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-muted);
 }
 
+.fallbackTitle {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.1;
+  color: var(--ink-soft);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+/* En vignette, il n'y a de place que pour l'initiale. */
 .sm .typeTag {
   display: none;
+}
+
+.sm .fallbackTitle {
+  font-size: 13px;
+  -webkit-line-clamp: 2;
+}
+
+.lg .fallbackTitle {
+  font-size: 21px;
 }

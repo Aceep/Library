@@ -248,6 +248,11 @@ function EpisodeRow({
       <span className={styles.episodeTitle}>{episode.title ?? 'Sans titre'}</span>
 
       <span className={styles.episodeSide}>
+        {episode.air_date ? (
+          <time className={styles.episodeDate} dateTime={episode.air_date}>
+            {formatAirDate(episode.air_date)}
+          </time>
+        ) : null}
         {episode.runtime_min ? (
           <span className={styles.episodeRuntime}>{episode.runtime_min} min</span>
         ) : null}
@@ -300,6 +305,17 @@ function ProgressLine({
       <ProgressBar progress={progress} color={account.identity_color} label={label} />
     </span>
   )
+}
+
+/** Diffusion : jour et mois suffisent dans une saison, l'année quand elle diffère. */
+const formatAirDate = (iso: string) => {
+  const date = new Date(iso)
+  const sameYear = date.getFullYear() === new Date().getFullYear()
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    year: sameYear ? undefined : 'numeric',
+  })
 }
 
 type WriteVariables =

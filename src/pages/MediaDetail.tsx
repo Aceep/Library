@@ -17,6 +17,7 @@ import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
 import MediaMetadata from '../components/MediaMetadata'
 import ProgressBar from '../components/ProgressBar'
+import Screenshots from '../components/Screenshots'
 import SeasonList from '../components/SeasonList'
 import TrackingPanel, { FollowedTrackings } from '../components/TrackingPanel'
 import VolumeGrid from '../components/VolumeGrid'
@@ -174,8 +175,25 @@ function Detail({ id }: { id: string }) {
         <SeasonList mediaId={id} seasons={detail.seasons} user={user} />
       ) : null}
 
+      {detail.type === 'game' && detail.metadata.screenshots.length > 0 ? (
+        <Screenshots urls={detail.metadata.screenshots} title={detail.title} />
+      ) : null}
+
       {detail.type === 'comic_series' ? (
-        <VolumeGrid mediaId={id} user={user} />
+        <VolumeGrid
+          mediaId={id}
+          user={user}
+          // Les deux bornes sont nullables : une plage à moitié connue ne dit
+          // rien, on n'affiche donc que si les deux sont là.
+          range={
+            detail.volumes?.first_number !== null &&
+            detail.volumes?.first_number !== undefined &&
+            detail.volumes?.last_number !== null &&
+            detail.volumes?.last_number !== undefined
+              ? { first: detail.volumes.first_number, last: detail.volumes.last_number }
+              : null
+          }
+        />
       ) : null}
 
       {/* Supprimer pour tout le monde est passé aux administrateurs seuls :

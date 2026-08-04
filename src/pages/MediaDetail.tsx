@@ -161,6 +161,7 @@ function Detail({ id }: { id: string }) {
         />
 
         <FollowedTrackings
+          mediaId={id}
           following={detail.tracking.following}
           others={detail.tracking.others}
           type={detail.type}

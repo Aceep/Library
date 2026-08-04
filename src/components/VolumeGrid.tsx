@@ -2,10 +2,17 @@ import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { applySeries } from '../api/cache'
 import { queryKeys } from '../api/keys'
-import { addVolume, deleteVolume, fetchVolumes, updateVolumeTracking } from '../api/endpoints'
+import {
+  addVolume,
+  deleteVolume,
+  fetchVolumes,
+  fetchVolumeTrackers,
+  updateVolumeTracking,
+} from '../api/endpoints'
 import type { VolumeTracking } from '../api/endpoints'
 import type { Account, MediaDetail, Page, SeriesAggregate, VolumeDetail } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
+import PeopleDisclosure from './PeopleDisclosure'
 import styles from './VolumeGrid.module.css'
 
 type VolumePages = { pages: Page<VolumeDetail>[]; pageParams: unknown[] }
@@ -236,10 +243,24 @@ function VolumeTile({
           style={{ background: read ? user.identity_color : 'transparent' }}
           title={`${user.pseudo}${read ? ' l’a lu' : ' ne l’a pas lu'}`}
         />
-        {/* Tome par tome, l'API donne un nombre, pas des noms. */}
-        {volume.tracking.others > 0 ? (
-          <span className={styles.othersCount}>+{volume.tracking.others}</span>
-        ) : null}
+        {/* Tome par tome, l'API ne donne qu'un nombre — les noms se
+            demandent au clic, jamais pour toute la grille d'un coup. */}
+        <PeopleDisclosure
+          count={volume.tracking.others}
+          label={['le suit', 'le suivent']}
+          panelTitle="Tous ceux qui suivent ce tome" 
+          size="sm"
+          queryKey={queryKeys.volumeTrackers(volume.id)}
+          fetcher={(signal) =>
+            fetchVolumeTrackers(volume.id, null, signal).then((page) => ({
+              ...page,
+              items: page.items.map((entry) => ({
+                user: entry.user,
+                note: entry.tracking.status === 'done' ? 'lu' : null,
+              })),
+            }))
+          }
+        />
       </div>
     </li>
   )

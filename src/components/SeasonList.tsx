@@ -2,10 +2,16 @@ import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { applyEpisodeWrite } from '../api/cache'
 import { queryKeys } from '../api/keys'
-import { batchEpisodes, fetchEpisodes, setEpisodeWatched } from '../api/endpoints'
+import {
+  batchEpisodes,
+  fetchEpisodes,
+  fetchEpisodeWatchers,
+  setEpisodeWatched,
+} from '../api/endpoints'
 import type { EpisodeBatch, EpisodeWriteResult } from '../api/endpoints'
 import type { Account, EpisodeDetail, MediaDetail, Page } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
+import PeopleDisclosure from './PeopleDisclosure'
 import ProgressBar from './ProgressBar'
 import styles from './SeasonList.module.css'
 
@@ -249,14 +255,21 @@ function EpisodeRow({
         {/* L'API ne nomme plus qui a vu quoi épisode par épisode : elle en
             donne le nombre. Les identités sont derrière
             `GET /episodes/:id/watchers`, qu'on ne demande pas ici. */}
-        {episode.watched.others > 0 ? (
-          <span
-            className={styles.othersCount}
-            title={`${episode.watched.others} autre${episode.watched.others > 1 ? 's' : ''} membre${episode.watched.others > 1 ? 's l’ont' : ' l’a'} vu`}
-          >
-            +{episode.watched.others}
-          </span>
-        ) : null}
+        <PeopleDisclosure
+          count={episode.watched.others}
+          label={['l’a vu', 'l’ont vu']}
+          panelTitle="Tous ceux qui ont vu cet épisode" 
+          size="sm"
+          queryKey={queryKeys.episodeWatchers(episode.id)}
+          fetcher={(signal) =>
+            fetchEpisodeWatchers(episode.id, null, signal).then((page) => ({
+              ...page,
+              // Les épisodes renvoient des comptes à plat : cocher n'a pas de
+              // nuance, il n'y a donc rien à afficher à côté du nom.
+              items: page.items.map((user) => ({ user })),
+            }))
+          }
+        />
 
         {!episode.watched.me ? (
           <button type="button" className={styles.untilHere} onClick={onUntilHere} disabled={disabled}>

@@ -76,7 +76,7 @@ function GatedApp() {
             path="musique"
             element={
               <ComingSoon
-                title="Music History"
+                title="Musique"
                 note="La musique est en cours de développement côté API — elle rejoindra les films, les séries, les livres, les mangas et les jeux. Cette page l'attend, et rien n'y sera inventé en attendant."
               />
             }
@@ -85,7 +85,7 @@ function GatedApp() {
             path="quetes"
             element={
               <ComingSoon
-                title="Quests"
+                title="Quêtes"
                 note="Les quêtes sont en cours de développement côté API. Les jeux vidéo, eux, ont déjà leur rayon à part entière."
               />
             }

@@ -47,7 +47,9 @@ export default function Cover({
 
   if (src && src !== brokenUrl) {
     return (
-      <div className={className}>
+      // `data-media-type` porte la teinte du rayon : `global.css` la lie à
+      // `--type-hue`, et la feuille du composant n'a qu'à s'en servir.
+      <div className={className} data-media-type={type}>
         <img
           src={src}
           alt=""
@@ -63,7 +65,7 @@ export default function Cover({
   // lit, elle ne s'abrège pas. En vignette (`sm`), la place manque et on
   // retombe sur l'initiale seule.
   return (
-    <div className={`${className} ${styles.fallback}`}>
+    <div className={`${className} ${styles.fallback}`} data-media-type={type}>
       <span className={styles.typeTag}>{typeLabel(type)}</span>
       <span className={styles.fallbackTitle}>
         {size === 'sm' ? firstLetter(title) : title}

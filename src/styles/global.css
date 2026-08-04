@@ -77,6 +77,28 @@ ol {
   list-style: none;
 }
 
+/**
+ * La teinte d'un rayon se lie ici, une fois.
+ *
+ * Le type d'une œuvre est une **variante**, pas une donnée de runtime : il se
+ * porte en attribut (`data-media-type`) comme `data-status` sur un badge, et
+ * non en style inline — celui-ci reste réservé à la couleur d'un membre, qui
+ * arrive du réseau, et aux dimensions calculées.
+ *
+ * La liaison est globale plutôt que recopiée dans chaque module : `Cover`,
+ * `MediaCard` et la une nomment tous le même attribut, et six règles répétées
+ * trois fois divergeraient au premier rayon ajouté.
+ *
+ * `music` y figure sans être un `MediaType` — l'API ne sert pas encore le
+ * rayon, la bande d'accueil l'annonce quand même.
+ */
+[data-media-type='movie'] { --type-hue: var(--type-movie); }
+[data-media-type='tv'] { --type-hue: var(--type-tv); }
+[data-media-type='book'] { --type-hue: var(--type-book); }
+[data-media-type='comic_series'] { --type-hue: var(--type-comic_series); }
+[data-media-type='game'] { --type-hue: var(--type-game); }
+[data-media-type='music'] { --type-hue: var(--type-music); }
+
 /* Réservé aux lecteurs d'écran */
 .sr-only {
   position: absolute;

@@ -5,10 +5,16 @@ import AppFooter from './AppFooter'
 import IdentityDot from './IdentityDot'
 import styles from './AppShell.module.css'
 
-/** Sections annoncées mais pas encore servies par l'API. */
+/**
+ * Sections annoncées mais pas encore servies par l'API.
+ *
+ * Libellés en français comme le reste : l'application n'a pas d'i18n, et deux
+ * entrées en anglais au milieu de « Livres » et « Séries » se lisaient comme un
+ * autre produit.
+ */
 const PENDING_SECTIONS = [
-  { to: '/musique', label: 'Music History' },
-  { to: '/quetes', label: 'Quests' },
+  { to: '/musique', label: 'Musique' },
+  { to: '/quetes', label: 'Quêtes' },
 ]
 
 const navClass = ({ isActive }: { isActive: boolean }) =>

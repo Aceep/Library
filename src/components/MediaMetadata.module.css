@@ -23,3 +23,34 @@
   color: var(--ink-soft);
   min-width: 0;
 }
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Liens sortants : vers la source, ou la bande-annonce. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.link {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+}
+
+.link:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.link::after {
+  content: ' ↗';
+  color: var(--ink-faint);
+}

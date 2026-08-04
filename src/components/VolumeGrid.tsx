@@ -20,9 +20,12 @@ type VolumePages = { pages: Page<VolumeDetail>[]; pageParams: unknown[] }
 export default function VolumeGrid({
   mediaId,
   user,
+  range,
 }: {
   mediaId: string
   user: Account
+  /** Bornes connues de la série, si le back les annonce. */
+  range?: { first: number; last: number } | null
 }) {
   const mediaQueryKey = queryKeys.media(mediaId)
   const queryClient = useQueryClient()
@@ -111,7 +114,16 @@ export default function VolumeGrid({
   return (
     <section className={styles.section}>
       <div className={styles.header}>
-        <h2 className={styles.sectionTitle}>Tomes</h2>
+        <h2 className={styles.sectionTitle}>
+          Tomes
+          {/* « Tomes 1 à 40 » dit mieux qu'un total ce qu'on a devant soi :
+              une série peut commencer ailleurs qu'à 1. */}
+          {range ? (
+            <span className={styles.range}>
+              {range.first} à {range.last}
+            </span>
+          ) : null}
+        </h2>
         <button
           type="button"
           className={styles.addToggle}

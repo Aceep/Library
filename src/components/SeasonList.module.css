@@ -233,3 +233,10 @@
   background: var(--paper-sunken);
   color: var(--ink);
 }
+
+.episodeDate {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  white-space: nowrap;
+  flex: none;
+}

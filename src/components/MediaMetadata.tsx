@@ -1,3 +1,4 @@
+import { externalLinks } from '../api/externalLinks'
 import type { MediaDetail } from '../api/schema'
 import styles from './MediaMetadata.module.css'
 
@@ -12,17 +13,47 @@ import styles from './MediaMetadata.module.css'
  */
 export default function MediaMetadata({ detail }: { detail: MediaDetail }) {
   const rows = buildRows(detail)
-  if (rows.length === 0) return null
+  const links = externalLinks(detail)
+  const trailer = detail.type === 'movie' ? detail.metadata.trailer_url : null
+
+  if (rows.length === 0 && links.length === 0 && !trailer) return null
 
   return (
-    <dl className={styles.list}>
-      {rows.map((row) => (
-        <div key={row.label} className={styles.row}>
-          <dt className={styles.label}>{row.label}</dt>
-          <dd className={styles.value}>{row.value}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className={styles.block}>
+      {rows.length > 0 ? (
+        <dl className={styles.list}>
+          {rows.map((row) => (
+            <div key={row.label} className={styles.row}>
+              <dt className={styles.label}>{row.label}</dt>
+              <dd className={styles.value}>{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      {/* Sortir de l'application est parfois ce qu'on veut : revoir la
+          bande-annonce, lire la fiche d'origine. Ces liens ouvrent ailleurs. */}
+      {trailer || links.length > 0 ? (
+        <p className={styles.links}>
+          {trailer ? (
+            <a href={trailer} target="_blank" rel="noreferrer" className={styles.link}>
+              Bande-annonce
+            </a>
+          ) : null}
+          {links.map((link) => (
+            <a
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noreferrer"
+              className={styles.link}
+            >
+              {link.label}
+            </a>
+          ))}
+        </p>
+      ) : null}
+    </div>
   )
 }
 

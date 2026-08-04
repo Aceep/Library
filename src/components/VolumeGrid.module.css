@@ -198,3 +198,11 @@
   background: var(--paper-sunken);
   color: var(--ink);
 }
+
+.range {
+  margin-left: var(--space-2);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-faint);
+}

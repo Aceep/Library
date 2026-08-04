@@ -1,0 +1,25 @@
+.list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  align-items: baseline;
+}
+
+.row {
+  display: contents;
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.value {
+  color: var(--ink-soft);
+  min-width: 0;
+}

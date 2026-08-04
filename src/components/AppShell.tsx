@@ -64,7 +64,7 @@ export default function AppShell() {
             <NavLink to="/recherche" className={styles.searchLink}>
               Ajouter une œuvre
             </NavLink>
-            <NavLink to={`/membres/${user.id}`} className={styles.identityLink}>
+            <NavLink to="/mon-compte" className={styles.identityLink} title="Mon compte">
               <IdentityDot account={user} withName />
             </NavLink>
             <button type="button" className={styles.logout} onClick={() => void logout()}>

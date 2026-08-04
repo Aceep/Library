@@ -25,3 +25,11 @@
   font-size: var(--text-sm);
   color: var(--ink-soft);
 }
+
+/* L'avatar remplace la pastille, cerclé de la couleur d'identité pour que le
+   repère de couleur ne se perde pas. */
+.avatar {
+  object-fit: cover;
+  border: 2px solid;
+  border-radius: 50%;
+}

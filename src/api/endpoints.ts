@@ -187,6 +187,25 @@ export interface UserSummary {
 }
 
 /* ------------------------------------------------------------------ */
+/* Mon compte                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Modifier son profil.
+ *
+ * `identity_color` est **libre** : aucune unicité n'est imposée et deux
+ * membres peuvent partager une teinte. C'est pourtant elle qui les distingue
+ * partout — l'interface prévient donc quand le choix se rapproche de celui
+ * d'un compte suivi, sans jamais l'interdire.
+ */
+export const updateMe = (patch: { identity_color?: string; avatar_url?: string | null }) =>
+  api.patch<{ user: Account }>('/me', patch)
+
+/** Changer son mot de passe. Répond 204. L'ancien est exigé. */
+export const changePassword = (body: { current_password: string; new_password: string }) =>
+  api.post<void>('/me/password', body)
+
+/* ------------------------------------------------------------------ */
 /* Invitations et inscription — les seules routes sans session          */
 /* ------------------------------------------------------------------ */
 

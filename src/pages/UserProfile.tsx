@@ -71,6 +71,12 @@ function Profile({ id }: { id: string }) {
         <Counter label="Abonnés" value={data.followers_count} />
       </dl>
 
+      {isMe ? (
+        <p className={styles.compareLink}>
+          <Link to="/mon-compte">Modifier ma couleur, mon avatar ou mon mot de passe</Link>
+        </p>
+      ) : null}
+
       {/* Comparer n'a de sens qu'avec quelqu'un d'autre, et seulement si je le
           suis — c'est ce que la page Comparer sait proposer. */}
       {!isMe && data.followed_by_me ? (

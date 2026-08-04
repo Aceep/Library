@@ -30,23 +30,35 @@ export interface Progress {
   total: number
 }
 
-/** Profil public d'un compte. */
-export interface Account {
-  id: string
-  pseudo: string
-  avatar_url: string | null
-  identity_color: string
-}
+/**
+ * Profil public d'un compte, dérivé du contrat plutôt que redéclaré : l'objet
+ * est inline partout dans la spec, `CompareResponse.with` en est la copie la
+ * plus lisible.
+ */
+export type Account = CompareResponse['with']
+
+export type UserRole = Account['role']
 
 /**
  * Ce que renvoient `/auth/login` et `/auth/me`.
- * `partner` est nullable côté API : ne jamais supposer qu'il y a exactement
- * deux comptes — c'est ce qui rendra le passage à N comptes indolore.
+ *
+ * Depuis le passage aux comptes multiples, il n'y a plus de `partner` : les
+ * autres membres n'arrivent plus par la session mais par chaque charge utile,
+ * dans `tracking.following`. La session ne dit que qui je suis.
  */
 export interface Session {
   user: Account
-  partner: Account | null
 }
+
+/** Le suivi d'un compte auquel je suis abonné, tel qu'il accompagne une œuvre. */
+export type FollowedTracking = LibraryItem['tracking']['following'][number]
+
+/**
+ * Résumé des suiveurs que je ne suis pas : un compte et une moyenne, jamais
+ * leurs identités. Les abonnements trient ce qu'on voit, ils ne protègent rien
+ * — mais l'API ne déballe pas pour autant la liste entière.
+ */
+export type OthersSummary = LibraryItem['tracking']['others']
 
 /** Une page de résultats. `next_cursor` vaut `null` sur la dernière. */
 export interface Page<T> {

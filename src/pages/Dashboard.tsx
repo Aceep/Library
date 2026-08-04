@@ -13,10 +13,10 @@ import { queryKeys } from '../api/keys'
 import styles from './Dashboard.module.css'
 
 type InProgressEntry = HomeResponse['in_progress']['book'][number]
-type Activity = HomeResponse['partner']['activity'][number]
+type FeedEntry = HomeResponse['feed'][number]
 
 export default function Dashboard() {
-  const { user, partner } = useSession()
+  const { user } = useSession()
   const { data, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.home,
     queryFn: fetchHome,
@@ -66,35 +66,28 @@ export default function Dashboard() {
         </div>
       )}
 
-      {data.partner.user && data.partner.activity.length > 0 ? (
-        <section className={styles.partnerSection}>
-          <h2 className={styles.partnerTitle}>
-            <span
-              className={styles.partnerDot}
-              style={{ background: data.partner.user.identity_color }}
-              aria-hidden="true"
-            />
-            {data.partner.user.pseudo}, récemment
-          </h2>
+      {/* Un fil, plus une colonne : chaque entrée porte son auteur et sa
+          couleur, puisqu'il n'y a plus de partenaire unique. */}
+      <section className={styles.partnerSection}>
+        <h2 className={styles.partnerTitle}>
+          {data.following_count > 0
+            ? `Chez les ${data.following_count} comptes que tu suis`
+            : 'Chez les autres'}
+        </h2>
+        {data.feed.length === 0 ? (
+          <p className={styles.quiet}>
+            {data.following_count === 0
+              ? "Tu ne suis personne pour l'instant : ce fil se remplira dès que ce sera le cas."
+              : 'Rien de neuf ces trente derniers jours.'}
+          </p>
+        ) : (
           <ul className={styles.activity}>
-            {data.partner.activity.map((item) => (
-              <ActivityRow key={`${item.kind}-${item.media.id}-${item.at}`} item={item} />
+            {data.feed.map((item) => (
+              <ActivityRow key={`${item.user.id}-${item.kind}-${item.media.id}-${item.at}`} item={item} />
             ))}
           </ul>
-        </section>
-      ) : partner ? (
-        <section className={styles.partnerSection}>
-          <h2 className={styles.partnerTitle}>
-            <span
-              className={styles.partnerDot}
-              style={{ background: partner.identity_color }}
-              aria-hidden="true"
-            />
-            {partner.pseudo}, récemment
-          </h2>
-          <p className={styles.quiet}>Rien de neuf ces trente derniers jours.</p>
-        </section>
-      ) : null}
+        )}
+      </section>
     </div>
   )
 }
@@ -146,15 +139,30 @@ const defaultNextUpLabel = (nextUp: NonNullable<InProgressEntry['next_up']>) =>
     ? `S${nextUp.season_number}E${String(nextUp.number).padStart(2, '0')}`
     : `Tome ${nextUp.number}`
 
-const ACTIVITY_VERB: Record<Activity['kind'], string> = {
+const ACTIVITY_VERB: Record<FeedEntry['kind'], string> = {
   finished: 'a terminé',
   rated: 'a noté',
   started: 'a commencé',
 }
 
-function ActivityRow({ item }: { item: Activity }) {
+function ActivityRow({ item }: { item: FeedEntry }) {
   return (
     <li className={styles.activityRow}>
+      {/* Deux liens distincts plutôt qu'un lien dans un lien : l'auteur mène à
+          son profil, le reste de la ligne mène à l'œuvre. */}
+      <Link
+        to={`/membres/${item.user.id}`}
+        className={styles.activityAuthorLink}
+        title={`Le profil de ${item.user.pseudo}`}
+      >
+        <span
+          className={styles.activityDot}
+          style={{ background: item.user.identity_color }}
+          aria-hidden="true"
+        />
+        <span className={styles.activityAuthor}>{item.user.pseudo}</span>
+      </Link>
+
       <Link to={`/media/${item.media.id}`} className={styles.activityLink}>
         <Cover url={item.media.cover_url} title={item.media.title} type={item.media.type} size="sm" />
         <span className={styles.activityText}>

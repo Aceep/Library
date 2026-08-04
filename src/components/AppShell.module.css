@@ -119,3 +119,8 @@
     padding: var(--space-5) var(--space-4) var(--space-7);
   }
 }
+
+/* Son propre pseudo mène à son profil. */
+.identityLink:hover {
+  opacity: 0.75;
+}

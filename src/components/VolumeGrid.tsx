@@ -13,11 +13,9 @@ type VolumePages = { pages: Page<VolumeDetail>[]; pageParams: unknown[] }
 export default function VolumeGrid({
   mediaId,
   user,
-  partner,
 }: {
   mediaId: string
   user: Account
-  partner: Account | null
 }) {
   const mediaQueryKey = queryKeys.media(mediaId)
   const queryClient = useQueryClient()
@@ -139,7 +137,6 @@ export default function VolumeGrid({
                 key={volume.id}
                 volume={volume}
                 user={user}
-                partner={partner}
                 disabled={patch.isPending || remove.isPending}
                 onToggleRead={(read) =>
                   patch.mutate({ volumeId: volume.id, patch: { status: read ? 'done' : 'todo' } })
@@ -172,7 +169,6 @@ export default function VolumeGrid({
 function VolumeTile({
   volume,
   user,
-  partner,
   disabled,
   onToggleRead,
   onToggleOwned,
@@ -180,14 +176,12 @@ function VolumeTile({
 }: {
   volume: VolumeDetail
   user: Account
-  partner: Account | null
   disabled: boolean
   onToggleRead: (read: boolean) => void
   onToggleOwned: (owned: boolean) => void
   onDelete: () => void
 }) {
   const mine = volume.tracking.me
-  const theirs = volume.tracking.partner
   const read = mine?.status === 'done'
 
   return (
@@ -242,14 +236,9 @@ function VolumeTile({
           style={{ background: read ? user.identity_color : 'transparent' }}
           title={`${user.pseudo}${read ? ' l’a lu' : ' ne l’a pas lu'}`}
         />
-        {partner ? (
-          <span
-            className={styles.identity}
-            style={{
-              background: theirs?.status === 'done' ? partner.identity_color : 'transparent',
-            }}
-            title={`${partner.pseudo}${theirs?.status === 'done' ? ' l’a lu' : ' ne l’a pas lu'}`}
-          />
+        {/* Tome par tome, l'API donne un nombre, pas des noms. */}
+        {volume.tracking.others > 0 ? (
+          <span className={styles.othersCount}>+{volume.tracking.others}</span>
         ) : null}
       </div>
     </li>

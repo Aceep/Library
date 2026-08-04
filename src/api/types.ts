@@ -77,6 +77,8 @@ export interface paths {
      * Ouvrir une session
      * @description Vérifie le pseudo et le mot de passe, puis pose le cookie de session. Réponse identique quel que soit le motif d’échec, pour ne pas révéler quels comptes existent.
      *
+     * **Un compte désactivé ne peut pas se connecter**, et l’échec est indiscernable d’un mot de passe faux — pour la même raison.
+     *
      * **Limite de débit :** 10 tentatives **échouées** par 15 minutes, comptées **par pseudo et par IP** — marteler un compte connu et balayer les comptes depuis une même machine sont deux attaques distinctes, et aucun des deux compteurs ne couvre l’autre. Au-delà : `429`, avec un en-tête `Retry-After`.
      *
      * Une connexion réussie remet les deux compteurs à zéro : la limite vise la force brute, pas quelqu’un qui se connecte souvent et correctement.
@@ -93,11 +95,11 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Session courante et profil du partenaire */
+        /** @description Session courante */
         200: {
           content: {
             "application/json": {
-              /** @description Profil public d’un compte */
+              /** @description Profil public d’un membre */
               user: {
                 /** Format: uuid */
                 id: string;
@@ -105,16 +107,14 @@ export interface paths {
                 avatar_url: string | null;
                 /** @description Couleur d'identité au format #RRGGBB */
                 identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
               };
-              /** @description L'autre compte de la médiathèque */
-              partner: ({
-                /** Format: uuid */
-                id: string;
-                pseudo: string;
-                avatar_url: string | null;
-                /** @description Couleur d'identité au format #RRGGBB */
-                identity_color: string;
-              }) | null;
             };
           };
         };
@@ -149,16 +149,18 @@ export interface paths {
   };
   "/auth/me": {
     /**
-     * Profil courant et partenaire
-     * @description Renvoie le compte de la session et l'autre compte de la médiathèque, avec leurs couleurs d'identité.
+     * Profil courant
+     * @description Le compte de la session, avec son rôle et sa couleur d’identité.
+     *
+     * **Le champ `partner` a disparu** — il désignait « l’autre compte » d’une médiathèque qui n’en avait que deux. Pour les membres suivis, appeler `GET /users/me/following` ; pour la liste des membres, `GET /users`.
      */
     get: {
       responses: {
-        /** @description Session courante et profil du partenaire */
+        /** @description Session courante */
         200: {
           content: {
             "application/json": {
-              /** @description Profil public d’un compte */
+              /** @description Profil public d’un membre */
               user: {
                 /** Format: uuid */
                 id: string;
@@ -166,16 +168,14 @@ export interface paths {
                 avatar_url: string | null;
                 /** @description Couleur d'identité au format #RRGGBB */
                 identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
               };
-              /** @description L'autre compte de la médiathèque */
-              partner: ({
-                /** Format: uuid */
-                id: string;
-                pseudo: string;
-                avatar_url: string | null;
-                /** @description Couleur d'identité au format #RRGGBB */
-                identity_color: string;
-              }) | null;
             };
           };
         };
@@ -188,14 +188,171 @@ export interface paths {
       };
     };
   };
+  "/invitations/{token}": {
+    /**
+     * Vérifier un jeton avant d’afficher un formulaire
+     * @description Dit si un jeton est utilisable, et de quelle nature il est — inscription ou réinitialisation — pour que le front affiche le bon formulaire avant de demander quoi que ce soit à la personne.
+     *
+     * **Ne dit jamais pourquoi un jeton est invalide.** Expiré, révoqué, déjà consommé ou inventé donnent la même réponse `{ valid: false, kind: null, pseudo: null }`. Distinguer les cas laisserait deviner quels jetons ont existé.
+     *
+     * Répond toujours `200` : un jeton invalide n’est pas une erreur de la requête, c’est un résultat.
+     */
+    get: {
+      parameters: {
+        path: {
+          token: string;
+        };
+      };
+      responses: {
+        /** @description Validité d’un jeton d’invitation */
+        200: {
+          content: {
+            "application/json": {
+              valid: boolean;
+              /** @description Nul quand le jeton n’est pas valide */
+              kind: ("invite" | "password_reset") | null;
+              /** @description Pseudo du compte visé, pour une réinitialisation seulement */
+              pseudo: string | null;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/auth/register": {
+    /**
+     * Créer son compte avec un jeton d’invitation
+     * @description Consomme l’invitation, crée le compte, ouvre la session, et enregistre **qui a invité qui**.
+     *
+     * **Le nouveau membre suit d’office celui qui l’a invité.** Sans cet abonnement, sa première page d’accueil serait vide et l’application paraîtrait morte : il n’aurait rien ajouté, et ne suivrait personne dont voir l’activité. Il peut se désabonner immédiatement — c’est une amorce, pas une contrainte.
+     *
+     * La couleur d’identité est attribuée depuis une palette, en prenant la moins utilisée. C’est une préférence, pas une garantie : à partir du onzième membre, les teintes se répètent, et chacun peut changer la sienne ensuite.
+     *
+     * **À usage unique.** Deux inscriptions simultanées sur le même lien ne créent qu’un compte : la consommation est conditionnelle en base, et le perdant reçoit `409`.
+     */
+    post: {
+      /** @description Inscription par jeton d’invitation */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Jeton d’invitation, tel qu’il figure dans le lien reçu */
+            token: string;
+            /** @description Pseudo du compte */
+            pseudo: string;
+            /** @description Mot de passe, 8 caractères au minimum */
+            password: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Session courante */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Profil public d’un membre */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/auth/reset-password": {
+    /**
+     * Reprendre la main sur son compte avec un jeton
+     * @description Consomme un jeton de réinitialisation, remplace le mot de passe et ouvre la session.
+     *
+     * Le jeton est généré par un administrateur — `POST /admin/users/:id/password-reset` — et transmis de la main à la main. Il n’existe **aucun** envoi automatique : le serveur ne connaît pas de SMTP.
+     *
+     * Un compte désactivé ne peut pas être réactivé par ce chemin : le jeton fonctionne, mais la connexion qui suit échouerait. La réactivation est un geste d’administration.
+     */
+    post: {
+      /** @description Réinitialisation du mot de passe par jeton */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Jeton d’invitation, tel qu’il figure dans le lien reçu */
+            token: string;
+            /** @description Mot de passe, 8 caractères au minimum */
+            password: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Session courante */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Profil public d’un membre */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/auth/dev-login": {
     /**
      * [DÉVELOPPEMENT] Ouvrir une session sans mot de passe
      * @description **Outil de développement.** Ouvre une session à partir du seul pseudo, sans vérifier de mot de passe.
      *
-     * Elle existe parce que la session par cookie rend les essais manuels pénibles tant qu'aucun front n'existe.
+     * Elle existe parce que la session par cookie rend les essais manuels pénibles tant qu’aucun front n’existe.
      *
-     * **Montage.** Présente hors production, absente en production. `ENABLE_DEV_LOGIN` tranche indépendamment de `NODE_ENV` — c'est ce qui permet de la garder sur une instance de démonstration, qui tourne en production et où elle est justement utile. Quand elle est désactivée, elle n'est pas montée : elle répond 404, comme une adresse inconnue, et n'apparaît pas dans cette documentation.
+     * Un compte désactivé est refusé ici aussi — sinon la désactivation ne voudrait rien dire sur une instance de démonstration.
+     *
+     * **Montage.** `ENABLE_DEV_LOGIN` tranche indépendamment de `NODE_ENV`. Quand elle est désactivée, la route n’est pas montée : elle répond 404 et n’apparaît pas dans cette documentation.
      */
     post: {
       requestBody: {
@@ -207,11 +364,11 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Session courante et profil du partenaire */
+        /** @description Session courante */
         200: {
           content: {
             "application/json": {
-              /** @description Profil public d’un compte */
+              /** @description Profil public d’un membre */
               user: {
                 /** Format: uuid */
                 id: string;
@@ -219,17 +376,21 @@ export interface paths {
                 avatar_url: string | null;
                 /** @description Couleur d'identité au format #RRGGBB */
                 identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
               };
-              /** @description L'autre compte de la médiathèque */
-              partner: ({
-                /** Format: uuid */
-                id: string;
-                pseudo: string;
-                avatar_url: string | null;
-                /** @description Couleur d'identité au format #RRGGBB */
-                identity_color: string;
-              }) | null;
             };
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
           };
         };
         /** @description Default Response */
@@ -314,9 +475,11 @@ export interface paths {
   "/media": {
     /**
      * Lister la bibliothèque commune
-     * @description La bibliothèque des deux comptes. Chaque élément porte **les deux suivis** — `tracking.me` et `tracking.partner` — et, pour les types à statut dérivé, la progression sur tes épisodes ou tes tomes.
+     * @description La bibliothèque de toute la médiathèque. Chaque élément porte le **bloc de suivi collectif** — `tracking.me`, `tracking.following`, `tracking.others` — exactement dans la même forme que sur la fiche, et, pour les types à statut dérivé, la progression sur tes épisodes ou tes tomes.
      *
-     * `tracking.me` est nul quand l’autre compte a ajouté l’œuvre sans que tu l’aies reprise : la fiche est commune, le suivi ne l’est pas.
+     * `tracking.me` est nul quand quelqu’un d’autre a ajouté l’œuvre sans que tu l’aies reprise : la fiche est commune, le suivi ne l’est pas.
+     *
+     * `tracking.following` ne contient que les membres **que tu suis** qui suivent aussi l’œuvre ; les autres sont réduits à `tracking.others` — un compte et une note moyenne. Rien n’est caché : `GET /media/:id/trackers` déplie la liste entière.
      *
      * **Filtres** — `type` sur l’œuvre, `status` et `owned` sur *ton* suivi. Filtrer sur `status` ou `owned` écarte donc les œuvres que tu ne suis pas.
      *
@@ -460,9 +623,13 @@ export interface paths {
   "/media/{id}": {
     /**
      * Fiche d’une œuvre
-     * @description Tout ce qu’un écran de fiche affiche d’emblée : métadonnées, suivi des **deux** comptes côte à côte, progression agrégée de chacun, et le prochain élément à cocher.
+     * @description Tout ce qu’un écran de fiche affiche d’emblée : métadonnées, suivi collectif, ta progression agrégée, et le prochain élément à cocher.
      *
-     * `next_up` donne le premier élément non coché **de la session** — pas du partenaire — dans l’ordre de diffusion ou de lecture. C’est ce qui alimente un bouton « épisode suivant » sans obliger le client à parcourir la hiérarchie ni à réimplémenter cet ordre.
+     * **`tracking` a trois étages.** `me` — ton suivi. `following` — les membres **que tu suis** qui suivent aussi l’œuvre, en détail, notes et critiques comprises : c’est ce qui remplace l’ancien `partner`. `others` — les autres suiveurs, résumés à un compte et une note moyenne.
+     *
+     * Cette gradation n’est pas de la confidentialité : tout est public, et `GET /media/:id/trackers` rend la liste entière, paginée. Elle borne seulement ce que la fiche transporte sans qu’on l’ait demandé — à vingt membres, empiler vingt colonnes serait illisible et coûteux.
+     *
+     * `next_up` donne le premier élément non coché **de la session** — pas de quelqu’un d’autre — dans l’ordre de diffusion ou de lecture. C’est ce qui alimente un bouton « épisode suivant » sans obliger le client à parcourir la hiérarchie ni à réimplémenter cet ordre.
      *
      * **La hiérarchie n’est ici qu’en résumé.** Pour une série, `seasons` liste les saisons avec leur progression, **sans leurs épisodes** ; pour un manga, `volumes` donne les bornes et la progression, **sans la liste**. Le détail se demande ensuite, paginé, par `GET /seasons/:id/episodes` et `GET /media/:id/volumes` : une fiche affiche des saisons repliées et n’en déplie qu’une à la fois.
      *
@@ -499,11 +666,13 @@ export interface paths {
     };
     /**
      * Supprimer une œuvre de la bibliothèque commune
-     * @description Supprime la fiche et tout ce qui en dépend — saisons, épisodes, tomes — ainsi que ton propre suivi.
+     * @description **Réservé aux administrateurs depuis l’étape 7.** Supprime la fiche et tout ce qui en dépend — saisons, épisodes, tomes — ainsi que **le suivi de tous les membres**.
      *
-     * **Refusé (409) si l’autre compte suit encore l’œuvre.** La règle à protéger est l’isolation vis-à-vis du partenaire : on ne fait pas disparaître son suivi par un geste unilatéral. Elle ne protège pas tes données contre toi-même — si tu es le seul à suivre l’œuvre, la suppression passe et emporte ton suivi.
+     * La règle d’avant — refus tant que quelqu’un d’autre suivait l’œuvre — ne tient plus : à vingt membres, elle rendrait toute suppression impossible en pratique, puisqu’il suffit d’une personne pour bloquer. Elle est remplacée par une restriction de rôle, qui protège la même chose de façon tenable : on ne fait pas disparaître le suivi des autres par un geste unilatéral, mais quelqu’un peut encore faire le ménage.
      *
-     * Pour retirer l’œuvre de ta seule bibliothèque en laissant la fiche en place, utilise `DELETE /media/:id/tracking`.
+     * **Le geste est destructeur et n’est pas réversible** : les notes et les critiques de tout le monde sur cette œuvre partent avec elle. Un administrateur qui veut seulement la retirer de sa propre bibliothèque doit utiliser `DELETE /media/:id/tracking`, qui reste ouvert à tous.
+     *
+     * La réponse dit combien de suivis ont été emportés, pour qu’un écran de confirmation puisse l’annoncer avant de recommencer.
      */
     delete: {
       parameters: {
@@ -523,13 +692,13 @@ export interface paths {
           };
         };
         /** @description Default Response */
-        404: {
+        403: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };
         };
         /** @description Default Response */
-        409: {
+        404: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };
@@ -540,7 +709,9 @@ export interface paths {
   "/seasons/{id}/episodes": {
     /**
      * Épisodes d’une saison
-     * @description Les épisodes d’une saison, dans l’ordre de diffusion, **avec l’état des deux comptes** sur chaque ligne : de quoi afficher « vu par elle, pas encore par lui » sans un appel par épisode.
+     * @description Les épisodes d’une saison, dans l’ordre de diffusion, avec **ton** état sur chaque ligne et le **nombre** d’autres membres qui l’ont vu.
+     *
+     * Volontairement un compteur et pas des profils : une saison de 26 épisodes vue par vingt membres ferait 520 profils pour dessiner des cases à cocher. Pour savoir *qui*, `GET /episodes/:id/watchers`.
      *
      * C’est le complément de `GET /media/:id`, qui ne rend que le résumé des saisons. Une fiche déplie une saison à la fois ; cet endpoint sert ce dépliage.
      *
@@ -593,7 +764,9 @@ export interface paths {
   "/media/{id}/volumes": {
     /**
      * Tomes d’une série
-     * @description Les tomes d’une série, dans l’ordre de numérotation, avec le suivi des **deux** comptes sur chacun — possession comprise, qui ne coïncide pas forcément avec la lecture.
+     * @description Les tomes d’une série, dans l’ordre de numérotation, avec **ton** suivi sur chacun — possession comprise, qui ne coïncide pas forcément avec la lecture — et le **nombre** d’autres membres qui en ont un.
+     *
+     * Pour savoir *qui*, `GET /volumes/:id/trackers`.
      *
      * C’est le complément de `GET /media/:id`, qui ne rend que les bornes et la progression.
      *
@@ -650,7 +823,7 @@ export interface paths {
      *
      * Le tome créé porte `manual: true`, ce qui le rend supprimable par `DELETE /volumes/:id`. Un tome venu de la source, lui, reviendrait au prochain rafraîchissement : il n’est pas supprimable.
      *
-     * Un tome de plus change le total de la série : la réponse contient l’agrégat recalculé, et il l’est **pour les deux comptes**. Si la série était terminée pour quelqu’un, elle repasse en `doing` avec `has_new_content` — c’est du contenu paru, exactement comme une nouvelle saison chez TMDB.
+     * Un tome de plus change le total de la série : la réponse contient l’agrégat recalculé, et il l’est **pour tous les membres qui la suivent**, pas seulement pour toi. Si la série était terminée pour quelqu’un, elle repasse en `doing` avec `has_new_content` — c’est du contenu paru, exactement comme une nouvelle saison chez TMDB.
      */
     post: {
       parameters: {
@@ -709,7 +882,9 @@ export interface paths {
   "/media/{id}/tracking": {
     /**
      * Retirer une œuvre de sa propre bibliothèque
-     * @description Efface **ton** suivi de l’œuvre : la ligne d’ensemble, mais aussi tes épisodes cochés et tes tomes. La fiche commune et le suivi de l’autre compte ne bougent pas.
+     * @description Efface **ton** suivi de l’œuvre : la ligne d’ensemble, mais aussi tes épisodes cochés et tes tomes. La fiche commune et le suivi des autres membres ne bougent pas.
+     *
+     * Reste **ouvert à tous les membres**, contrairement à `DELETE /media/:id` qui supprime la fiche pour tout le monde et demande le rôle administrateur.
      *
      * La progression est effacée avec le reste, délibérément : la garder ferait réapparaître un décompte à moitié rempli le jour où tu réajoutes l’œuvre, sans que rien à l’écran n’explique d’où il sort.
      *
@@ -1152,11 +1327,15 @@ export interface paths {
      * Écran d’accueil
      * @description Tes œuvres **en cours**, trois au plus par type, chacune avec son prochain épisode ou tome déjà préparé : un bouton « reprendre » n’a plus rien à chercher ni à recalculer.
      *
-     * Puis l’**activité récente du partenaire** : ce qu’il ou elle vient de terminer, de noter, de commencer. « Récent » veut dire **30 jours**, **10 entrées au plus**. Une seule entrée par œuvre, portant le geste le plus significatif — terminé l’emporte sur noté, qui l’emporte sur commencé.
+     * Puis le **fil des membres que tu suis** : ce qu’ils viennent de terminer, de noter, de commencer, fondu en un seul flux chronologique et **attribué** — chaque entrée porte son auteur. « Récent » veut dire **30 jours**, **30 entrées au plus**, et **5 par membre**.
      *
-     * Un compte vierge répond `200` avec des listes vides, jamais une erreur. Les cinq types sont toujours présents dans `in_progress`, même vides : le front n’a pas à tester la présence d’une clé.
+     * Ce second plafond est ce qui rend le fil lisible : sans lui, quelqu’un qui coche trente épisodes un dimanche masquerait tous les autres. Une seule entrée par œuvre et par membre, portant le geste le plus significatif — terminé l’emporte sur noté, qui l’emporte sur commencé.
      *
-     * **Coût.** C’est l’un des deux seuls endpoints qui agrègent sur toute la bibliothèque. Le nombre de requêtes SQL est fixe — sept au plus — et ne dépend pas du nombre d’œuvres. Progressions et prochains éléments sont calculés en une requête groupée chacun, jamais œuvre par œuvre.
+     * **`partner` a disparu.** Il n’y a plus « l’autre compte » mais autant de fils que d’abonnements. Un compte qui ne suit personne reçoit `feed: []` et `following_count: 0` — c’est normal, pas une erreur, et c’est pour l’éviter que l’inscription abonne d’office à celui qui a invité.
+     *
+     * Les membres **désactivés** n’apparaissent pas dans le fil : leurs écrits restent consultables partout ailleurs, mais ils n’ont plus d’activité à montrer.
+     *
+     * **Coût.** C’est l’un des deux seuls endpoints qui agrègent sur toute la bibliothèque. Le nombre de requêtes SQL est fixe — sept au plus — et ne dépend **ni du nombre d’œuvres, ni du nombre de membres suivis**. Le fil se calcule en une requête, les deux plafonds appliqués en base par une fenêtre.
      */
     get: {
       responses: {
@@ -1178,15 +1357,25 @@ export interface paths {
   "/compare": {
     /**
      * Écran de comparaison
-     * @description Ce que vous avez **terminé tous les deux**, trié par écart de notes décroissant : les désaccords en premier, puisque ce sont eux qui font parler. Une œuvre que l’un des deux n’a pas notée arrive en fin de liste, avec un `rating_gap` nul.
+     * @description **`user_id` est désormais obligatoire** : on compare avec un membre qu’on choisit. « L’autre » n’a plus de référent dès qu’ils sont cinq, et se limiter à ses abonnements serait arbitraire — tout est public, on compare avec qui on veut, suivi ou non.
      *
-     * Puis ce que le partenaire a **adoré** — note de 8 ou plus — et que **tu n’as pas commencé** : ni suivi du tout, ni au statut `todo`. 20 entrées au plus.
+     * Ce que vous avez **terminé tous les deux**, trié par écart de notes décroissant : les désaccords en premier, puisque ce sont eux qui font parler. Une œuvre que l’un des deux n’a pas notée arrive en fin de liste, avec un `rating_gap` nul.
      *
-     * Un compte vierge, ou une médiathèque à un seul compte, répond `200` avec des listes vides et `partner: null`.
+     * Puis ce que ce membre a **adoré** — note de 8 ou plus — et que **tu n’as pas commencé** : ni suivi du tout, ni au statut `todo`. 20 entrées au plus.
+     *
+     * Se comparer à soi-même répond `400` : l’écran n’aurait rien à montrer. Un membre inconnu répond `404`. Un membre désactivé se compare normalement — ses notes n’ont pas bougé.
+     *
+     * `partner` devient `with`, `loved_by_partner` devient `loved_by_them`, et `Comparison.partner` devient `Comparison.them`.
      *
      * **Coût.** Trois requêtes SQL, quel que soit le nombre d’œuvres.
      */
     get: {
+      parameters: {
+        query: {
+          /** @description Le membre avec qui comparer. Obligatoire — 400 sans lui, 404 s’il n’existe pas */
+          user_id: string;
+        };
+      };
       responses: {
         /** @description Default Response */
         200: {
@@ -1195,7 +1384,1427 @@ export interface paths {
           };
         };
         /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
         401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/users": {
+    /**
+     * Lister les membres
+     * @description Tous les membres de la médiathèque, avec de quoi décider qui suivre : combien de personnes ils suivent, combien les suivent, combien d’œuvres ils ont, et si **je** les suis déjà.
+     *
+     * **Les comptes désactivés sont exclus par défaut** — ils ne se proposent plus. `include_deactivated=true` les rend, parce qu’ils restent parfaitement consultables : leurs critiques et leur suivi n’ont pas bougé.
+     *
+     * **Pagination** — `limit` (défaut 40, maximum 100) et `cursor` opaque, comme partout.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+          /** @description `pseudo` = ordre alphabétique (défaut), `joined` = arrivée la plus récente d’abord */
+          sort?: "pseudo" | "joined";
+          /** @description Inclure les comptes désactivés. Faux par défaut : ils ne se proposent plus, mais restent consultables */
+          include_deactivated?: string;
+        };
+      };
+      responses: {
+        /** @description Page de membres */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** @description Profil public d’un membre */
+                  user: {
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  };
+                  /** @description Membres qu’il suit */
+                  following_count: number;
+                  /** @description Membres qui le suivent */
+                  followers_count: number;
+                  /** @description Œuvres dans sa bibliothèque */
+                  tracked_count: number;
+                  /** @description Est-ce que je le suis ? Toujours faux sur mon propre profil */
+                  followed_by_me: boolean;
+                  /** Format: date-time */
+                  joined_at: string;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/users/{id}": {
+    /**
+     * Profil d’un membre
+     * @description Le profil public d’un membre, désactivé compris. Tout membre voit celui de tout autre : il n’existe aucun réglage pour le restreindre.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Profil d’un membre */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Profil public d’un membre */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+              /** @description Membres qu’il suit */
+              following_count: number;
+              /** @description Membres qui le suivent */
+              followers_count: number;
+              /** @description Œuvres dans sa bibliothèque */
+              tracked_count: number;
+              /** @description Est-ce que je le suis ? Toujours faux sur mon propre profil */
+              followed_by_me: boolean;
+              /** Format: date-time */
+              joined_at: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/users/{id}/follow": {
+    /**
+     * Suivre un membre
+     * @description **Sans approbation, et sans que ça donne accès à quoi que ce soit.** Le suivi de tout le monde est déjà consultable ; l’abonnement décide seulement de qui apparaît en détail sur une fiche et dans ton fil d’accueil.
+     *
+     * **Idempotent** : suivre quelqu’un qu’on suit déjà répond `200` sans rien changer, et sans remonter l’abonnement en tête de liste. Un bouton double-cliqué ne doit pas produire un conflit.
+     *
+     * Se suivre soi-même est refusé (`400`) : la ligne fausserait tous les décomptes et te ferait apparaître dans ton propre fil.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description État d’abonnement après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description État après le geste */
+              following: boolean;
+              /** @description Le membre visé */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Ne plus suivre un membre
+     * @description Retire l’abonnement. **Idempotent** : se désabonner de quelqu’un qu’on ne suit pas répond `200`.
+     *
+     * Ça ne ferme aucune porte : son suivi reste consultable, ses notes et ses critiques aussi. Il rejoint simplement le résumé `others` sur les fiches, et sort de ton fil.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description État d’abonnement après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description État après le geste */
+              following: boolean;
+              /** @description Le membre visé */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/users/{id}/following": {
+    /**
+     * Les membres qu’il suit
+     * @description Ses abonnements, du plus récent au plus ancien.
+     *
+     * Consultable pour n’importe quel membre, pas seulement pour soi : les abonnements sont publics comme le reste. `GET /users/me/following` fonctionne aussi, comme raccourci vers la session.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+        };
+        path: {
+          id: string | "me";
+        };
+      };
+      responses: {
+        /** @description Page de membres */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** @description Profil public d’un membre */
+                  user: {
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  };
+                  /** @description Membres qu’il suit */
+                  following_count: number;
+                  /** @description Membres qui le suivent */
+                  followers_count: number;
+                  /** @description Œuvres dans sa bibliothèque */
+                  tracked_count: number;
+                  /** @description Est-ce que je le suis ? Toujours faux sur mon propre profil */
+                  followed_by_me: boolean;
+                  /** Format: date-time */
+                  joined_at: string;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/users/{id}/followers": {
+    /**
+     * Les membres qui le suivent
+     * @description Ses abonnés, du plus récent au plus ancien.
+     *
+     * Consultable pour n’importe quel membre, pas seulement pour soi : les abonnements sont publics comme le reste. `GET /users/me/followers` fonctionne aussi, comme raccourci vers la session.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+        };
+        path: {
+          id: string | "me";
+        };
+      };
+      responses: {
+        /** @description Page de membres */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** @description Profil public d’un membre */
+                  user: {
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  };
+                  /** @description Membres qu’il suit */
+                  following_count: number;
+                  /** @description Membres qui le suivent */
+                  followers_count: number;
+                  /** @description Œuvres dans sa bibliothèque */
+                  tracked_count: number;
+                  /** @description Est-ce que je le suis ? Toujours faux sur mon propre profil */
+                  followed_by_me: boolean;
+                  /** Format: date-time */
+                  joined_at: string;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me": {
+    /**
+     * Modifier son profil
+     * @description Couleur d’identité et avatar. Seuls les champs envoyés sont modifiés.
+     *
+     * **Aucune unicité n’est imposée sur la couleur** : deux membres peuvent partager une teinte. L’attribution à l’inscription évite les collisions quand elle le peut, mais c’est une préférence — l’imposer ferait échouer une inscription sur une propriété décorative, et t’empêcherait de choisir celle que tu veux.
+     */
+    patch: {
+      /** @description Modification de son propre profil */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Couleur d’identité. Libre — aucune unicité n’est imposée, deux membres peuvent partager une teinte */
+            identity_color?: string;
+            avatar_url?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Session courante */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Profil public d’un membre */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/password": {
+    /**
+     * Changer son mot de passe
+     * @description Exige le mot de passe actuel. C’est ce qui distingue ce geste de la réinitialisation par jeton : ici on prouve qu’on connaît le précédent, là on prouve qu’on a reçu un lien d’un administrateur.
+     *
+     * La session en cours reste ouverte.
+     */
+    post: {
+      /** @description Changement de mot de passe */
+      requestBody: {
+        content: {
+          "application/json": {
+            current_password: string;
+            new_password: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/invitations": {
+    /**
+     * Lister les invitations
+     * @description Les invitations et les réinitialisations, la plus récente d’abord, **sans leurs jetons**.
+     *
+     * `status` est calculé, pas stocké : révoquée l’emporte sur consommée, qui l’emporte sur expirée. Une invitation révoquée après avoir été consommée reste affichée « révoquée », pour que le geste de l’administrateur se voie.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+          /** @description Filtre sur l’état calculé */
+          status?: "pending" | "used" | "revoked" | "expired";
+        };
+      };
+      responses: {
+        /** @description Page d’invitations, la plus récente d’abord */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** Format: uuid */
+                  id: string;
+                  /**
+                   * @description Nature du jeton
+                   * @enum {string}
+                   */
+                  kind: "invite" | "password_reset";
+                  /** @description Profil public d’un membre */
+                  created_by: {
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  };
+                  /** @description Le compte visé, pour une réinitialisation. Nul pour une invitation, qui ne vise encore personne */
+                  target_user: ({
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  }) | null;
+                  /** Format: date-time */
+                  expires_at: string;
+                  used_at: string | null;
+                  revoked_at: string | null;
+                  /** Format: date-time */
+                  created_at: string;
+                  /**
+                   * @description État calculé, dans cet ordre de priorité : révoquée, consommée, expirée, sinon en attente
+                   * @enum {string}
+                   */
+                  status: "pending" | "used" | "revoked" | "expired";
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Générer un lien d’invitation
+     * @description Crée un jeton à **usage unique et daté**, et rend le lien à transmettre.
+     *
+     * **Aucun e-mail n’est envoyé, et il n’y en aura jamais.** Le serveur ne connaît pas de SMTP : en auto-hébergement, c’est une corvée sans fin — enregistrements DNS, réputation d’expéditeur, courriers classés indésirables. Transmets le lien par le moyen que tu veux.
+     *
+     * **Le jeton n’apparaît qu’ici, une seule fois.** La base n’en garde qu’une empreinte SHA-256 : `GET /admin/invitations` ne le rendra pas, et un lien perdu ne se retrouve pas — il se révoque et se régénère.
+     *
+     * `url` est composé à partir de `PUBLIC_APP_URL`. Il vaut `null` si la variable n’est pas configurée : mieux vaut pas de lien qu’un lien qui ne mène nulle part.
+     */
+    post: {
+      /** @description Création d’une invitation */
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * @description Durée de validité, en heures. Une semaine par défaut, trente jours au plus
+             * @default 168
+             */
+            expires_in_hours?: number;
+            /** @description Aide-mémoire libre — « pour Camille » — jamais montré à l’invité */
+            note?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Invitation créée, jeton compris */
+        201: {
+          content: {
+            "application/json": {
+              /** @description Invitation, sans son jeton */
+              invitation: {
+                /** Format: uuid */
+                id: string;
+                /**
+                 * @description Nature du jeton
+                 * @enum {string}
+                 */
+                kind: "invite" | "password_reset";
+                /** @description Profil public d’un membre */
+                created_by: {
+                  /** Format: uuid */
+                  id: string;
+                  pseudo: string;
+                  avatar_url: string | null;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  identity_color: string;
+                  /**
+                   * @description Rôle du membre
+                   * @enum {string}
+                   */
+                  role: "user" | "admin";
+                  /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                  deactivated: boolean;
+                };
+                /** @description Le compte visé, pour une réinitialisation. Nul pour une invitation, qui ne vise encore personne */
+                target_user: ({
+                  /** Format: uuid */
+                  id: string;
+                  pseudo: string;
+                  avatar_url: string | null;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  identity_color: string;
+                  /**
+                   * @description Rôle du membre
+                   * @enum {string}
+                   */
+                  role: "user" | "admin";
+                  /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                  deactivated: boolean;
+                }) | null;
+                /** Format: date-time */
+                expires_at: string;
+                used_at: string | null;
+                revoked_at: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /**
+                 * @description État calculé, dans cet ordre de priorité : révoquée, consommée, expirée, sinon en attente
+                 * @enum {string}
+                 */
+                status: "pending" | "used" | "revoked" | "expired";
+              };
+              /** @description **Affiché une seule fois.** Non rejouable : la base n’en garde qu’une empreinte */
+              token: string;
+              /** @description Lien prêt à transmettre. Nul si `PUBLIC_APP_URL` n’est pas configurée */
+              url: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/invitations/{id}": {
+    /**
+     * Révoquer une invitation
+     * @description Rend le lien inutilisable immédiatement. C’est le geste à faire quand un lien a été transmis à la mauvaise personne, ou qu’on l’a perdu.
+     *
+     * Une invitation **déjà consommée** ne peut pas être révoquée (`409`) : le compte existe, et révoquer le lien ne le ferait pas disparaître. Pour fermer ce compte, c’est `POST /admin/users/:id/deactivate`.
+     *
+     * Idempotent sur une invitation déjà révoquée.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Invitation, sans son jeton */
+        200: {
+          content: {
+            "application/json": {
+              /** Format: uuid */
+              id: string;
+              /**
+               * @description Nature du jeton
+               * @enum {string}
+               */
+              kind: "invite" | "password_reset";
+              /** @description Profil public d’un membre */
+              created_by: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+              /** @description Le compte visé, pour une réinitialisation. Nul pour une invitation, qui ne vise encore personne */
+              target_user: ({
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              }) | null;
+              /** Format: date-time */
+              expires_at: string;
+              used_at: string | null;
+              revoked_at: string | null;
+              /** Format: date-time */
+              created_at: string;
+              /**
+               * @description État calculé, dans cet ordre de priorité : révoquée, consommée, expirée, sinon en attente
+               * @enum {string}
+               */
+              status: "pending" | "used" | "revoked" | "expired";
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/users/{id}/password-reset": {
+    /**
+     * Régénérer un lien de mot de passe
+     * @description Même mécanisme que l’invitation, pour quelqu’un qui a perdu son mot de passe. Le lien mène à `POST /auth/reset-password`.
+     *
+     * L’administrateur **ne voit ni ne choisit** le nouveau mot de passe : il rend seulement la possibilité d’en poser un. C’est la différence entre rendre l’accès et prendre la place de quelqu’un.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Création d’une invitation */
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * @description Durée de validité, en heures. Une semaine par défaut, trente jours au plus
+             * @default 168
+             */
+            expires_in_hours?: number;
+            /** @description Aide-mémoire libre — « pour Camille » — jamais montré à l’invité */
+            note?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Invitation créée, jeton compris */
+        201: {
+          content: {
+            "application/json": {
+              /** @description Invitation, sans son jeton */
+              invitation: {
+                /** Format: uuid */
+                id: string;
+                /**
+                 * @description Nature du jeton
+                 * @enum {string}
+                 */
+                kind: "invite" | "password_reset";
+                /** @description Profil public d’un membre */
+                created_by: {
+                  /** Format: uuid */
+                  id: string;
+                  pseudo: string;
+                  avatar_url: string | null;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  identity_color: string;
+                  /**
+                   * @description Rôle du membre
+                   * @enum {string}
+                   */
+                  role: "user" | "admin";
+                  /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                  deactivated: boolean;
+                };
+                /** @description Le compte visé, pour une réinitialisation. Nul pour une invitation, qui ne vise encore personne */
+                target_user: ({
+                  /** Format: uuid */
+                  id: string;
+                  pseudo: string;
+                  avatar_url: string | null;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  identity_color: string;
+                  /**
+                   * @description Rôle du membre
+                   * @enum {string}
+                   */
+                  role: "user" | "admin";
+                  /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                  deactivated: boolean;
+                }) | null;
+                /** Format: date-time */
+                expires_at: string;
+                used_at: string | null;
+                revoked_at: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /**
+                 * @description État calculé, dans cet ordre de priorité : révoquée, consommée, expirée, sinon en attente
+                 * @enum {string}
+                 */
+                status: "pending" | "used" | "revoked" | "expired";
+              };
+              /** @description **Affiché une seule fois.** Non rejouable : la base n’en garde qu’une empreinte */
+              token: string;
+              /** @description Lien prêt à transmettre. Nul si `PUBLIC_APP_URL` n’est pas configurée */
+              url: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/users/{id}/deactivate": {
+    /**
+     * Désactiver un compte
+     * @description **Le geste normal pour faire partir quelqu’un.** Il ne peut plus se connecter — ses sessions déjà ouvertes s’arrêtent au prochain appel —, il disparaît des listes de membres et des fils d’activité.
+     *
+     * **Rien de ce qu’il a écrit ne disparaît.** Son suivi, ses notes et ses critiques restent en place et lui restent attribués : une critique qui a fait choisir un film à quelqu’un ne s’évapore pas parce que son auteur est parti. Il reste visible sur les fiches et dans `GET /media/:id/trackers`, avec `deactivated: true`.
+     *
+     * Réversible par `POST /admin/users/:id/reactivate`. Pour un effacement réel, c’est `DELETE /admin/users/:id`, qui est autre chose.
+     *
+     * Un administrateur ne peut pas se désactiver lui-même (`409`) : ce serait le seul geste d’administration qu’on ne peut pas défaire soi-même.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Désactivation d’un compte */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Motif, pour le journal. Jamais rendu au membre */
+            reason?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Compte après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Profil public d’un membre */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/users/{id}/reactivate": {
+    /**
+     * Réactiver un compte
+     * @description Annule une désactivation. Le membre peut de nouveau se connecter — avec son mot de passe d’avant, qui n’a pas été touché. Idempotent.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Compte après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Profil public d’un membre */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/users/{id}/role": {
+    /**
+     * Changer le rôle d’un membre
+     * @description Promeut un membre administrateur, ou le rétrograde.
+     *
+     * **Le dernier administrateur ne peut pas être rétrogradé** (`409`) : la médiathèque se retrouverait sans personne pour inviter, et il n’existe aucune route pour s’en sortir. Se rétrograder soi-même est possible tant qu’il en reste un autre.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Changement de rôle */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            role: "user" | "admin";
+          };
+        };
+      };
+      responses: {
+        /** @description Compte après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Profil public d’un membre */
+              user: {
+                /** Format: uuid */
+                id: string;
+                pseudo: string;
+                avatar_url: string | null;
+                /** @description Couleur d'identité au format #RRGGBB */
+                identity_color: string;
+                /**
+                 * @description Rôle du membre
+                 * @enum {string}
+                 */
+                role: "user" | "admin";
+                /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                deactivated: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/users/{id}": {
+    /**
+     * Supprimer définitivement un compte
+     * @description **Irréversible. À ne pas confondre avec la désactivation.**
+     *
+     * Emporte tout par cascade : le compte, son suivi, ses notes, ses critiques, ses épisodes et ses tomes cochés, ses abonnements dans les deux sens. Rien n’est conservé, rien n’est anonymisé.
+     *
+     * Cette route existe parce qu’une personne doit pouvoir obtenir l’effacement de ses données. C’est aussi pourquoi il n’y a **pas** d’anonymisation intermédiaire : garder les écrits de quelqu’un qui demande son effacement, fût-ce sous un pseudonyme, serait le contraire de ce qu’il demande.
+     *
+     * Dans tous les autres cas — quelqu’un qui s’en va, un compte à fermer — la désactivation est le bon geste : elle laisse en place ce que les autres voyaient.
+     *
+     * **Confirmation obligatoire** : le corps doit porter le pseudo exact du compte. Toute autre valeur répond `400` sans rien supprimer. Un clic sur la mauvaise ligne d’une liste ne doit pas pouvoir effacer quelqu’un.
+     *
+     * Les œuvres de la bibliothèque commune ne sont **pas** supprimées : elles ne lui appartenaient pas.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Suppression définitive d’un compte */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Le pseudo exact du compte à supprimer. Toute autre valeur répond 400, sans rien supprimer */
+            confirm_pseudo: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/media/{id}/trackers": {
+    /**
+     * Tous les membres qui suivent une œuvre
+     * @description Le détail complet derrière `tracking.others` : **tout le monde**, avec ses notes, ses critiques et ses dates.
+     *
+     * Rien n’est réservé aux abonnés — cette route répond à n’importe quel membre pour n’importe quelle œuvre. L’abonnement décide de ce qui s’affiche sans qu’on le demande, pas de ce qu’on a le droit de voir.
+     *
+     * **Ordre :** tes abonnements d’abord, puis les autres, chaque groupe par pseudo. Le classement est figé dans le curseur, pour qu’un désabonnement en cours de pagination ne fasse pas sauter de lignes.
+     *
+     * Les comptes désactivés y figurent, avec `deactivated: true` : leur suivi et leurs écrits restent en place et leur restent attribués.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+        };
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Page de suiveurs d’une œuvre, mes abonnements en tête */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** @description Profil public d’un membre */
+                  user: {
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  };
+                  tracking: components["schemas"]["UserTracking"];
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/episodes/{id}/watchers": {
+    /**
+     * Qui a vu cet épisode
+     * @description Le détail derrière le compteur `watched.others`. Le profil suffit : cocher un épisode n’a ni note ni critique, il n’y a rien de plus à rendre.
+     *
+     * Seuls les membres qui l’ont **effectivement** coché sont rendus — une ligne `user_episodes` à `watched: false` existe parfois, elle ne compte pas.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+        };
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Page de membres ayant coché l’épisode */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** Format: uuid */
+                  id: string;
+                  pseudo: string;
+                  avatar_url: string | null;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  identity_color: string;
+                  /**
+                   * @description Rôle du membre
+                   * @enum {string}
+                   */
+                  role: "user" | "admin";
+                  /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                  deactivated: boolean;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/volumes/{id}/trackers": {
+    /**
+     * Qui suit ce tome
+     * @description Le détail derrière le compteur `tracking.others` d’un tome : possession, statut, note et critique de chacun. Trié par pseudo.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+        };
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Page de suivis d’un tome */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** @description Profil public d’un membre */
+                  user: {
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  };
+                  /** @description Suivi d’un utilisateur sur un tome */
+                  tracking: {
+                    /** Format: uuid */
+                    user_id: string;
+                    owned: boolean;
+                    /**
+                     * @description Statut de suivi
+                     * @enum {string}
+                     */
+                    status: "todo" | "doing" | "done";
+                    rating: number | null;
+                    review: string | null;
+                  };
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };
@@ -1660,9 +3269,37 @@ export interface components {
       cover_url: string | null;
       release_date: string | null;
       year: number | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTrackingInput"] | null;
-        partner: components["schemas"]["UserTrackingInput"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTrackingInput"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         /** @description Éléments cochés par l’utilisateur */
@@ -1687,20 +3324,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTrackingInput"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTrackingInput"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTrackingInput"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -1744,20 +3401,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTrackingInput"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTrackingInput"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTrackingInput"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -1799,13 +3476,6 @@ export interface components {
             /** @description Éléments connus en base */
             total: number;
           };
-          /** @description Progression sur les éléments d’un type dérivé (épisodes, tomes) */
-          partner: {
-            /** @description Éléments cochés par l’utilisateur */
-            checked: number;
-            /** @description Éléments connus en base */
-            total: number;
-          };
         };
       };
     }, {
@@ -1824,20 +3494,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTrackingInput"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTrackingInput"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTrackingInput"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -1881,20 +3571,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTrackingInput"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTrackingInput"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTrackingInput"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -1938,20 +3648,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTrackingInput"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTrackingInput"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTrackingInput"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -1986,18 +3716,12 @@ export interface components {
           /** @description Numéro de saison ; 0 désigne les hors-séries */
           number: number;
           title: string | null;
-          /** @description Nombre d’épisodes réellement en base — c’est aussi le nombre que `GET /seasons/:id/episodes` rendra, et le `total` des deux progressions */
+          /** @description Nombre d’épisodes réellement en base — c’est aussi le nombre que `GET /seasons/:id/episodes` rendra, et le `total` de la progression */
           episode_count: number;
+          /** @description Ma progression seulement — celle des autres se demande par `GET /media/:id/trackers` */
           progress: {
             /** @description Progression sur les éléments d’un type dérivé (épisodes, tomes) */
             me: {
-              /** @description Éléments cochés par l’utilisateur */
-              checked: number;
-              /** @description Éléments connus en base */
-              total: number;
-            };
-            /** @description Progression sur les éléments d’un type dérivé (épisodes, tomes) */
-            partner: {
               /** @description Éléments cochés par l’utilisateur */
               checked: number;
               /** @description Éléments connus en base */
@@ -2016,10 +3740,12 @@ export interface components {
       runtime_min: number | null;
       /** @description Date de première diffusion, AAAA-MM-JJ */
       air_date: string | null;
-      /** @description Coché par chacun — jamais nul : ne pas avoir coché est une information */
+      /** @description Mon état, et combien d’autres l’ont vu */
       watched: {
+        /** @description Jamais nul : ne pas avoir coché est une information */
         me: boolean;
-        partner: boolean;
+        /** @description Nombre d’autres membres ayant coché cet épisode */
+        others: number;
       };
     };
     VolumeDetailInput: {
@@ -2032,6 +3758,7 @@ export interface components {
       release_date: string | null;
       /** @description Ajouté à la main plutôt que par la source — seuls ceux-là sont supprimables */
       manual: boolean;
+      /** @description Mon suivi du tome, et combien d’autres en ont un */
       tracking: {
         me: ({
           /** Format: uuid */
@@ -2045,19 +3772,8 @@ export interface components {
           rating: number | null;
           review: string | null;
         }) | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: ({
-          /** Format: uuid */
-          user_id: string;
-          owned: boolean;
-          /**
-           * @description Statut de suivi
-           * @enum {string}
-           */
-          status: "todo" | "doing" | "done";
-          rating: number | null;
-          review: string | null;
-        }) | null;
+        /** @description Nombre d’autres membres ayant posé un suivi sur ce tome */
+        others: number;
       };
     };
     ComicSeriesMetadataInput: {
@@ -2225,7 +3941,7 @@ export interface components {
       in_progress: {
         book: ({
             media: components["schemas"]["MediaSummaryInput"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTrackingInput"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -2256,7 +3972,7 @@ export interface components {
           })[];
         comic_series: ({
             media: components["schemas"]["MediaSummaryInput"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTrackingInput"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -2287,7 +4003,7 @@ export interface components {
           })[];
         game: ({
             media: components["schemas"]["MediaSummaryInput"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTrackingInput"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -2318,7 +4034,7 @@ export interface components {
           })[];
         movie: ({
             media: components["schemas"]["MediaSummaryInput"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTrackingInput"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -2349,7 +4065,7 @@ export interface components {
           })[];
         tv: ({
             media: components["schemas"]["MediaSummaryInput"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTrackingInput"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -2379,43 +4095,58 @@ export interface components {
             }]>) | null;
           })[];
       };
-      partner: {
-        /** @description Nul tant que le second compte n’existe pas */
-        user: ({
-          /** Format: uuid */
-          id: string;
-          pseudo: string;
-          avatar_url: string | null;
-          /** @description Couleur d'identité au format #RRGGBB */
-          identity_color: string;
-        }) | null;
-        /** @description Gestes récents, du plus récent au plus ancien */
-        activity: ({
+      /** @description Gestes récents des membres suivis, du plus récent au plus ancien */
+      feed: ({
+          /** @description L’auteur du geste — le fil en mélange plusieurs */
+          user: {
+            /** Format: uuid */
+            id: string;
+            pseudo: string;
+            avatar_url: string | null;
+            /** @description Couleur d'identité au format #RRGGBB */
+            identity_color: string;
             /**
-             * @description Un seul geste par œuvre, le plus significatif : terminé l’emporte sur noté, qui l’emporte sur commencé
+             * @description Rôle du membre
              * @enum {string}
              */
-            kind: "finished" | "rated" | "started";
-            /**
-             * Format: date-time
-             * @description Date du geste
-             */
-            at: string;
-            media: components["schemas"]["MediaSummaryInput"];
-            rating: number | null;
-            review: string | null;
-          })[];
-      };
+            role: "user" | "admin";
+            /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+            deactivated: boolean;
+          };
+          /**
+           * @description Un seul geste par œuvre et par membre, le plus significatif : terminé l’emporte sur noté, qui l’emporte sur commencé
+           * @enum {string}
+           */
+          kind: "finished" | "rated" | "started";
+          /**
+           * Format: date-time
+           * @description Date du geste
+           */
+          at: string;
+          media: components["schemas"]["MediaSummaryInput"];
+          rating: number | null;
+          review: string | null;
+        })[];
+      /** @description Nombre de membres suivis — à zéro, le fil est vide et c’est normal */
+      following_count: number;
     };
     CompareResponseInput: {
-      partner: ({
+      /** @description Le membre comparé — jamais nul, puisqu’il est choisi */
+      with: {
         /** Format: uuid */
         id: string;
         pseudo: string;
         avatar_url: string | null;
         /** @description Couleur d'identité au format #RRGGBB */
         identity_color: string;
-      }) | null;
+        /**
+         * @description Rôle du membre
+         * @enum {string}
+         */
+        role: "user" | "admin";
+        /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+        deactivated: boolean;
+      };
       /** @description Terminées par les deux, écarts de notes du plus grand au plus petit */
       both_finished: ({
           media: components["schemas"]["MediaSummaryInput"];
@@ -2423,7 +4154,7 @@ export interface components {
             rating: number | null;
             finished_at: string | null;
           };
-          partner: {
+          them: {
             rating: number | null;
             finished_at: string | null;
           };
@@ -2431,12 +4162,12 @@ export interface components {
           rating_gap: number | null;
         })[];
       /** @description Ce qu’il ou elle a adoré et que tu n’as pas commencé */
-      loved_by_partner: ({
+      loved_by_them: ({
           media: components["schemas"]["MediaSummaryInput"];
           /** @description Note sur 10 */
-          partner_rating: number;
-          partner_review: string | null;
-          partner_finished_at: string | null;
+          their_rating: number;
+          their_review: string | null;
+          their_finished_at: string | null;
         })[];
     };
     ApiError: {
@@ -2890,9 +4621,37 @@ export interface components {
       cover_url: string | null;
       release_date: string | null;
       year: number | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTracking"] | null;
-        partner: components["schemas"]["UserTracking"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTracking"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         /** @description Éléments cochés par l’utilisateur */
@@ -2917,20 +4676,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTracking"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTracking"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTracking"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -2974,20 +4753,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTracking"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTracking"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTracking"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -3029,13 +4828,6 @@ export interface components {
             /** @description Éléments connus en base */
             total: number;
           };
-          /** @description Progression sur les éléments d’un type dérivé (épisodes, tomes) */
-          partner: {
-            /** @description Éléments cochés par l’utilisateur */
-            checked: number;
-            /** @description Éléments connus en base */
-            total: number;
-          };
         };
       };
     }, {
@@ -3054,20 +4846,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTracking"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTracking"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTracking"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -3111,20 +4923,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTracking"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTracking"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTracking"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -3168,20 +5000,40 @@ export interface components {
       year: number | null;
       summary: string | null;
       refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
       tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
         me: components["schemas"]["UserTracking"] | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: components["schemas"]["UserTracking"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTracking"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+        };
       };
       progress: {
         me: {
-          /** @description Éléments cochés par l’utilisateur */
-          checked: number;
-          /** @description Éléments connus en base */
-          total: number;
-        } | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: {
           /** @description Éléments cochés par l’utilisateur */
           checked: number;
           /** @description Éléments connus en base */
@@ -3216,18 +5068,12 @@ export interface components {
           /** @description Numéro de saison ; 0 désigne les hors-séries */
           number: number;
           title: string | null;
-          /** @description Nombre d’épisodes réellement en base — c’est aussi le nombre que `GET /seasons/:id/episodes` rendra, et le `total` des deux progressions */
+          /** @description Nombre d’épisodes réellement en base — c’est aussi le nombre que `GET /seasons/:id/episodes` rendra, et le `total` de la progression */
           episode_count: number;
+          /** @description Ma progression seulement — celle des autres se demande par `GET /media/:id/trackers` */
           progress: {
             /** @description Progression sur les éléments d’un type dérivé (épisodes, tomes) */
             me: {
-              /** @description Éléments cochés par l’utilisateur */
-              checked: number;
-              /** @description Éléments connus en base */
-              total: number;
-            };
-            /** @description Progression sur les éléments d’un type dérivé (épisodes, tomes) */
-            partner: {
               /** @description Éléments cochés par l’utilisateur */
               checked: number;
               /** @description Éléments connus en base */
@@ -3246,10 +5092,12 @@ export interface components {
       runtime_min: number | null;
       /** @description Date de première diffusion, AAAA-MM-JJ */
       air_date: string | null;
-      /** @description Coché par chacun — jamais nul : ne pas avoir coché est une information */
+      /** @description Mon état, et combien d’autres l’ont vu */
       watched: {
+        /** @description Jamais nul : ne pas avoir coché est une information */
         me: boolean;
-        partner: boolean;
+        /** @description Nombre d’autres membres ayant coché cet épisode */
+        others: number;
       };
     };
     VolumeDetail: {
@@ -3262,6 +5110,7 @@ export interface components {
       release_date: string | null;
       /** @description Ajouté à la main plutôt que par la source — seuls ceux-là sont supprimables */
       manual: boolean;
+      /** @description Mon suivi du tome, et combien d’autres en ont un */
       tracking: {
         me: ({
           /** Format: uuid */
@@ -3275,19 +5124,8 @@ export interface components {
           rating: number | null;
           review: string | null;
         }) | null;
-        /** @description L’autre compte de la médiathèque */
-        partner: ({
-          /** Format: uuid */
-          user_id: string;
-          owned: boolean;
-          /**
-           * @description Statut de suivi
-           * @enum {string}
-           */
-          status: "todo" | "doing" | "done";
-          rating: number | null;
-          review: string | null;
-        }) | null;
+        /** @description Nombre d’autres membres ayant posé un suivi sur ce tome */
+        others: number;
       };
     };
     ComicSeriesMetadata: {
@@ -3455,7 +5293,7 @@ export interface components {
       in_progress: {
         book: ({
             media: components["schemas"]["MediaSummary"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTracking"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -3486,7 +5324,7 @@ export interface components {
           })[];
         comic_series: ({
             media: components["schemas"]["MediaSummary"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTracking"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -3517,7 +5355,7 @@ export interface components {
           })[];
         game: ({
             media: components["schemas"]["MediaSummary"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTracking"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -3548,7 +5386,7 @@ export interface components {
           })[];
         movie: ({
             media: components["schemas"]["MediaSummary"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTracking"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -3579,7 +5417,7 @@ export interface components {
           })[];
         tv: ({
             media: components["schemas"]["MediaSummary"];
-            /** @description Ton suivi — c’est ton écran, pas celui du couple */
+            /** @description Ton suivi — c’est ton écran, pas celui de la médiathèque */
             tracking: components["schemas"]["UserTracking"];
             /** @description Nulle pour les types sans éléments à cocher */
             progress: {
@@ -3609,43 +5447,58 @@ export interface components {
             }]>) | null;
           })[];
       };
-      partner: {
-        /** @description Nul tant que le second compte n’existe pas */
-        user: ({
-          /** Format: uuid */
-          id: string;
-          pseudo: string;
-          avatar_url: string | null;
-          /** @description Couleur d'identité au format #RRGGBB */
-          identity_color: string;
-        }) | null;
-        /** @description Gestes récents, du plus récent au plus ancien */
-        activity: ({
+      /** @description Gestes récents des membres suivis, du plus récent au plus ancien */
+      feed: ({
+          /** @description L’auteur du geste — le fil en mélange plusieurs */
+          user: {
+            /** Format: uuid */
+            id: string;
+            pseudo: string;
+            avatar_url: string | null;
+            /** @description Couleur d'identité au format #RRGGBB */
+            identity_color: string;
             /**
-             * @description Un seul geste par œuvre, le plus significatif : terminé l’emporte sur noté, qui l’emporte sur commencé
+             * @description Rôle du membre
              * @enum {string}
              */
-            kind: "finished" | "rated" | "started";
-            /**
-             * Format: date-time
-             * @description Date du geste
-             */
-            at: string;
-            media: components["schemas"]["MediaSummary"];
-            rating: number | null;
-            review: string | null;
-          })[];
-      };
+            role: "user" | "admin";
+            /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+            deactivated: boolean;
+          };
+          /**
+           * @description Un seul geste par œuvre et par membre, le plus significatif : terminé l’emporte sur noté, qui l’emporte sur commencé
+           * @enum {string}
+           */
+          kind: "finished" | "rated" | "started";
+          /**
+           * Format: date-time
+           * @description Date du geste
+           */
+          at: string;
+          media: components["schemas"]["MediaSummary"];
+          rating: number | null;
+          review: string | null;
+        })[];
+      /** @description Nombre de membres suivis — à zéro, le fil est vide et c’est normal */
+      following_count: number;
     };
     CompareResponse: {
-      partner: ({
+      /** @description Le membre comparé — jamais nul, puisqu’il est choisi */
+      with: {
         /** Format: uuid */
         id: string;
         pseudo: string;
         avatar_url: string | null;
         /** @description Couleur d'identité au format #RRGGBB */
         identity_color: string;
-      }) | null;
+        /**
+         * @description Rôle du membre
+         * @enum {string}
+         */
+        role: "user" | "admin";
+        /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+        deactivated: boolean;
+      };
       /** @description Terminées par les deux, écarts de notes du plus grand au plus petit */
       both_finished: ({
           media: components["schemas"]["MediaSummary"];
@@ -3653,7 +5506,7 @@ export interface components {
             rating: number | null;
             finished_at: string | null;
           };
-          partner: {
+          them: {
             rating: number | null;
             finished_at: string | null;
           };
@@ -3661,12 +5514,12 @@ export interface components {
           rating_gap: number | null;
         })[];
       /** @description Ce qu’il ou elle a adoré et que tu n’as pas commencé */
-      loved_by_partner: ({
+      loved_by_them: ({
           media: components["schemas"]["MediaSummary"];
           /** @description Note sur 10 */
-          partner_rating: number;
-          partner_review: string | null;
-          partner_finished_at: string | null;
+          their_rating: number;
+          their_review: string | null;
+          their_finished_at: string | null;
         })[];
     };
   };

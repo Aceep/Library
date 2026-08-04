@@ -33,6 +33,9 @@ export default function AppShell() {
                 {typeLabelPlural(type)}
               </NavLink>
             ))}
+            <NavLink to="/membres" className={navClass}>
+              Membres
+            </NavLink>
             <NavLink to="/comparer" className={navClass}>
               Comparer
             </NavLink>
@@ -56,7 +59,9 @@ export default function AppShell() {
             <NavLink to="/recherche" className={styles.searchLink}>
               Ajouter une œuvre
             </NavLink>
-            <IdentityDot account={user} withName />
+            <NavLink to={`/membres/${user.id}`} className={styles.identityLink}>
+              <IdentityDot account={user} withName />
+            </NavLink>
             <button type="button" className={styles.logout} onClick={() => void logout()}>
               Déconnexion
             </button>

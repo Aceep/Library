@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { applyTrackingUpdate } from '../api/cache'
 import { queryKeys } from '../api/keys'
-import { ApiError } from '../api/client'
 import {
   deleteMedia,
   deleteTracking,
@@ -19,7 +18,7 @@ import ErrorNotice from '../components/ErrorNotice'
 import MediaMetadata from '../components/MediaMetadata'
 import ProgressBar from '../components/ProgressBar'
 import SeasonList from '../components/SeasonList'
-import TrackingPanel, { PartnerTracking } from '../components/TrackingPanel'
+import TrackingPanel, { FollowedTrackings } from '../components/TrackingPanel'
 import VolumeGrid from '../components/VolumeGrid'
 import { useSession } from '../session/SessionContext'
 import styles from './MediaDetail.module.css'
@@ -31,7 +30,7 @@ export default function MediaDetail() {
 }
 
 function Detail({ id }: { id: string }) {
-  const { user, partner } = useSession()
+  const { user, isAdmin } = useSession()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [refreshResult, setRefreshResult] = useState<RefreshResponse | null>(null)
@@ -111,19 +110,14 @@ function Detail({ id }: { id: string }) {
 
           {detail.summary ? <p className={styles.summary}>{detail.summary}</p> : null}
 
+          {/* L'API ne renvoie plus que ma progression sur la fiche : celle des
+              autres se lit œuvre par œuvre dans leurs suivis, plus bas. */}
           <div className={styles.progressPair}>
             <ProgressLine
               label={user.pseudo}
               color={user.identity_color}
               progress={detail.progress.me}
             />
-            {partner ? (
-              <ProgressLine
-                label={partner.pseudo}
-                color={partner.identity_color}
-                progress={detail.progress.partner}
-              />
-            ) : null}
           </div>
 
           <MediaMetadata detail={detail} />
@@ -166,36 +160,34 @@ function Detail({ id }: { id: string }) {
           error={patch.error ?? removeTracking.error}
         />
 
-        {partner ? (
-          <PartnerTracking tracking={detail.tracking.partner} account={partner} type={detail.type} />
-        ) : null}
+        <FollowedTrackings
+          following={detail.tracking.following}
+          others={detail.tracking.others}
+          type={detail.type}
+        />
       </div>
 
       {/* Saisons, épisodes et tomes : chargés à la demande, jamais avec la
           fiche — `GET /media/:id` n'en contient qu'un résumé. */}
       {detail.type === 'tv' ? (
-        <SeasonList
-          mediaId={id}
-          seasons={detail.seasons}
-          user={user}
-          partner={partner}
-        />
+        <SeasonList mediaId={id} seasons={detail.seasons} user={user} />
       ) : null}
 
       {detail.type === 'comic_series' ? (
-        <VolumeGrid mediaId={id} user={user} partner={partner} />
+        <VolumeGrid mediaId={id} user={user} />
       ) : null}
 
-      <DangerZone
-        title={detail.title}
-        onDelete={() => removeMedia.mutate()}
-        isDeleting={removeMedia.isPending}
-        error={removeMedia.error}
-        onFallback={() => {
-          removeMedia.reset()
-          removeTracking.mutate()
-        }}
-      />
+      {/* Supprimer pour tout le monde est passé aux administrateurs seuls :
+          l'afficher aux autres reviendrait à promettre un geste que le back
+          refusera en 403. */}
+      {isAdmin ? (
+        <DangerZone
+          title={detail.title}
+          onDelete={() => removeMedia.mutate()}
+          isDeleting={removeMedia.isPending}
+          error={removeMedia.error}
+        />
+      ) : null}
     </article>
   )
 }
@@ -231,16 +223,13 @@ function DangerZone({
   onDelete,
   isDeleting,
   error,
-  onFallback,
 }: {
   title: string
   onDelete: () => void
   isDeleting: boolean
   error: unknown
-  onFallback: () => void
 }) {
   const [confirming, setConfirming] = useState(false)
-  const conflict = error instanceof ApiError && error.status === 409
 
   return (
     <section className={styles.danger}>
@@ -276,13 +265,6 @@ function DangerZone({
           {error ? (
             <div className={styles.dangerError}>
               <ErrorNotice error={error} />
-              {/* Un 409 n'est pas un échec technique : le back explique
-                  pourquoi il refuse, et le repli est de ne retirer que soi. */}
-              {conflict ? (
-                <button type="button" className={styles.ghost} onClick={onFallback}>
-                  Retirer seulement de ma bibliothèque
-                </button>
-              ) : null}
             </div>
           ) : null}
         </div>

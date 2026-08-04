@@ -4,7 +4,13 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchLibrary } from '../api/endpoints'
 import type { LibraryFilters, LibrarySort } from '../api/endpoints'
 import { MEDIA_TYPES, isDerivedStatusType, statusLabel, typeLabelPlural } from '../api/schema'
-import type { LibraryItem, MediaType, TrackingStatus, UserTracking } from '../api/schema'
+import type {
+  Account,
+  LibraryItem,
+  MediaType,
+  TrackingStatus,
+  UserTracking,
+} from '../api/schema'
 import Cover from '../components/Cover'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
@@ -38,7 +44,7 @@ export default function TypeLibrary() {
 }
 
 function Library({ type }: { type: MediaType }) {
-  const { user, partner } = useSession()
+  const { user } = useSession()
   const [status, setStatus] = useState<TrackingStatus | null>(null)
   const [ownedOnly, setOwnedOnly] = useState(false)
   const [sort, setSort] = useState<LibrarySort>('added')
@@ -124,14 +130,7 @@ function Library({ type }: { type: MediaType }) {
         <>
           <ul className={styles.grid}>
             {items.map((item) => (
-              <MediaCard
-                key={item.id}
-                item={item}
-                meColor={user.identity_color}
-                mePseudo={user.pseudo}
-                partnerColor={partner?.identity_color ?? null}
-                partnerPseudo={partner?.pseudo ?? null}
-              />
+              <MediaCard key={item.id} item={item} me={user} />
             ))}
           </ul>
 
@@ -159,19 +158,7 @@ function Library({ type }: { type: MediaType }) {
   )
 }
 
-function MediaCard({
-  item,
-  meColor,
-  mePseudo,
-  partnerColor,
-  partnerPseudo,
-}: {
-  item: LibraryItem
-  meColor: string
-  mePseudo: string
-  partnerColor: string | null
-  partnerPseudo: string | null
-}) {
+function MediaCard({ item, me }: { item: LibraryItem; me: Account }) {
   return (
     <li className={styles.card}>
       <Link to={`/media/${item.id}`} className={styles.cardLink}>
@@ -184,24 +171,36 @@ function MediaCard({
           {/* Nul sur les types sans éléments à cocher : le composant s'efface. */}
           <ProgressBar
             progress={item.progress}
-            color={meColor}
+            color={me.identity_color}
             label={`Progression sur ${item.title}`}
           />
 
           <div className={styles.trackings}>
             <TrackingLine
               tracking={item.tracking.me}
-              color={meColor}
-              pseudo={mePseudo}
+              color={me.identity_color}
+              pseudo={me.pseudo}
               type={item.type}
             />
-            {partnerColor && partnerPseudo ? (
+            {/* Un rayon reste lisible : on nomme les abonnements, on compte le
+                reste. La vignette n'est pas l'endroit où tout déballer. */}
+            {item.tracking.following.map((entry) => (
               <TrackingLine
-                tracking={item.tracking.partner}
-                color={partnerColor}
-                pseudo={partnerPseudo}
+                key={entry.user.id}
+                tracking={entry.tracking}
+                color={entry.user.identity_color}
+                pseudo={entry.user.pseudo}
                 type={item.type}
               />
+            ))}
+            {item.tracking.others.count > 0 ? (
+              <p className={styles.othersLine}>
+                +{item.tracking.others.count} autre
+                {item.tracking.others.count > 1 ? 's' : ''}
+                {item.tracking.others.average_rating !== null
+                  ? ` · ${item.tracking.others.average_rating}/10 en moyenne`
+                  : ''}
+              </p>
             ) : null}
           </div>
         </div>

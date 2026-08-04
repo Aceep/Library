@@ -198,3 +198,11 @@
   background: var(--paper-sunken);
   color: var(--ink);
 }
+
+/* Combien d'autres membres suivent ce tome — sans les nommer. */
+.othersCount {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  margin-left: auto;
+}

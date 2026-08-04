@@ -5,9 +5,11 @@ import ComingSoon from './pages/ComingSoon'
 import Compare from './pages/Compare'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
+import Members from './pages/Members'
 import MediaDetail from './pages/MediaDetail'
 import Search from './pages/Search'
 import TypeLibrary from './pages/TypeLibrary'
+import UserProfile from './pages/UserProfile'
 import { SessionProvider, useSessionQuery } from './session/SessionContext'
 import styles from './App.module.css'
 
@@ -45,6 +47,8 @@ export default function App() {
           <Route path="bibliotheque/:type" element={<TypeLibrary />} />
           <Route path="media/:id" element={<MediaDetail />} />
           <Route path="recherche" element={<Search />} />
+          <Route path="membres" element={<Members />} />
+          <Route path="membres/:id" element={<UserProfile />} />
           <Route path="comparer" element={<Compare />} />
           <Route
             path="musique"

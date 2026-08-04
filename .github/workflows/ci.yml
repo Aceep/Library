@@ -1,0 +1,40 @@
+name: CI
+
+# Sur main et sur les propositions de fusion. Les branches de travail sont
+# couvertes par leur pull request : les vérifier deux fois ne dirait rien de
+# plus et doublerait l'attente.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verifier:
+    name: Lint et build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 20 exigé par `engines` et `.nvmrc` : Vite 5 et openapi-typescript
+      # ne tournent pas en deçà.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` plutôt que `npm install` : il installe exactement le lockfile
+      # et échoue s'il diverge de package.json, au lieu de le réécrire en
+      # silence.
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # `npm run build` enchaîne `tsc --noEmit` puis `vite build` : la
+      # compilation des types est donc couverte ici, pas besoin d'une étape à
+      # part.
+      - name: Build
+        run: npm run build

@@ -1,0 +1,85 @@
+.cover {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  aspect-ratio: 2 / 3;
+  flex: none;
+}
+
+.sm {
+  width: 46px;
+}
+
+.base {
+  width: 100%;
+}
+
+.lg {
+  width: 200px;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Repli : teinte dérivée du type, initiale du titre. */
+.fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  text-align: center;
+}
+
+.fallback[data-type='movie'] {
+  background: #efe6dc;
+}
+
+.fallback[data-type='tv'] {
+  background: #e4e8ea;
+}
+
+.fallback[data-type='book'] {
+  background: #eae6da;
+}
+
+.fallback[data-type='comic_series'] {
+  background: #eee3e3;
+}
+
+.fallback[data-type='game'] {
+  background: #e3e9e3;
+}
+
+.initial {
+  font-family: var(--font-serif);
+  font-size: 1.75em;
+  line-height: 1;
+  color: var(--ink-soft);
+}
+
+.sm .initial {
+  font-size: 1.1rem;
+}
+
+.lg .initial {
+  font-size: 3rem;
+}
+
+.typeTag {
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.sm .typeTag {
+  display: none;
+}

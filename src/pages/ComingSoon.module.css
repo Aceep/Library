@@ -1,0 +1,23 @@
+.page {
+  max-width: var(--measure);
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: var(--space-3);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-4);
+}
+
+.note {
+  color: var(--ink-muted);
+  max-width: 46ch;
+}

@@ -481,9 +481,11 @@ export interface paths {
      *
      * `tracking.following` ne contient que les membres **que tu suis** qui suivent aussi l’œuvre ; les autres sont réduits à `tracking.others` — un compte et une note moyenne. Rien n’est caché : `GET /media/:id/trackers` déplie la liste entière.
      *
-     * **Filtres** — `type` sur l’œuvre, `status` et `owned` sur *ton* suivi. Filtrer sur `status` ou `owned` écarte donc les œuvres que tu ne suis pas.
+     * **Filtres** — `type` sur l’œuvre, `status`, `owned` et `favorite` sur *ton* suivi. Filtrer sur l’un des trois écarte donc les œuvres que tu ne suis pas.
      *
      * **Pagination** — `limit` (défaut 40, maximum 100) et `cursor`, comme `GET /search`. Le curseur porte la clé de tri du dernier élément rendu : la page suivante reste juste même si des œuvres sont ajoutées ou retirées entre deux appels, ce qu’un décalage numérique ne garantit pas.
+     *
+     * Pour la bibliothèque d’un membre plutôt que la commune, `GET /users/:id/media` rend exactement les mêmes éléments.
      */
     get: {
       parameters: {
@@ -498,6 +500,8 @@ export interface paths {
           status?: "todo" | "doing" | "done";
           /** @description Filtre sur **ta** possession */
           owned?: string;
+          /** @description Filtre sur **tes** coups de cœur */
+          favorite?: string;
           /** @description `added` = ajout le plus récent d’abord (défaut), `title` = ordre alphabétique */
           sort?: "added" | "title";
         };
@@ -613,6 +617,77 @@ export interface paths {
         };
         /** @description Default Response */
         503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/users/{id}/media": {
+    /**
+     * La bibliothèque d’un membre
+     * @description Les œuvres que **ce membre** suit — ce que `tracked_count` compte sur son profil, déplié. Consultable pour n’importe qui, désactivé compris : tout est public, l’abonnement ne fait que trier.
+     *
+     * **La réponse a exactement la forme de `GET /media`** — même schéma, même bloc de suivi collectif, même progression, même pagination. C’est délibéré : la même carte s’affiche sur la bibliothèque et sur un profil, sans écrire deux composants.
+     *
+     * Tout y reste rendu **de ton point de vue** : `tracking.me` est ton suivi à toi — souvent nul sur le profil de quelqu’un d’autre, c’est normal —, `progress` ta progression sur tes épisodes ou tes tomes. Avec une exception nécessaire : **le membre dont c’est le profil est toujours détaillé dans `tracking.following`**, que tu le suives ou non, et il ne compte alors pas dans `tracking.others`. Sans elle, sa propre page cacherait ses propres notes derrière un résumé.
+     *
+     * **Filtres** — `type` sur l’œuvre, `status`, `owned` et `favorite` sur **son** suivi à lui. C’est l’inverse de `GET /media`, où ils portent sur le tien. `?favorite=true` sur un profil, c’est « ce qu’il a adoré ».
+     *
+     * **Tri** — `rating` par défaut : ses meilleures notes d’abord, ses œuvres non notées en fin de liste. `added` et `title` se comportent comme sur `GET /media`.
+     *
+     * `GET /users/me/media` fonctionne comme raccourci vers la session, comme sur `following` et `followers`.
+     *
+     * **Coût** — quatre requêtes par page, quel que soit le nombre de membres de la médiathèque et quel que soit le nombre de personnes que tu suis.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+          /** @description Filtre par type d’œuvre */
+          type?: "book" | "comic_series" | "movie" | "tv" | "game";
+          /** @description Filtre sur **son** statut à lui, pas le tien */
+          status?: "todo" | "doing" | "done";
+          /** @description Filtre sur **sa** possession à lui, pas la tienne */
+          owned?: string;
+          /** @description Filtre sur **ses** coups de cœur à lui, pas les tiens */
+          favorite?: string;
+          /** @description `rating` = ses meilleures notes d’abord (défaut), non notées en fin de liste ; `added` = ajout le plus récent à la bibliothèque commune ; `title` = ordre alphabétique */
+          sort?: "rating" | "added" | "title";
+        };
+        path: {
+          id: string | "me";
+        };
+      };
+      responses: {
+        /** @description Page de bibliothèque */
+        200: {
+          content: {
+            "application/json": {
+              items: components["schemas"]["LibraryItem"][];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };
@@ -921,6 +996,10 @@ export interface paths {
      *
      * **`status` est refusé (400) sur `tv` et `comic_series`** : leur statut est dérivé des épisodes ou des tomes cochés et recalculé par le serveur. L’accepter donnerait au client un moyen d’écrire une valeur que le prochain recalcul effacerait — un mensonge à retardement. La possession, elle, reste saisie à la main pour tous les types.
      *
+     * **`favorite`** est le coup de cœur (§8) : un booléen indépendant de la note, accepté sur tous les types, y compris dérivés. Un film à 7 qu’on adore n’est pas un film à 9 qu’on admire.
+     *
+     * **Passer une œuvre à `done` crée une entrée de journal**, datée de `finished_at` si elle est fournie et du jour même sinon, avec la note du moment. Une entrée existe déjà pour ce jour-là ? Aucune seconde n’est créée : décocher puis recocher ne compte pas pour deux lectures. Le détail est dans `GET /media/:id/log`.
+     *
      * La réponse contient l’agrégat recalculé pour les types dérivés.
      */
     patch: {
@@ -944,6 +1023,8 @@ export interface paths {
              * @enum {string}
              */
             status?: "todo" | "doing" | "done";
+            /** @description Coup de cœur — accepté sur tous les types */
+            favorite?: boolean;
             rating?: number | null;
             review?: string | null;
             started_at?: string | null;
@@ -1483,6 +1564,12 @@ export interface paths {
     /**
      * Profil d’un membre
      * @description Le profil public d’un membre, désactivé compris. Tout membre voit celui de tout autre : il n’existe aucun réglage pour le restreindre.
+     *
+     * **`counts` s’ajoute ici et nulle part ailleurs** — la répartition de sa bibliothèque par type et par statut, de quoi dessiner un en-tête et des onglets sans charger une seule œuvre. Toutes les clés sont présentes, à zéro s’il le faut ; leur somme vaut `tracked_count`.
+     *
+     * **`showcase`** (§8) est la vitrine qu’il a choisie : jusqu’à 8 œuvres, tous types confondus, **dans son ordre à lui**. Vide tant qu’il n’a rien posé. Lui seul la modifie, par `PUT /me/showcase`.
+     *
+     * Pour déplier la liste, `GET /users/:id/media`.
      */
     get: {
       parameters: {
@@ -1491,7 +1578,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Profil d’un membre */
+        /** @description Profil détaillé d’un membre */
         200: {
           content: {
             "application/json": {
@@ -1521,6 +1608,25 @@ export interface paths {
               followed_by_me: boolean;
               /** Format: date-time */
               joined_at: string;
+              /** @description Répartition de la bibliothèque d’un membre */
+              counts: {
+                /** @description Œuvres suivies par type */
+                by_type: {
+                  book: number;
+                  comic_series: number;
+                  movie: number;
+                  tv: number;
+                  game: number;
+                };
+                /** @description Œuvres suivies par statut */
+                by_status: {
+                  todo: number;
+                  doing: number;
+                  done: number;
+                };
+              };
+              /** @description Sa vitrine, dans l’ordre qu’il a choisi. Vide tant qu’il n’en a pas posé */
+              showcase: components["schemas"]["MediaSummary"][];
             };
           };
         };
@@ -1848,6 +1954,53 @@ export interface paths {
                 /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
                 deactivated: boolean;
               };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/showcase": {
+    /**
+     * Poser sa vitrine
+     * @description Les œuvres mises en avant sur son profil — 8 au plus, tous types confondus, **dans l’ordre du tableau envoyé**. C’est ce qui donne une personnalité à un profil, là où un compteur ne dit rien.
+     *
+     * **Remplacement complet.** On envoie la vitrine entière, pas un ajout ni un retrait. Un tableau vide la vide. Trois routes séparées — ajouter, retirer, déplacer — produiraient des positions incohérentes dès deux onglets ouverts ; ici la dernière écriture gagne, entièrement.
+     *
+     * Trois refus possibles, tous en `400` et tous **complets** — rien n’est écrit partiellement : plus de 8 œuvres, un identifiant répété, ou une œuvre absente de la bibliothèque commune.
+     *
+     * **Seulement la sienne.** Il n’existe aucune route pour poser la vitrine de quelqu’un d’autre, administrateur compris.
+     *
+     * Une œuvre supprimée de la bibliothèque commune quitte d’elle-même les vitrines qui la portaient.
+     */
+    put: {
+      /** @description Vitrine du profil */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Les œuvres de la vitrine, dans l’ordre. Une liste vide la vide */
+            media_ids: string[];
+          };
+        };
+      };
+      responses: {
+        /** @description Vitrine après écriture */
+        200: {
+          content: {
+            "application/json": {
+              showcase: components["schemas"]["MediaSummary"][];
             };
           };
         };
@@ -2812,6 +2965,298 @@ export interface paths {
       };
     };
   };
+  "/media/{id}/log": {
+    /**
+     * Le journal d’un membre sur une œuvre
+     * @description Les fois où cette œuvre a été lue ou vue, de la plus récente à la plus ancienne. `tracking.me.times` en donne le nombre sur chaque fiche et dans chaque bibliothèque ; cette route en donne le détail.
+     *
+     * **`user_id` choisit de qui.** Absent, c’est le tien. Le journal de n’importe quel membre est lisible — une lecture datée n’est pas plus privée qu’une note, et le modèle est le même depuis l’étape 7.
+     *
+     * Chaque entrée porte sa propre note et son propre commentaire, distincts de ceux de l’œuvre : `rating` dit ce qu’on en a pensé **cette fois-là**, `tracking.rating` ce qu’on en pense **maintenant**.
+     *
+     * **Pagination** — `limit` et `cursor`, comme partout. L’ordre est la date de fin décroissante, l’identifiant départageant deux entrées du même jour.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+          /** @description De qui on lit le journal. Absent = le sien. Celui de tout le monde est lisible */
+          user_id?: string;
+        };
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Page de journal */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** Format: uuid */
+                  id: string;
+                  /** Format: uuid */
+                  user_id: string;
+                  /** Format: uuid */
+                  media_id: string;
+                  started_at: string | null;
+                  /** Format: date */
+                  finished_at: string;
+                  /** @description La note de cette fois-là, indépendante de celle de l’œuvre */
+                  rating: number | null;
+                  /** @description Un mot sur cette fois-là, distinct de la critique de l’œuvre */
+                  comment: string | null;
+                  /** Format: date-time */
+                  created_at: string;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Enregistrer une lecture ou un visionnage
+     * @description Une fois de plus. C’est le geste qui manquait : « je l’ai revu », « je l’ai relu », y compris longtemps après.
+     *
+     * **Rien n’est touché d’autre.** Ni le statut, ni les épisodes, ni les tomes cochés — une entrée est une ligne d’historique, pas une remise à zéro. Relire un manga ne fait pas perdre quarante tomes de suivi.
+     *
+     * **`finished_at` est obligatoire, `started_at` non** : on se souvient d’avoir fini bien plus souvent que d’avoir commencé, et c’est la date de fin qui ordonne le journal. Une date de début postérieure à la fin est refusée (`400`).
+     *
+     * **La note de l’entrée remonte au suivi si l’entrée est la plus récente.** Noter la dernière fois, c’est dire ce qu’on en pense aujourd’hui. Ajouter après coup une relecture ancienne ne change donc rien à la note de l’œuvre.
+     *
+     * L’œuvre entre dans ta bibliothèque si elle n’y était pas : enregistrer une lecture vaut suivi.
+     *
+     * Écrire dans le journal de quelqu’un d’autre est refusé (`403`), rôle compris.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Nouvelle entrée de journal */
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description Facultatif. S’il désigne quelqu’un d’autre que la session, la requête est refusée (403)
+             */
+            user_id?: string;
+            started_at?: string | null;
+            /**
+             * Format: date
+             * @description Obligatoire : c’est elle qui date et ordonne l’entrée
+             */
+            finished_at: string;
+            rating?: number | null;
+            comment?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Entrée de journal et suivi remis à jour */
+        201: {
+          content: {
+            "application/json": {
+              /** @description Une entrée de journal */
+              entry: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                user_id: string;
+                /** Format: uuid */
+                media_id: string;
+                started_at: string | null;
+                /** Format: date */
+                finished_at: string;
+                /** @description La note de cette fois-là, indépendante de celle de l’œuvre */
+                rating: number | null;
+                /** @description Un mot sur cette fois-là, distinct de la critique de l’œuvre */
+                comment: string | null;
+                /** Format: date-time */
+                created_at: string;
+              };
+              tracking: components["schemas"]["UserTracking"];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/log/{id}": {
+    /**
+     * Supprimer une entrée de journal
+     * @description Efface une fois du journal. `times` diminue d’autant.
+     *
+     * **La note de l’œuvre ne bouge pas.** Elle est ce qu’on en pense aujourd’hui, pas une moyenne de l’historique : supprimer une entrée corrige un souvenir, pas un avis. Pour changer la note, `PATCH /media/:id/tracking`.
+     *
+     * La réponse rend le suivi remis à jour, pour éviter au client un aller-retour rien que pour un compteur.
+     *
+     * Supprimer l’entrée de quelqu’un d’autre est refusé (`403`), rôle compris.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Suivi après suppression d’une entrée */
+        200: {
+          content: {
+            "application/json": {
+              tracking: components["schemas"]["UserTracking"];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Corriger une entrée de journal
+     * @description Seuls les champs envoyés sont modifiés. Une entrée est un fait daté : on la corrige, on ne la réécrit pas en bloc.
+     *
+     * Comme à la création, **la note remonte au suivi si l’entrée est la plus récente**. Changer la date peut donc faire d’une vieille entrée la plus récente, et sa note devient alors celle de l’œuvre.
+     *
+     * Modifier l’entrée de quelqu’un d’autre est refusé (`403`), rôle compris.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Correction d’une entrée de journal */
+      requestBody: {
+        content: {
+          "application/json": {
+            started_at?: string | null;
+            /** Format: date */
+            finished_at?: string;
+            rating?: number | null;
+            comment?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Entrée de journal et suivi remis à jour */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une entrée de journal */
+              entry: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                user_id: string;
+                /** Format: uuid */
+                media_id: string;
+                started_at: string | null;
+                /** Format: date */
+                finished_at: string;
+                /** @description La note de cette fois-là, indépendante de celle de l’œuvre */
+                rating: number | null;
+                /** @description Un mot sur cette fois-là, distinct de la critique de l’œuvre */
+                comment: string | null;
+                /** Format: date-time */
+                created_at: string;
+              };
+              tracking: components["schemas"]["UserTracking"];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -3230,6 +3675,10 @@ export interface components {
       completed_at: string | null;
       /** @description Vrai quand du contenu est paru après `completed_at` sans être encore coché */
       has_new_content: boolean;
+      /** @description Coup de cœur — indépendant de la note */
+      favorite: boolean;
+      /** @description Nombre de fois lue ou vue — le détail est dans `GET /media/:id/log` */
+      times: number;
       /** Format: date-time */
       updated_at: string;
     };
@@ -3299,6 +3748,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -3354,6 +3805,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -3431,6 +3884,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -3524,6 +3979,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -3601,6 +4058,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -3678,6 +4137,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -4582,6 +5043,10 @@ export interface components {
       completed_at: string | null;
       /** @description Vrai quand du contenu est paru après `completed_at` sans être encore coché */
       has_new_content: boolean;
+      /** @description Coup de cœur — indépendant de la note */
+      favorite: boolean;
+      /** @description Nombre de fois lue ou vue — le détail est dans `GET /media/:id/log` */
+      times: number;
       /** Format: date-time */
       updated_at: string;
     };
@@ -4651,6 +5116,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -4706,6 +5173,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -4783,6 +5252,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -4876,6 +5347,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -4953,6 +5426,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {
@@ -5030,6 +5505,8 @@ export interface components {
           count: number;
           /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
           average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
         };
       };
       progress: {

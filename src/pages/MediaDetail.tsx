@@ -15,6 +15,7 @@ import { typeLabel } from '../api/schema'
 import type { MediaDetail as MediaDetailType, RefreshResponse } from '../api/schema'
 import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
+import MediaLog from '../components/MediaLog'
 import MediaMetadata from '../components/MediaMetadata'
 import ProgressBar from '../components/ProgressBar'
 import Screenshots from '../components/Screenshots'
@@ -46,6 +47,9 @@ function Detail({ id }: { id: string }) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.home })
     void queryClient.invalidateQueries({ queryKey: queryKeys.library })
     void queryClient.invalidateQueries({ queryKey: queryKeys.compare })
+    // Passer l'œuvre à « terminé » crée une entrée de journal côté serveur :
+    // sans ça le panneau afficherait un compte à jour et une liste d'avant.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.log(id, null) })
   }
 
   const patch = useMutation({
@@ -168,6 +172,19 @@ function Detail({ id }: { id: string }) {
           type={detail.type}
         />
       </div>
+
+      {/* Le journal est à côté du suivi, pas dedans : le suivi dit ce que j'en
+          pense maintenant, le journal ce que j'en ai pensé chaque fois. */}
+      <MediaLog
+        mediaId={id}
+        type={detail.type}
+        tracking={detail.tracking.me}
+        onTracking={(tracking) => {
+          queryClient.setQueryData(queryKeys.media(id), (previous?: MediaDetailType) =>
+            previous ? applyTrackingUpdate(previous, { tracking, series: null }) : previous,
+          )
+        }}
+      />
 
       {/* Saisons, épisodes et tomes : chargés à la demande, jamais avec la
           fiche — `GET /media/:id` n'en contient qu'un résumé. */}

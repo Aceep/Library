@@ -5,6 +5,7 @@ import type {
   EpisodeDetail,
   HomeResponse,
   LibraryItem,
+  LogEntry,
   MediaDetail,
   MediaSource,
   MediaType,
@@ -114,6 +115,73 @@ export const updateTracking = (id: string, patch: TrackingPatch) =>
 
 /** Retirer l'œuvre de ma bibliothèque. Le geste courant. Répond 204. */
 export const deleteTracking = (id: string) => api.delete<void>(`/media/${id}/tracking`)
+
+/* ------------------------------------------------------------------ */
+/* Journal                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * L'historique daté, à côté du résumé courant.
+ *
+ * `user_media` dit ce qu'on pense d'une œuvre **maintenant** ; le journal dit
+ * ce qu'on en a pensé **chaque fois**. Une œuvre pouvait être terminée, elle ne
+ * pouvait pas l'avoir été deux fois : `finished_at` écrasait la date d'avant.
+ *
+ * Trois choses à ne pas perdre de vue :
+ *
+ * - Passer une œuvre à `done` crée l'entrée **toute seule** ; `addLogEntry` ne
+ *   sert qu'aux fois que l'application n'a pas vues — une relecture ancienne.
+ * - Une entrée ne touche **jamais** aux épisodes ni aux tomes cochés. Relire un
+ *   manga ne remet pas quarante tomes à zéro.
+ * - La note d'une entrée remonte au suivi **si l'entrée est la plus récente**.
+ *   L'inverse n'existe pas : corriger la note de l'œuvre ne réécrit pas
+ *   l'histoire. C'est pourquoi chaque écriture renvoie le suivi recalculé.
+ */
+export const fetchLog = (
+  mediaId: string,
+  userId: string | null,
+  cursor: string | null,
+  signal?: AbortSignal,
+) =>
+  api.get<Page<LogEntry>>(
+    `/media/${mediaId}/log`,
+    { user_id: userId ?? undefined, cursor: cursor ?? undefined },
+    signal,
+  )
+
+/** Ce que renvoie toute écriture de journal : l'entrée, et le suivi recalculé. */
+export interface LogWriteResult {
+  entry: LogEntry
+  tracking: UserTracking
+}
+
+/**
+ * « Je l'ai revu. » `finished_at` est obligatoire — c'est elle qui date et
+ * ordonne l'entrée. Une date de début postérieure à la fin est refusée en 400.
+ *
+ * L'œuvre entre dans ma bibliothèque si elle n'y était pas : enregistrer une
+ * lecture vaut suivi.
+ */
+export interface NewLogEntry {
+  finished_at: string
+  started_at?: string | null
+  rating?: number | null
+  comment?: string | null
+}
+
+export const addLogEntry = (mediaId: string, body: NewLogEntry) =>
+  api.post<LogWriteResult>(`/media/${mediaId}/log`, body)
+
+/** Correction d'un fait daté : seuls les champs envoyés bougent. */
+export const updateLogEntry = (entryId: string, patch: Partial<NewLogEntry>) =>
+  api.patch<LogWriteResult>(`/log/${entryId}`, patch)
+
+/**
+ * Supprimer une entrée corrige un souvenir, pas un avis : la note de l'œuvre ne
+ * bouge pas. Le suivi revient tout de même dans la réponse, `times` en moins.
+ */
+export const deleteLogEntry = (entryId: string) =>
+  api.delete<{ tracking: UserTracking }>(`/log/${entryId}`)
 
 /**
  * Supprimer l'œuvre pour tout le monde. Peut être refusé en `409` — le message

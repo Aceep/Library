@@ -19,6 +19,15 @@ export const queryKeys = {
   library: ['library'] as const,
   libraryWith: (filters: unknown) => ['library', filters] as const,
   media: (id: string) => ['media', id] as const,
+  /**
+   * Le journal d'un membre sur une œuvre — le mien quand `userId` est nul.
+   *
+   * La clé est **volontairement** préfixée par celle de la fiche : cocher le
+   * dernier épisode d'une série la fait passer à « terminé », ce qui crée une
+   * entrée côté serveur. Invalider `media(id)` emporte donc le journal, et le
+   * panneau ne peut pas afficher un compte à jour au-dessus d'une liste d'avant.
+   */
+  log: (mediaId: string, userId: string | null) => ['media', mediaId, 'log', userId] as const,
   episodes: (seasonId: string) => ['episodes', seasonId] as const,
   volumes: (mediaId: string) => ['volumes', mediaId] as const,
   search: (type: string, params: unknown) => ['search', type, params] as const,

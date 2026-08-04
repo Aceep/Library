@@ -3,7 +3,9 @@ import AppShell from './components/AppShell'
 import ErrorNotice from './components/ErrorNotice'
 import ComingSoon from './pages/ComingSoon'
 import Compare from './pages/Compare'
+import AdminInvitations from './pages/AdminInvitations'
 import Dashboard from './pages/Dashboard'
+import Invitation from './pages/Invitation'
 import Login from './pages/Login'
 import Members from './pages/Members'
 import MediaDetail from './pages/MediaDetail'
@@ -14,6 +16,17 @@ import { SessionProvider, useSessionQuery } from './session/SessionContext'
 import styles from './App.module.css'
 
 export default function App() {
+  return (
+    <Routes>
+      {/* Seule page publique : on y arrive par un lien reçu, sans compte.
+          Elle doit donc rester hors du portail de connexion. */}
+      <Route path="/invitation/:token" element={<Invitation />} />
+      <Route path="*" element={<GatedApp />} />
+    </Routes>
+  )
+}
+
+function GatedApp() {
   const { data: session, isPending, error, refetch } = useSessionQuery()
 
   if (isPending) {
@@ -50,6 +63,7 @@ export default function App() {
           <Route path="membres" element={<Members />} />
           <Route path="membres/:id" element={<UserProfile />} />
           <Route path="comparer" element={<Compare />} />
+          <Route path="administration/invitations" element={<AdminInvitations />} />
           <Route
             path="musique"
             element={

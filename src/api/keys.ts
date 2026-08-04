@@ -22,4 +22,8 @@ export const queryKeys = {
   episodes: (seasonId: string) => ['episodes', seasonId] as const,
   volumes: (mediaId: string) => ['volumes', mediaId] as const,
   search: (type: string, params: unknown) => ['search', type, params] as const,
+  invitation: (token: string) => ['invitation', token] as const,
+  /** Préfixe : créer ou annuler une invitation périme tous les filtres. */
+  invitationsAll: ['invitations'] as const,
+  invitations: (status: string | null) => ['invitations', status] as const,
 }

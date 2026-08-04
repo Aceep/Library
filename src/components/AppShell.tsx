@@ -14,7 +14,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
 
 export default function AppShell() {
-  const { user, logout } = useSession()
+  const { user, isAdmin, logout } = useSession()
 
   return (
     <div className={styles.shell}>
@@ -56,6 +56,11 @@ export default function AppShell() {
           </nav>
 
           <div className={styles.account}>
+            {isAdmin ? (
+              <NavLink to="/administration/invitations" className={styles.adminLink}>
+                Inviter
+              </NavLink>
+            ) : null}
             <NavLink to="/recherche" className={styles.searchLink}>
               Ajouter une œuvre
             </NavLink>

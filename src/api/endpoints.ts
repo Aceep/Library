@@ -186,6 +186,93 @@ export interface UserSummary {
   joined_at: string
 }
 
+/* ------------------------------------------------------------------ */
+/* Invitations et inscription — les seules routes sans session          */
+/* ------------------------------------------------------------------ */
+
+export interface InvitationCheck {
+  valid: boolean
+  /** `invite` pour une inscription, `password_reset` pour un mot de passe. Nul si invalide. */
+  kind: 'invite' | 'password_reset' | null
+  /** Le compte visé, pour une réinitialisation seulement. */
+  pseudo: string | null
+}
+
+/**
+ * Vérifie un jeton avant d'afficher le moindre formulaire.
+ *
+ * Répond **toujours** `200`, et ne dit jamais *pourquoi* un jeton est
+ * invalide : expiré, révoqué, déjà consommé ou inventé donnent la même
+ * réponse. Ne pas chercher à en tirer un message plus précis — il n'y en a pas,
+ * et c'est délibéré.
+ */
+export const checkInvitation = (token: string, signal?: AbortSignal) =>
+  api.get<InvitationCheck>(`/invitations/${encodeURIComponent(token)}`, undefined, signal)
+
+/**
+ * Création du compte. Sur invitation uniquement : le serveur n'envoie aucun
+ * e-mail et n'en enverra pas. Le nouveau membre suit d'office celui qui l'a
+ * invité, sans quoi sa première page d'accueil serait vide.
+ */
+export const register = (body: { token: string; pseudo: string; password: string }) =>
+  api.post<{ user: Account }>('/auth/register', body)
+
+/** Même mécanique de jeton, pour un mot de passe oublié. */
+export const resetPassword = (body: { token: string; password: string }) =>
+  api.post<{ user: Account }>('/auth/reset-password', body)
+
+/* ------------------------------------------------------------------ */
+/* Administration des invitations                                      */
+/* ------------------------------------------------------------------ */
+
+export type InvitationStatus = 'pending' | 'used' | 'revoked' | 'expired'
+
+export interface Invitation {
+  id: string
+  kind: 'invite' | 'password_reset'
+  created_by: Account
+  target_user: Account | null
+  expires_at: string
+  used_at: string | null
+  revoked_at: string | null
+  created_at: string
+  status: InvitationStatus
+}
+
+/**
+ * Fabrique un lien d'invitation. C'est à l'administrateur de le transmettre —
+ * par le canal qu'il veut, l'API ne s'en charge pas.
+ *
+ * `note` est un aide-mémoire privé, jamais montré à l'invité.
+ */
+export const createInvitation = (body: { expires_in_hours?: number; note?: string }) =>
+  api.post<{
+    invitation: Invitation
+    /** Affiché une seule fois : la base n'en garde qu'une empreinte. */
+    token: string
+    /** Nul tant que `PUBLIC_APP_URL` n'est pas configurée côté serveur. */
+    url: string | null
+  }>('/admin/invitations', body)
+
+export const fetchInvitations = (
+  status: InvitationStatus | null,
+  cursor: string | null,
+  signal?: AbortSignal,
+) =>
+  api.get<Page<Invitation>>(
+    '/admin/invitations',
+    { status: status ?? undefined, cursor: cursor ?? undefined },
+    signal,
+  )
+
+/**
+ * Révoquer une invitation. `409` si elle a déjà servi — une invitation
+ * consommée n'est plus révocable. L'invitation mise à jour est renvoyée
+ * telle quelle, sans enveloppe.
+ */
+export const revokeInvitation = (id: string) =>
+  api.delete<Invitation>(`/admin/invitations/${id}`)
+
 /**
  * L'annuaire des membres.
  *

@@ -14,7 +14,9 @@ import type {
   SearchResult,
   SeriesAggregate,
   Session,
+  Showcase,
   TrackingStatus,
+  UserDetail,
   UserRole,
   UserTracking,
   VolumeDetail,
@@ -467,7 +469,24 @@ export const fetchUsers = (
   )
 
 export const fetchUser = (id: string, signal?: AbortSignal) =>
-  api.get<UserSummary>(`/users/${id}`, undefined, signal)
+  api.get<UserDetail>(`/users/${id}`, undefined, signal)
+
+/**
+ * Poser sa vitrine — **remplacement complet**, jamais un ajout ni un retrait.
+ *
+ * L'API n'offre pas trois routes séparées, et c'est un choix : à deux onglets
+ * ouverts, ajouter et déplacer produiraient des positions incohérentes. Ici la
+ * dernière écriture gagne, entièrement ; un tableau vide vide la vitrine.
+ *
+ * Les trois refus possibles sont tous en `400` et tous **complets** — rien
+ * n'est écrit à moitié : plus de huit œuvres, un identifiant répété, ou une
+ * œuvre absente de la bibliothèque commune.
+ *
+ * Il n'existe aucune route pour poser la vitrine de quelqu'un d'autre,
+ * administrateur compris. D'où `/me/` dans le chemin, et pas d'identifiant.
+ */
+export const setShowcase = (mediaIds: string[]) =>
+  api.put<{ showcase: Showcase }>('/me/showcase', { media_ids: mediaIds })
 
 /**
  * S'abonner, ou se désabonner. Les deux gestes renvoient l'état **après**

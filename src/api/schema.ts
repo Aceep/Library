@@ -33,6 +33,20 @@ export type RefreshResponse = S['RefreshResponse']
 export type LogEntry =
   paths['/media/{id}/log']['get']['responses'][200]['content']['application/json']['items'][number]
 
+/**
+ * Le profil détaillé d'un membre — ce que rend `GET /users/:id`, et lui seul.
+ *
+ * Il porte deux choses que l'annuaire n'a pas : `counts`, la répartition de sa
+ * bibliothèque, et `showcase`, les œuvres qu'il met en avant. L'annuaire s'en
+ * passe délibérément — quarante répartitions par page pour un chiffre que
+ * personne n'affiche.
+ */
+export type UserDetail =
+  paths['/users/{id}']['get']['responses'][200]['content']['application/json']
+
+/** La vitrine : jusqu'à huit œuvres, tous types confondus, dans son ordre à lui. */
+export type Showcase = UserDetail['showcase']
+
 export type MediaType = MediaSummary['type']
 export type TrackingStatus = UserTracking['status']
 export type MediaSource = MediaSummary['source']

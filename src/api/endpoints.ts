@@ -62,6 +62,12 @@ export interface LibraryFilters {
   /** Coup de cœur — indépendant de la note, et non un seuil de note. */
   favorite?: boolean | null
   sort?: LibrarySort
+  /**
+   * Taille de page. Absent, le back en sert 40 — ce que veut un rayon qu'on
+   * fait défiler. L'accueil, lui, n'en montre que six et n'a aucune raison d'en
+   * télécharger sept fois trop.
+   */
+  limit?: number
 }
 
 /**
@@ -82,6 +88,7 @@ export const fetchLibrary = (
       owned: filters.owned ?? undefined,
       favorite: filters.favorite ? 'true' : undefined,
       sort: filters.sort ?? 'added',
+      limit: filters.limit,
       cursor: cursor ?? undefined,
     },
     signal,

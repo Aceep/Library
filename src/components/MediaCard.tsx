@@ -21,7 +21,10 @@ import styles from './MediaCard.module.css'
  */
 export default function MediaCard({ item, me }: { item: LibraryItem; me: Account }) {
   return (
-    <li className={styles.card}>
+    // La teinte du rayon arrive par l'attribut, comme dans `Cover` : elle ne
+    // teinte ici qu'un filet déjà présent — celui qui sépare la notice de la
+    // pile de suivi.
+    <li className={styles.card} data-media-type={item.type}>
       <Link to={`/media/${item.id}`} className={styles.cardLink}>
         <Cover url={item.cover_url} title={item.title} type={item.type} size="lg" />
 

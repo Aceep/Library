@@ -2,13 +2,58 @@
  * La une.
  *
  * « On entre dans un numéro » : pas de modules de statistiques, pas de
- * carrousel. Des sections numérotées, un déséquilibre déclaré (1,6/1/1 pour
- * les en-cours, 8/4 pour le carnet), et beaucoup de blanc entre les deux.
+ * carrousel. Une œuvre en couverture, une bande de rayons, puis des sections
+ * numérotées et beaucoup de blanc entre elles.
+ *
+ * Deux couleurs y travaillent, et elles ne disent pas la même chose :
+ *
+ *  · **L'ocre est un verbe** — reprendre, progresser, survoler. `--accent` pour
+ *    le texte (il tient l'AA sur le papier), `--accent-mark` pour les filets et
+ *    les barres. Il ne qualifie jamais un type ni un membre.
+ *  · **La teinte de rayon est un nom** — elle descend par `--type-hue`, posée
+ *    sur l'élément qui connaît le type, jamais écrite ici.
+ *
+ * Les couleurs de membres, elles, restent seules dans le carnet : c'est le seul
+ * endroit de la page où l'on demande *qui*.
  */
 .page {
   display: flex;
   flex-direction: column;
   gap: var(--s-9);
+}
+
+/**
+ * Entrée en scène : les blocs montent dans l'ordre, décalés de `--stagger`.
+ *
+ * Le rang se lit sur la position dans le DOM, qui est déjà l'ordre de lecture :
+ * rien à passer depuis le composant, et la une peut manquer sans que les
+ * suivants aient à se renuméroter.
+ *
+ * `--stagger` vaut 0 en mouvement réduit (`tokens.css`) : le retard tombe avec
+ * les durées que `global.css` ramène à presque rien, et aucun bloc ne reste
+ * invisible en attendant son tour.
+ */
+.page > * {
+  animation: rise var(--dur-4) var(--ease-page) both;
+}
+
+.page > *:nth-child(2) { animation-delay: calc(1 * var(--stagger)); }
+.page > *:nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+.page > *:nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+.page > *:nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+.page > *:nth-child(6) { animation-delay: calc(5 * var(--stagger)); }
+.page > *:nth-child(7) { animation-delay: calc(6 * var(--stagger)); }
+.page > *:nth-child(n + 8) { animation-delay: calc(7 * var(--stagger)); }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .loading {
@@ -35,7 +80,116 @@
   max-width: 20ch;
 }
 
-/* Une section = un numéro dans la marge, un titre, puis le contenu. */
+/* ---- La une : l'œuvre qu'on est le plus près de finir ---- */
+
+.hero {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: var(--s-7);
+  align-items: start;
+}
+
+.heroCover {
+  display: block;
+  transition: transform var(--dur-3) var(--ease-page);
+}
+
+.heroCover:hover {
+  transform: translateY(-4px);
+}
+
+.heroBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-4);
+  padding-top: var(--s-2);
+  border-top: var(--rule-w-strong) solid var(--type-hue);
+}
+
+/* Le compte à rebours, en petites capitales et dans la teinte du rayon : il dit
+   de quoi il reste deux, pas seulement qu'il en reste deux. */
+.heroKicker {
+  font: var(--eyebrow);
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--type-hue);
+  margin-top: var(--s-4);
+}
+
+.heroTitle {
+  font: var(--display-2);
+  letter-spacing: -0.035em;
+  max-width: 14ch;
+}
+
+.heroTitle a {
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.heroTitle a:hover {
+  color: var(--accent);
+}
+
+.heroMeta {
+  font: var(--caption);
+  color: var(--ink-faint);
+}
+
+.heroProgress {
+  width: min(100%, 320px);
+}
+
+/* ---- La bande de rayons ---- */
+
+.rayons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-6);
+  border-top: var(--rule-w) solid var(--ink);
+  border-bottom: var(--rule-w) solid var(--ink);
+  padding: var(--s-4) 0;
+}
+
+/**
+ * Chaque rayon porte sa teinte, mais ne la montre qu'au survol : au repos la
+ * bande reste une ligne d'encre, et c'est le geste qui révèle la couleur.
+ */
+.rayonLink {
+  position: relative;
+  font: var(--eyebrow);
+  font-size: 11px;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--ink);
+  padding-bottom: var(--s-2);
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.rayonLink::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: var(--rule-w-strong);
+  background: var(--type-hue);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-3) var(--ease-rule);
+}
+
+.rayonLink:hover,
+.rayonLink:focus-visible {
+  color: var(--type-hue);
+}
+
+.rayonLink:hover::after,
+.rayonLink:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* ---- Une section = un numéro dans la marge, un titre, puis le contenu ---- */
+
 .section,
 .partnerSection {
   display: grid;
@@ -65,14 +219,15 @@
   gap: var(--s-7);
 }
 
+/* Le nom du rayon prend sa teinte : c'est là qu'elle nomme le mieux. */
 .groupTitle {
   font: var(--eyebrow);
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-muted);
+  color: var(--type-hue);
   padding-bottom: var(--s-3);
   margin-bottom: var(--s-5);
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w-strong) solid var(--type-hue);
 }
 
 /**
@@ -102,6 +257,11 @@
 
 .cardCover {
   width: 100%;
+  transition: transform var(--dur-3) var(--ease-page);
+}
+
+.cardLink:hover .cardCover {
+  transform: translateY(-4px);
 }
 
 .cardBody {
@@ -117,6 +277,11 @@
   font-size: 21px;
   line-height: 1.12;
   letter-spacing: -0.015em;
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.cardLink:hover .cardTitle {
+  color: var(--accent);
 }
 
 /* La première colonne porte un titre de tête, pas une vignette. */
@@ -145,20 +310,33 @@
   color: var(--ink-muted);
 }
 
-/* « Reprendre » est un lien souligné, jamais un bouton plein. */
+/**
+ * « Reprendre » est un lien souligné, jamais un bouton plein — et c'est le seul
+ * texte ocre de la page, parce que c'est le seul qui demande un geste.
+ *
+ * Au survol le filet épaissit et la ligne de base ne bouge pas : la marge basse
+ * rend exactement ce que la bordure prend.
+ */
 .resume {
   margin-top: var(--s-3);
   align-self: flex-start;
   font-size: 13.5px;
   font-weight: 500;
-  color: var(--ink);
-  border-bottom: var(--rule-w) solid var(--ink);
-  padding-bottom: 2px;
+  color: var(--accent);
+  border-bottom: var(--rule-w-strong) solid var(--accent-mark);
+  padding-bottom: 4px;
+  transition: border-bottom-width var(--dur-2) var(--ease-page),
+    padding-bottom var(--dur-2) var(--ease-page);
 }
 
 .resume:hover {
-  color: var(--ink-muted);
-  border-bottom-color: var(--ink-muted);
+  border-bottom-width: 4px;
+  padding-bottom: 2px;
+}
+
+.heroResume {
+  font-size: 15px;
+  margin-top: var(--s-2);
 }
 
 .partnerTitle {
@@ -209,6 +387,11 @@
   font-family: var(--font-serif);
   font-size: 19px;
   color: var(--ink);
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.activityLink:hover .activityTitle {
+  color: var(--accent);
 }
 
 /* La note est un chiffre composé, dans la couleur du membre. */
@@ -233,6 +416,73 @@
   color: var(--ink-faint);
 }
 
+/* ---- Récemment ajouté : la page se ferme sur des images ---- */
+
+.recentRow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--gutter);
+  align-items: start;
+}
+
+.recentLink {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.recentCover {
+  transition: transform var(--dur-3) var(--ease-page);
+}
+
+.recentLink:hover .recentCover {
+  transform: translateY(-4px);
+}
+
+.recentTitle {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.15;
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.recentLink:hover .recentTitle {
+  color: var(--accent);
+}
+
+.recentType {
+  font: var(--eyebrow);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- Les sections que l'API ne sert pas encore ---- */
+
+/**
+ * Empreintes tiretées, jamais des aplats : un rectangle gris plein se lit comme
+ * un chargement, et laisserait croire que la donnée arrive dans la seconde.
+ */
+.ghostRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gutter);
+}
+
+.ghostCard {
+  aspect-ratio: 2 / 3;
+  border: var(--rule-w) dashed var(--rule-strong);
+  opacity: 0.7;
+}
+
+.ghostNote {
+  margin-top: var(--s-5);
+  max-width: var(--measure);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
 .quiet {
   color: var(--ink-muted);
   font-size: var(--text-sm);
@@ -248,11 +498,14 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink);
-  transition: background var(--dur-2) var(--ease-page);
+  transition: background var(--dur-2) var(--ease-page), border-color var(--dur-2) var(--ease-page),
+    color var(--dur-2) var(--ease-page);
 }
 
 .emptyAction:hover {
   background: var(--surface-sunken);
+  border-color: var(--accent-mark);
+  color: var(--accent);
 }
 
 .activityDot {
@@ -280,8 +533,14 @@
   color: var(--ink-muted);
 }
 
-/* Tablette : les en-cours passent à deux colonnes, le carnet à une. */
+/* Tablette : la une passe en colonne, les en-cours à deux colonnes, le carnet
+   à une, et le catalogue à trois couvertures. */
 @media (max-width: 1023px) {
+  .hero {
+    grid-template-columns: 260px 1fr;
+    gap: var(--s-6);
+  }
+
   .entries {
     grid-template-columns: 1.4fr 1fr;
   }
@@ -289,11 +548,27 @@
   .activity {
     columns: 1;
   }
+
+  .recentRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 767px) {
   .page {
     gap: var(--s-8);
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .heroCover {
+    max-width: 220px;
+  }
+
+  .heroBody {
+    padding-top: 0;
   }
 
   .section,
@@ -313,5 +588,13 @@
 
   .card:first-child .cardTitle {
     font-size: 26px;
+  }
+
+  .recentRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ghostRow {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

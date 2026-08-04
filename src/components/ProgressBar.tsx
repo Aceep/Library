@@ -13,7 +13,12 @@ export default function ProgressBar({
   label,
 }: {
   progress: Progress | null | undefined
-  /** Couleur d'identité du compte concerné. */
+  /**
+   * La couleur de la barre, choisie par l'appelant — c'est lui qui sait de quoi
+   * la progression parle. Dans un rayon c'est l'identité du membre : la barre
+   * dit *à qui* elle appartient, au milieu de plusieurs. Sur sa propre une il
+   * n'y a personne à désigner, et l'accueil y passe l'ocre d'action.
+   */
   color?: string
   label?: string
 }) {

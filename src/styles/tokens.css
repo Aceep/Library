@@ -38,6 +38,43 @@
   /* identité — injectée en runtime */
   --identity:        currentColor;
 
+  /**
+   * Accent — l'ocre veut dire « fais ceci ».
+   *
+   * Il ne qualifie jamais un état ni un type : il marque ce sur quoi on agit —
+   * reprendre, progresser, survoler. C'est la seule teinte de l'interface à
+   * porter un verbe, et c'est ce qui la distingue des couleurs de membres
+   * (qui disent *qui*) et des teintes de rayon (qui disent *quoi*).
+   *
+   * Deux valeurs, pas une : `--accent` compose du texte de 13 px et doit tenir
+   * l'AA sur le papier crème — #B07D2B n'y atteint que 3,2:1, #8A5F17 monte à
+   * 5,1:1. `--accent-mark` sert aux filets et aux barres, où le contraste de
+   * texte ne s'applique pas et où la valeur claire porte mieux.
+   */
+  --accent:          #8A5F17;
+  --accent-mark:     #B07D2B;
+
+  /**
+   * Teintes de rayon — famille de terres, construite autour de l'ocre.
+   *
+   * Toutes à la même valeur : aucun rayon ne crie plus fort qu'un autre. Elles
+   * ne servent qu'à *nommer* — filet de section, sourcil, type sur un repli de
+   * couverture — jamais à qualifier un état ni à remplir une surface.
+   *
+   * `music` n'est pas un `MediaType` : l'API ne sert pas encore le rayon. Sa
+   * teinte existe quand même, pour que la bande de rayons soit complète le jour
+   * où il arrive sans avoir à rouvrir ce fichier.
+   */
+  --type-movie:         #8A4A32;
+  --type-tv:            #4F5F5C;
+  --type-book:          #6B5B2E;
+  --type-comic_series:  #6E4438;
+  --type-game:          #55604A;
+  --type-music:         #5E4A55;
+
+  /** Teinte de rayon courante, posée par le composant qui connaît le type. */
+  --type-hue:        var(--ink-muted);
+
   /* type */
   --font-serif: 'Newsreader', Iowan Old Style, Palatino, Georgia, serif;
   --font-sans:  'Inter Tight', system-ui, sans-serif;
@@ -156,6 +193,20 @@
     --ink-soft: #C9C8C6;
     --ink-muted: #9B9A99;
     --ink-faint: #6E6D6C;
+
+    /* Sur le fond sombre, la valeur claire de l'ocre passe l'AA (5,2:1) : les
+       deux jetons se rejoignent, et l'accent redevient une seule couleur. */
+    --accent: #B07D2B;
+    --accent-mark: #B07D2B;
+
+    /* Les terres remontent en valeur — les mêmes hues, éclaircies, sinon elles
+       s'effondrent sur le noir (l'olive n'y tient que 2,8:1). */
+    --type-movie:         #D08A6A;
+    --type-tv:            #9AB0AB;
+    --type-book:          #B8A163;
+    --type-comic_series:  #C08E7E;
+    --type-game:          #A3B48F;
+    --type-music:         #B295A6;
   }
 }
 

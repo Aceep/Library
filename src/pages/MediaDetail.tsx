@@ -102,7 +102,13 @@ function Detail({ id }: { id: string }) {
 
       <header className={styles.header}>
         <div className={styles.headerCover}>
-          <Cover url={detail.cover_url} title={detail.title} type={detail.type} size="lg" />
+          <Cover
+            url={detail.cover_url}
+            title={detail.title}
+            type={detail.type}
+            size="full"
+            ratio="3/4"
+          />
         </div>
 
         <div className={styles.headerBody}>

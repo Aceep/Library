@@ -51,10 +51,7 @@ export default function Dashboard() {
         /* 01 — les en-cours, en trois colonnes inégales : la première œuvre de
            chaque rayon pèse plus que les deux suivantes. */
         <section className={styles.section}>
-          <div>
-            <div className={styles.sectionNumber}>01</div>
-            <div className={styles.sectionKicker}>En cours</div>
-          </div>
+          <SectionHead number="01" kicker="En cours" />
           <div className={styles.groups}>
             {groups.map((group) => (
               <div key={group.type}>
@@ -78,31 +75,45 @@ export default function Dashboard() {
       {/* Un fil, plus une colonne : chaque entrée porte son auteur et sa
           couleur, puisqu'il n'y a plus de partenaire unique. */}
       <section className={styles.partnerSection}>
+        <SectionHead number="02" kicker="Le carnet" />
         <div>
-          <div className={styles.sectionNumber}>02</div>
-          <div className={styles.sectionKicker}>Le carnet</div>
-        </div>
-        <div>
-        <h2 className={styles.partnerTitle}>
-          {data.following_count > 0
-            ? `Le carnet du cercle · ${data.following_count} comptes suivis`
-            : 'Le carnet du cercle'}
-        </h2>
-        {data.feed.length === 0 ? (
-          <p className={styles.quiet}>
-            {data.following_count === 0
-              ? "Tu ne suis personne pour l'instant : ce fil se remplira dès que ce sera le cas."
-              : 'Rien de neuf ces trente derniers jours.'}
-          </p>
-        ) : (
-          <ul className={styles.activity}>
-            {data.feed.map((item) => (
-              <ActivityRow key={`${item.user.id}-${item.kind}-${item.media.id}-${item.at}`} item={item} />
-            ))}
-          </ul>
-        )}
+          <h2 className={styles.partnerTitle}>
+            {data.following_count > 0
+              ? `Le carnet du cercle · ${data.following_count} comptes suivis`
+              : 'Le carnet du cercle'}
+          </h2>
+          {data.feed.length === 0 ? (
+            <p className={styles.quiet}>
+              {data.following_count === 0
+                ? "Tu ne suis personne pour l'instant : ce fil se remplira dès que ce sera le cas."
+                : 'Rien de neuf ces trente derniers jours.'}
+            </p>
+          ) : (
+            <ul className={styles.activity}>
+              {data.feed.map((item) => (
+                <ActivityRow
+                  key={`${item.user.id}-${item.kind}-${item.media.id}-${item.at}`}
+                  item={item}
+                />
+              ))}
+            </ul>
+          )}
         </div>
       </section>
+    </div>
+  )
+}
+
+/**
+ * Le numéro et le sourcil d'une section, dans la colonne de marge. Les deux
+ * sections de la une posent la même chrome : elle vit ici, pas deux fois dans
+ * le corps de la page.
+ */
+function SectionHead({ number, kicker }: { number: string; kicker: string }) {
+  return (
+    <div>
+      <div className={styles.sectionNumber}>{number}</div>
+      <div className={styles.sectionKicker}>{kicker}</div>
     </div>
   )
 }

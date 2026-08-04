@@ -4,14 +4,18 @@
  * petites capitales, pas une pastille — et « Du neuf », qui était un aplat
  * rouge, devient un mot souligné d'un filet.
  */
-.badge {
+.badge,
+.newBadge {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
   font: var(--eyebrow);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.badge {
+  gap: var(--space-1);
 }
 
 .badge[data-status='todo'] {
@@ -27,13 +31,7 @@
 }
 
 .newBadge {
-  display: inline-flex;
-  align-items: center;
-  font: var(--eyebrow);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--signal-new);
   border-bottom: var(--rule-w-strong) solid var(--signal-new);
   padding-bottom: 2px;
-  white-space: nowrap;
 }

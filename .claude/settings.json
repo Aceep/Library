@@ -5,8 +5,6 @@
       "Bash(npx tsc --noEmit *)",
       "Bash(npm run build)",
       "Bash(npm run lint)",
-      "Bash(npm run format:check)",
-      "Bash(npx prettier --check *)",
       "mcp__plugin_dsi_redmine__redmine_list_issues"
     ]
   }

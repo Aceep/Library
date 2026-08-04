@@ -55,10 +55,17 @@ const PREVIEW_SESSION: Session = {
  * session. Aucune requête ne doit aboutir dans un aperçu — `retry: false`
  * fait échouer vite plutôt que de boucler.
  */
+/**
+ * Un seul cache pour tous les aperçus : construit dans le corps du composant,
+ * il repartait de zéro à chaque rendu et faisait se réabonner tous les
+ * consommateurs.
+ */
+const PREVIEW_CLIENT = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+
 export function DesignPreviewProvider({ children }: { children: ReactNode }) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
-  })
+  const client = PREVIEW_CLIENT
 
   return (
     <QueryClientProvider client={client}>

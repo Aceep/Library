@@ -8,13 +8,15 @@ const frame: React.CSSProperties = { padding: 'var(--space-4)', maxWidth: '34rem
  * à l'identité et aux statuts.
  */
 const actionStyle: React.CSSProperties = {
-  display: 'inline-block',
-  padding: 'var(--space-2) var(--space-4)',
-  border: '1px solid var(--rule-strong)',
-  borderRadius: 'var(--radius)',
-  background: 'var(--paper-raised)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 44,
+  padding: '0 var(--s-5)',
+  border: 'var(--rule-w) solid var(--ink)',
   color: 'var(--ink)',
-  fontSize: 'var(--text-sm)',
+  font: 'var(--eyebrow)',
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
 }
 
 /** Le cas courant : un rayon encore vide, avec de quoi le remplir. */

@@ -91,7 +91,6 @@
   text-transform: uppercase;
   color: var(--ink-soft);
   border: var(--rule-w) solid var(--rule);
-  border-radius: var(--radius-0);
   padding: 0 var(--s-4);
   white-space: nowrap;
   transition: border-color var(--dur-2) var(--ease-page);

@@ -83,6 +83,51 @@ export const fetchLibrary = (
     signal,
   )
 
+/**
+ * La bibliothèque d'**un membre** — ce que `tracked_count` compte, déplié.
+ *
+ * La réponse a exactement la forme de `GET /media`, et la même carte s'affiche
+ * donc des deux côtés. Trois différences comptent tout de même :
+ *
+ * - **`status`, `owned` et `favorite` portent sur *son* suivi à lui**, pas sur
+ *   le mien. C'est le seul endroit de l'API où ces filtres changent de sujet ;
+ *   les libellés de l'écran doivent le dire, sans quoi on croit filtrer le sien
+ *   et on filtre le nôtre.
+ * - **Le tri par défaut est `rating`**, pas `added` : on vient voir ce qu'il a
+ *   préféré, pas ce qu'il vient d'ajouter.
+ * - **Il est toujours détaillé dans `tracking.following`**, que je le suive ou
+ *   non, et ne compte alors pas dans `others`. Sans ça sa propre page cacherait
+ *   ses propres notes derrière un résumé.
+ */
+export type MemberLibrarySort = LibrarySort | 'rating'
+
+export interface MemberLibraryFilters {
+  type?: MediaType
+  /** Sur **son** statut à lui. */
+  status?: TrackingStatus | null
+  /** Sur **ses** coups de cœur à lui. */
+  favorite?: boolean | null
+  sort?: MemberLibrarySort
+}
+
+export const fetchMemberLibrary = (
+  userId: string,
+  filters: MemberLibraryFilters,
+  cursor: string | null,
+  signal?: AbortSignal,
+) =>
+  api.get<Page<LibraryItem>>(
+    `/users/${userId}/media`,
+    {
+      type: filters.type,
+      status: filters.status ?? undefined,
+      favorite: filters.favorite ? 'true' : undefined,
+      sort: filters.sort ?? 'rating',
+      cursor: cursor ?? undefined,
+    },
+    signal,
+  )
+
 export const fetchMediaDetail = (id: string, signal?: AbortSignal) =>
   api.get<MediaDetail>(`/media/${id}`, undefined, signal)
 

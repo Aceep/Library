@@ -3,19 +3,11 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchLibrary } from '../api/endpoints'
 import type { LibraryFilters, LibrarySort } from '../api/endpoints'
-import { MEDIA_TYPES, isDerivedStatusType, statusLabel, typeLabelPlural } from '../api/schema'
-import type {
-  Account,
-  LibraryItem,
-  MediaType,
-  TrackingStatus,
-  UserTracking,
-} from '../api/schema'
-import Cover from '../components/Cover'
+import { MEDIA_TYPES, statusLabel, typeLabelPlural } from '../api/schema'
+import type { MediaType, TrackingStatus } from '../api/schema'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
-import ProgressBar from '../components/ProgressBar'
-import StatusBadge, { NewContentBadge } from '../components/StatusBadge'
+import MediaCard from '../components/MediaCard'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
 import styles from './TypeLibrary.module.css'
@@ -153,93 +145,6 @@ function Library({ type }: { type: MediaType }) {
             </p>
           )}
         </>
-      )}
-    </div>
-  )
-}
-
-function MediaCard({ item, me }: { item: LibraryItem; me: Account }) {
-  return (
-    <li className={styles.card}>
-      <Link to={`/media/${item.id}`} className={styles.cardLink}>
-        <Cover url={item.cover_url} title={item.title} type={item.type} size="lg" />
-
-        <div className={styles.cardBody}>
-          <p className={styles.cardTitle}>{item.title}</p>
-          {item.year ? <p className={styles.cardYear}>{item.year}</p> : null}
-
-          {/* Nul sur les types sans éléments à cocher : le composant s'efface. */}
-          <ProgressBar
-            progress={item.progress}
-            color={me.identity_color}
-            label={`Progression sur ${item.title}`}
-          />
-
-          <div className={styles.trackings}>
-            <TrackingLine
-              tracking={item.tracking.me}
-              color={me.identity_color}
-              pseudo={me.pseudo}
-              type={item.type}
-            />
-            {/* Un rayon reste lisible : on nomme les abonnements, on compte le
-                reste. La vignette n'est pas l'endroit où tout déballer. */}
-            {item.tracking.following.map((entry) => (
-              <TrackingLine
-                key={entry.user.id}
-                tracking={entry.tracking}
-                color={entry.user.identity_color}
-                pseudo={entry.user.pseudo}
-                type={item.type}
-              />
-            ))}
-            {item.tracking.others.count > 0 ? (
-              <p className={styles.othersLine}>
-                +{item.tracking.others.count} autre
-                {item.tracking.others.count > 1 ? 's' : ''}
-                {item.tracking.others.average_rating !== null
-                  ? ` · ${item.tracking.others.average_rating}/10 en moyenne`
-                  : ''}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </Link>
-    </li>
-  )
-}
-
-/**
- * Une ligne par compte. Un suivi `null` n'est pas un `todo` : c'est « ne suit
- * pas du tout cette œuvre », et les deux ne se disent pas de la même façon.
- */
-function TrackingLine({
-  tracking,
-  color,
-  pseudo,
-  type,
-}: {
-  tracking: UserTracking | null
-  color: string
-  pseudo: string
-  type: MediaType
-}) {
-  return (
-    <div className={styles.trackingLine}>
-      <span className={styles.trackingDot} style={{ background: color }} aria-hidden="true" />
-      <span className={styles.trackingName}>{pseudo}</span>
-      {tracking ? (
-        <span className={styles.trackingTags}>
-          <StatusBadge status={tracking.status} />
-          {tracking.rating !== null ? (
-            <span className={styles.rating}>{tracking.rating}/10</span>
-          ) : null}
-          {tracking.owned ? <span className={styles.owned}>Possédé</span> : null}
-          {/* « Du neuf » n'a de sens que là où du contenu peut s'ajouter. */}
-          {tracking.has_new_content && isDerivedStatusType(type) ? <NewContentBadge /> : null}
-        </span>
-      ) : (
-        <span className={styles.notTracked}>ne suit pas</span>
       )}
     </div>
   )

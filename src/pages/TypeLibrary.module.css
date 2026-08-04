@@ -1,24 +1,25 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--s-7);
 }
 
 .intro {
-  border-bottom: 1px solid var(--rule);
-  padding-bottom: var(--space-4);
+  border-bottom: var(--rule-w) solid var(--ink);
+  padding-bottom: var(--s-5);
 }
 
 .eyebrow {
-  font-size: var(--text-xs);
-  letter-spacing: 0.14em;
+  font: var(--eyebrow);
+  letter-spacing: var(--eyebrow-tracking);
   text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-bottom: var(--space-2);
+  color: var(--ink-muted);
+  margin-bottom: var(--s-4);
 }
 
 .title {
-  font-size: var(--text-2xl);
+  font: var(--display-2);
+  letter-spacing: -0.035em;
 }
 
 .loading {
@@ -32,37 +33,40 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--s-5);
+  padding: var(--s-3) 0;
+  border-top: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule);
 }
 
 .filterGroup {
   display: flex;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  gap: var(--s-2);
 }
 
 .chip {
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--text-sm);
-  color: var(--ink-muted);
+  min-height: 36px;
+  padding: var(--s-2) var(--s-4);
+  font-size: 12.5px;
+  color: var(--ink-soft);
   background: transparent;
-  border: none;
+  border: var(--rule-w) solid var(--rule);
+  border-radius: var(--radius-0);
   cursor: pointer;
+  transition: border-color var(--dur-2) var(--ease-page);
 }
 
-.chip + .chip {
-  border-left: 1px solid var(--rule);
-}
+
 
 .chip:hover {
-  background: var(--paper-sunken);
+  border-color: var(--ink-muted);
   color: var(--ink);
 }
 
 .chip[aria-pressed='true'] {
   background: var(--ink);
-  color: var(--paper);
+  border-color: var(--ink);
+  color: var(--surface-raised);
 }
 
 .toggle,
@@ -77,110 +81,21 @@
 
 .sort select {
   font: inherit;
+  min-height: 44px;
   color: var(--ink);
-  background: var(--paper-raised);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: none;
+  border-bottom: var(--rule-w) solid var(--rule);
+  border-radius: var(--radius-0);
+  padding: var(--s-2) 0;
 }
 
 /* ---- Grille ---- */
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--space-5);
-}
-
-.card {
-  display: flex;
-}
-
-.cardLink {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  flex: 1;
-  min-width: 0;
-}
-
-.cardLink:hover .cardTitle {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.cardBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.cardTitle {
-  font-family: var(--font-serif);
-  font-size: var(--text-base);
-  line-height: 1.25;
-}
-
-.cardYear {
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
-  margin-top: calc(var(--space-2) * -1);
-}
-
-/* ---- Les deux suivis côte à côte ---- */
-
-.trackings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  border-top: 1px solid var(--rule);
-  padding-top: var(--space-2);
-}
-
-.trackingLine {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  min-width: 0;
-}
-
-.trackingDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex: none;
-}
-
-.trackingName {
-  color: var(--ink-muted);
-  flex: none;
-}
-
-.trackingTags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.rating {
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-soft);
-}
-
-.owned {
-  color: var(--ink-muted);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-2);
-}
-
-.notTracked {
-  color: var(--ink-faint);
-  font-style: italic;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-8) var(--gutter);
 }
 
 /* ---- Pagination ---- */
@@ -233,9 +148,17 @@
   color: var(--ink);
 }
 
-/* Les suiveurs hors abonnements : un nombre, jamais des noms. */
-.othersLine {
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
-  padding-left: calc(7px + var(--space-2));
+/**
+ * Paliers — la grille du rayon tient à trois colonnes jusqu'à la tablette,
+ * puis tombe à deux sur téléphone, où la pile de suivi se réduit.
+ */
+@media (max-width: 767px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-6) var(--gutter);
+  }
+
+  .filters {
+    gap: var(--s-3);
+  }
 }

@@ -8,6 +8,7 @@ import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import type { UserDetail } from '../api/schema'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
+import MemberLibrary from '../components/MemberLibrary'
 import Showcase from '../components/Showcase'
 import { useSession } from '../session/SessionContext'
 import styles from './UserProfile.module.css'
@@ -123,6 +124,17 @@ function Profile({ id }: { id: string }) {
       </nav>
 
       <RelationList key={tab} userId={id} tab={tab} meId={me.id} />
+
+      {/* Le compteur « œuvres suivies » ne s'ouvrait sur rien : la moitié de
+          l'aller-retour manquait. On savait déplier « qui suit cette œuvre »,
+          pas « quelles œuvres suit ce membre ». */}
+      <MemberLibrary
+        userId={id}
+        pseudo={user.pseudo}
+        isMe={isMe}
+        me={me}
+        trackedCount={data.tracked_count}
+      />
     </div>
   )
 }

@@ -18,6 +18,13 @@ export const queryKeys = {
   followers: (userId: string) => ['people', 'followers', userId] as const,
   library: ['library'] as const,
   libraryWith: (filters: unknown) => ['library', filters] as const,
+  /**
+   * La bibliothèque d'un membre. Sous le préfixe `library` : elle contient mon
+   * suivi à moi dans chaque `tracking.me`, et redevient donc fausse dès que
+   * j'écris quelque part, exactement comme un rayon.
+   */
+  memberLibrary: (userId: string, filters: unknown) =>
+    ['library', 'member', userId, filters] as const,
   media: (id: string) => ['media', id] as const,
   /**
    * Le journal d'un membre sur une œuvre — le mien quand `userId` est nul.

@@ -191,10 +191,13 @@ de fusion (`.github/workflows/ci.yml`), sur la version de Node lue dans
 `.nvmrc`. `npm ci` y est préféré à `npm install` : il installe exactement le
 lockfile et échoue s'il diverge de `package.json`, au lieu de le réécrire.
 
-**Rien n'est déployé automatiquement.** Les workflows de déploiement de
-l'ancienne infrastructure sont conservés hors service dans
-[`docs/deploiement/`](docs/deploiement/README.md), avec ce qu'il faudrait pour
-les réactiver.
+**Rien n'est déployé automatiquement.** Vercel était branché sur ce dépôt via
+l'application GitHub et publiait à chaque fusion, mais l'API vit sur une
+adresse de réseau local que ses serveurs ne peuvent pas joindre : ces
+déploiements sont coupés par `vercel.json`. Les workflows de l'ancienne
+infrastructure Railway sont conservés hors service au même endroit. Ce qu'il
+faudrait pour tout réactiver est dans
+[`docs/deploiement/`](docs/deploiement/README.md).
 
 Deux règles ESLint sont désactivées volontairement :
 `react/no-unescaped-entities` (l'interface est en français, les apostrophes sont

@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { useSession } from '../session/SessionContext'
+import AppFooter from './AppFooter'
 import IdentityDot from './IdentityDot'
 import styles from './AppShell.module.css'
 
@@ -82,6 +83,8 @@ export default function AppShell() {
       <main className={styles.main}>
         <Outlet />
       </main>
+
+      <AppFooter />
     </div>
   )
 }

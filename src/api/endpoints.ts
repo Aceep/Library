@@ -1,6 +1,7 @@
 import { api, ApiError, request } from './client'
 import type {
   Account,
+  Availability,
   CompareResponse,
   EpisodeDetail,
   HomeResponse,
@@ -235,6 +236,28 @@ export const deleteLogEntry = (entryId: string) =>
  * du back explique alors pourquoi, et il est affiché tel quel.
  */
 export const deleteMedia = (id: string) => api.delete<void>(`/media/${id}`)
+
+/**
+ * Où regarder un film ou une série.
+ *
+ * **La fiche ne passe jamais d'appel sortant** : elle sert son bloc depuis le
+ * cache seul, ce qui garantit qu'une panne de TMDB ne peut ni la ralentir ni
+ * l'empêcher de s'afficher. Sur cache froid elle rend donc `null`, et c'est
+ * cette route-ci qui va vraiment chercher — et qui réchauffe le cache pour six
+ * heures.
+ *
+ * `refresh` court-circuite le cache. **Réservé à un geste explicite** : ces
+ * données changent d'un jour à l'autre, pas d'une seconde à l'autre.
+ *
+ * `400` sur un livre, un manga ou un jeu : TMDB ne couvre que les films et les
+ * séries.
+ */
+export const fetchAvailability = (id: string, refresh = false, signal?: AbortSignal) =>
+  api.get<{ availability: Availability | null }>(
+    `/media/${id}/availability`,
+    { refresh: refresh ? 'true' : undefined },
+    signal,
+  )
 
 /** Recherche de nouveautés auprès de la source. Manuel, jamais automatique. */
 export const refreshMedia = (id: string) => api.post<RefreshResponse>(`/media/${id}/refresh`)

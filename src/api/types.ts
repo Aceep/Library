@@ -3257,6 +3257,127 @@ export interface paths {
       };
     };
   };
+  "/media/{id}/availability": {
+    /**
+     * Où regarder un film ou une série
+     * @description Les plateformes qui proposent l’œuvre, par mode : `subscription` (compris dans un abonnement), `rent`, `buy`, `free`, et `ads` (gratuit avec publicité). Chaque tableau est toujours présent, vide s’il n’y a rien.
+     *
+     * **`availability` peut être nul, et ce n’est pas une erreur** — TMDB injoignable, aucune clé configurée, ou aucune plateforme dans ce pays. La réponse reste `200` : un écran qui affiche « nulle part pour l’instant » est juste, un écran qui affiche une erreur ne l’est pas.
+     *
+     * **Ces données sont volatiles** et ne sont pas figées dans `metadata` : elles vivent en cache six heures. `?refresh=true` court-circuite le cache — à réserver à un geste explicite de l’utilisateur, pas à chaque affichage.
+     *
+     * La fiche `GET /media/:id` porte le même bloc, mais **servi depuis le cache seul** : elle ne passe jamais d’appel sortant. Sur un cache froid elle rend `null`, et c’est cet endpoint qui va chercher la valeur et réchauffe le cache pour les visites suivantes.
+     *
+     * **Attribution obligatoire.** Les conditions d’utilisation de l’API TMDB imposent d’attribuer ces données à JustWatch partout où elles sont affichées, et sur **chaque œuvre** — pas une ligne unique en pied de page. Le bloc `attribution` porte la mention et le lien à afficher ; il voyage avec la donnée précisément pour qu’on ne puisse pas l’oublier.
+     *
+     * Le pays est celui de l’instance (`WATCH_REGION`, `FR` par défaut), pas celui du membre.
+     *
+     * Refusé (`400`) sur un livre, un manga ou un jeu : TMDB ne couvre que les films et les séries.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Ignorer le cache et redemander à TMDB. À réserver à un geste explicite */
+          refresh?: string;
+        };
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Disponibilité d’une œuvre */
+        200: {
+          content: {
+            "application/json": {
+              availability: ({
+                /** @description Pays interrogé, code ISO 3166-1 — « FR » par défaut */
+                region: string;
+                /** @description Page « où regarder » de TMDB pour cette œuvre */
+                link: string | null;
+                /** @description Compris dans un abonnement */
+                subscription: ({
+                    /** @description Identifiant TMDB de la plateforme */
+                    id: number;
+                    /** @description Nom affichable — « Netflix », « Canal+ » */
+                    name: string;
+                    /** @description Logo carré, servi par le CDN de TMDB */
+                    logo_url: string | null;
+                  })[];
+                /** @description En location */
+                rent: ({
+                    /** @description Identifiant TMDB de la plateforme */
+                    id: number;
+                    /** @description Nom affichable — « Netflix », « Canal+ » */
+                    name: string;
+                    /** @description Logo carré, servi par le CDN de TMDB */
+                    logo_url: string | null;
+                  })[];
+                /** @description À l’achat */
+                buy: ({
+                    /** @description Identifiant TMDB de la plateforme */
+                    id: number;
+                    /** @description Nom affichable — « Netflix », « Canal+ » */
+                    name: string;
+                    /** @description Logo carré, servi par le CDN de TMDB */
+                    logo_url: string | null;
+                  })[];
+                /** @description Gratuit */
+                free: ({
+                    /** @description Identifiant TMDB de la plateforme */
+                    id: number;
+                    /** @description Nom affichable — « Netflix », « Canal+ » */
+                    name: string;
+                    /** @description Logo carré, servi par le CDN de TMDB */
+                    logo_url: string | null;
+                  })[];
+                /** @description Gratuit avec publicité */
+                ads: ({
+                    /** @description Identifiant TMDB de la plateforme */
+                    id: number;
+                    /** @description Nom affichable — « Netflix », « Canal+ » */
+                    name: string;
+                    /** @description Logo carré, servi par le CDN de TMDB */
+                    logo_url: string | null;
+                  })[];
+                /** @description Attribution obligatoire des données de disponibilité */
+                attribution: {
+                  /** @enum {string} */
+                  source: "JustWatch";
+                  /** @description Mention à afficher telle quelle, à côté des plateformes */
+                  text: string;
+                  /**
+                   * Format: uri
+                   * @description Lien vers JustWatch, à poser sur la mention
+                   */
+                  url: string;
+                };
+                /** Format: date-time */
+                fetched_at: string;
+              }) | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -4091,6 +4212,72 @@ export interface components {
       /** @constant */
       type: "movie";
       metadata: components["schemas"]["MovieMetadataInput"];
+      /** @description Où regarder — servi depuis le cache seul, nul tant qu’il est froid. Voir GET /media/:id/availability */
+      availability: ({
+        /** @description Pays interrogé, code ISO 3166-1 — « FR » par défaut */
+        region: string;
+        /** @description Page « où regarder » de TMDB pour cette œuvre */
+        link: string | null;
+        /** @description Compris dans un abonnement */
+        subscription: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description En location */
+        rent: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description À l’achat */
+        buy: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Gratuit */
+        free: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Gratuit avec publicité */
+        ads: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Attribution obligatoire des données de disponibilité */
+        attribution: {
+          /** @constant */
+          source: "JustWatch";
+          /** @description Mention à afficher telle quelle, à côté des plateformes */
+          text: string;
+          /**
+           * Format: uri
+           * @description Lien vers JustWatch, à poser sur la mention
+           */
+          url: string;
+        };
+        /** Format: date-time */
+        fetched_at: string;
+      }) | null;
     }, {
       /** Format: uuid */
       id: string;
@@ -4170,6 +4357,72 @@ export interface components {
       /** @constant */
       type: "tv";
       metadata: components["schemas"]["TvMetadataInput"];
+      /** @description Où regarder — servi depuis le cache seul, nul tant qu’il est froid. Voir GET /media/:id/availability */
+      availability: ({
+        /** @description Pays interrogé, code ISO 3166-1 — « FR » par défaut */
+        region: string;
+        /** @description Page « où regarder » de TMDB pour cette œuvre */
+        link: string | null;
+        /** @description Compris dans un abonnement */
+        subscription: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description En location */
+        rent: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description À l’achat */
+        buy: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Gratuit */
+        free: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Gratuit avec publicité */
+        ads: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Attribution obligatoire des données de disponibilité */
+        attribution: {
+          /** @constant */
+          source: "JustWatch";
+          /** @description Mention à afficher telle quelle, à côté des plateformes */
+          text: string;
+          /**
+           * Format: uri
+           * @description Lien vers JustWatch, à poser sur la mention
+           */
+          url: string;
+        };
+        /** Format: date-time */
+        fetched_at: string;
+      }) | null;
       /** @description Saisons dans l’ordre, **sans leurs épisodes** — voir `GET /seasons/:id/episodes` */
       seasons: ({
           /** Format: uuid */
@@ -5459,6 +5712,72 @@ export interface components {
       /** @constant */
       type: "movie";
       metadata: components["schemas"]["MovieMetadata"];
+      /** @description Où regarder — servi depuis le cache seul, nul tant qu’il est froid. Voir GET /media/:id/availability */
+      availability: ({
+        /** @description Pays interrogé, code ISO 3166-1 — « FR » par défaut */
+        region: string;
+        /** @description Page « où regarder » de TMDB pour cette œuvre */
+        link: string | null;
+        /** @description Compris dans un abonnement */
+        subscription: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description En location */
+        rent: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description À l’achat */
+        buy: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Gratuit */
+        free: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Gratuit avec publicité */
+        ads: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Attribution obligatoire des données de disponibilité */
+        attribution: {
+          /** @constant */
+          source: "JustWatch";
+          /** @description Mention à afficher telle quelle, à côté des plateformes */
+          text: string;
+          /**
+           * Format: uri
+           * @description Lien vers JustWatch, à poser sur la mention
+           */
+          url: string;
+        };
+        /** Format: date-time */
+        fetched_at: string;
+      }) | null;
     }, {
       /** Format: uuid */
       id: string;
@@ -5538,6 +5857,72 @@ export interface components {
       /** @constant */
       type: "tv";
       metadata: components["schemas"]["TvMetadata"];
+      /** @description Où regarder — servi depuis le cache seul, nul tant qu’il est froid. Voir GET /media/:id/availability */
+      availability: ({
+        /** @description Pays interrogé, code ISO 3166-1 — « FR » par défaut */
+        region: string;
+        /** @description Page « où regarder » de TMDB pour cette œuvre */
+        link: string | null;
+        /** @description Compris dans un abonnement */
+        subscription: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description En location */
+        rent: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description À l’achat */
+        buy: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Gratuit */
+        free: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Gratuit avec publicité */
+        ads: ({
+            /** @description Identifiant TMDB de la plateforme */
+            id: number;
+            /** @description Nom affichable — « Netflix », « Canal+ » */
+            name: string;
+            /** @description Logo carré, servi par le CDN de TMDB */
+            logo_url: string | null;
+          })[];
+        /** @description Attribution obligatoire des données de disponibilité */
+        attribution: {
+          /** @constant */
+          source: "JustWatch";
+          /** @description Mention à afficher telle quelle, à côté des plateformes */
+          text: string;
+          /**
+           * Format: uri
+           * @description Lien vers JustWatch, à poser sur la mention
+           */
+          url: string;
+        };
+        /** Format: date-time */
+        fetched_at: string;
+      }) | null;
       /** @description Saisons dans l’ordre, **sans leurs épisodes** — voir `GET /seasons/:id/episodes` */
       seasons: ({
           /** Format: uuid */

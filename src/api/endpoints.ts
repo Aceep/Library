@@ -186,10 +186,64 @@ export interface UserSummary {
   joined_at: string
 }
 
-/** Les comptes auxquels `userId` est abonné. */
+/**
+ * L'annuaire des membres.
+ *
+ * `include_deactivated` reste faux par défaut : un compte parti ne s'affiche
+ * plus dans les listes, mais ce qu'il a écrit demeure sur les fiches. Ne pas
+ * le lister n'est pas l'effacer.
+ */
+export const fetchUsers = (
+  params: { sort?: 'pseudo' | 'joined'; includeDeactivated?: boolean },
+  cursor: string | null,
+  signal?: AbortSignal,
+) =>
+  api.get<Page<UserSummary>>(
+    '/users',
+    {
+      sort: params.sort ?? 'pseudo',
+      include_deactivated: params.includeDeactivated ? 'true' : undefined,
+      cursor: cursor ?? undefined,
+    },
+    signal,
+  )
+
+export const fetchUser = (id: string, signal?: AbortSignal) =>
+  api.get<UserSummary>(`/users/${id}`, undefined, signal)
+
+/**
+ * S'abonner, ou se désabonner. Les deux gestes renvoient l'état **après**
+ * coup : on le prend tel quel plutôt que d'inverser un booléen localement.
+ *
+ * L'abonnement trie ce qu'on voit, il ne protège rien — suivre quelqu'un ne
+ * demande pas son accord, et ne lui donne accès à rien de plus.
+ */
+export const setFollow = (id: string, follow: boolean) =>
+  follow
+    ? api.put<FollowResult>(`/users/${id}/follow`)
+    : api.delete<FollowResult>(`/users/${id}/follow`)
+
+export interface FollowResult {
+  /** État après le geste. */
+  following: boolean
+  user: Account
+}
+
+/**
+ * Les comptes auxquels `userId` est abonné. `me` est accepté à la place d'un
+ * identifiant, ce qui évite d'avoir à porter le sien jusqu'ici.
+ */
 export const fetchFollowing = (userId: string, cursor: string | null, signal?: AbortSignal) =>
   api.get<Page<UserSummary>>(
     `/users/${userId}/following`,
+    { cursor: cursor ?? undefined },
+    signal,
+  )
+
+/** Les comptes abonnés à `userId`. */
+export const fetchFollowers = (userId: string, cursor: string | null, signal?: AbortSignal) =>
+  api.get<Page<UserSummary>>(
+    `/users/${userId}/followers`,
     { cursor: cursor ?? undefined },
     signal,
   )

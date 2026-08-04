@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { TrackingPatch } from '../api/endpoints'
 import { isDerivedStatusType, statusLabel } from '../api/schema'
 import type {
@@ -307,7 +308,10 @@ function ReadOnlyTracking({
           style={{ background: account.identity_color }}
           aria-hidden="true"
         />
-        {account.pseudo}
+        <Link to={`/membres/${account.id}`} className={styles.followedLink}>
+          {account.pseudo}
+        </Link>
+        {account.deactivated ? <span className={styles.deactivatedTag}>compte désactivé</span> : null}
       </h3>
 
       {/* Un suivi nul, ce n'est pas « à voir » : c'est ne pas suivre l'œuvre. */}

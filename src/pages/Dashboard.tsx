@@ -148,15 +148,24 @@ const ACTIVITY_VERB: Record<FeedEntry['kind'], string> = {
 function ActivityRow({ item }: { item: FeedEntry }) {
   return (
     <li className={styles.activityRow}>
+      {/* Deux liens distincts plutôt qu'un lien dans un lien : l'auteur mène à
+          son profil, le reste de la ligne mène à l'œuvre. */}
+      <Link
+        to={`/membres/${item.user.id}`}
+        className={styles.activityAuthorLink}
+        title={`Le profil de ${item.user.pseudo}`}
+      >
+        <span
+          className={styles.activityDot}
+          style={{ background: item.user.identity_color }}
+          aria-hidden="true"
+        />
+        <span className={styles.activityAuthor}>{item.user.pseudo}</span>
+      </Link>
+
       <Link to={`/media/${item.media.id}`} className={styles.activityLink}>
         <Cover url={item.media.cover_url} title={item.media.title} type={item.media.type} size="sm" />
         <span className={styles.activityText}>
-          <span
-            className={styles.activityDot}
-            style={{ background: item.user.identity_color }}
-            aria-hidden="true"
-          />
-          <span className={styles.activityAuthor}>{item.user.pseudo}</span>{' '}
           <span className={styles.activityVerb}>{ACTIVITY_VERB[item.kind]}</span>{' '}
           <span className={styles.activityTitle}>{item.media.title}</span>
           {item.rating !== null ? <span className={styles.activityRating}>{item.rating}/10</span> : null}

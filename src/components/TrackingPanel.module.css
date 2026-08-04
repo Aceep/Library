@@ -304,3 +304,19 @@
   font-size: var(--text-sm);
   color: var(--ink-faint);
 }
+
+.followedLink {
+  color: inherit;
+}
+
+.followedLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.deactivatedTag {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  font-style: italic;
+}

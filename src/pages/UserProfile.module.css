@@ -1,0 +1,212 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.loading {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.quiet {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.breadcrumb {
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.breadcrumb a:hover {
+  color: var(--ink);
+}
+
+/* ---- En-tête ---- */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: var(--space-5);
+}
+
+.dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: var(--space-2);
+}
+
+.headerBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-2xl);
+}
+
+.tag {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+}
+
+.tagQuiet {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.deactivated {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  border-left: 2px solid var(--rule-strong);
+  padding-left: var(--space-3);
+  max-width: 56ch;
+}
+
+.joined {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+/* ---- Compteurs ---- */
+
+.counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-7);
+}
+
+.counter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.counterLabel {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.counterValue {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl, var(--text-lg));
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.compareLink {
+  font-size: var(--text-sm);
+}
+
+.compareLink a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.compareLink a:hover {
+  color: var(--ink);
+}
+
+/* ---- Onglets ---- */
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--rule);
+}
+
+.tab {
+  font: inherit;
+  font-size: var(--text-sm);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-2) var(--space-4);
+  color: var(--ink-muted);
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab[aria-pressed='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* ---- Relations ---- */
+
+.relations {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.relation {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.relation + .relation {
+  border-top: 1px solid var(--rule);
+}
+
+.relation:hover {
+  background: var(--paper-raised);
+}
+
+.relationLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.relationDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.relationName {
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.relationLink:hover .relationName {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

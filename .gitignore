@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+*.log
+
+# Environnement local
+.env
+.env.local
+.env.*.local
+
+# Artefacts d'outillage
+.vite/
+.DS_Store

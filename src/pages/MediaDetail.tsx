@@ -144,7 +144,7 @@ function Detail({ id }: { id: string }) {
 
           {refresh.error ? <ErrorNotice error={refresh.error} /> : null}
           {refreshResult && !refresh.isPending ? (
-            <p className={styles.refreshResult}>{describeRefresh(refreshResult)}</p>
+            <RefreshReport result={refreshResult} onDismiss={() => setRefreshResult(null)} />
           ) : null}
         </div>
       </header>
@@ -274,7 +274,63 @@ function DangerZone({
   )
 }
 
-const describeRefresh = (result: RefreshResponse) => {
+/**
+ * Compte rendu d'un rafraîchissement.
+ *
+ * Deux choses à dire, et la seconde est la moins évidente : **un
+ * rafraîchissement ne supprime jamais rien**. Un épisode retiré du catalogue de
+ * la source, ou renuméroté, reste en base — quelqu'un l'a peut-être marqué vu.
+ * Le back le signale dans `divergences`, avec un `label` fait pour être affiché.
+ * Le taire laisserait croire à une fiche parfaitement alignée sur sa source.
+ */
+function RefreshReport({
+  result,
+  onDismiss,
+}: {
+  result: RefreshResponse
+  onDismiss: () => void
+}) {
+  const { divergences } = result
+
+  return (
+    <div className={styles.refreshReport}>
+      <p className={styles.refreshResult}>{describeChanges(result)}</p>
+
+      {divergences.length > 0 ? (
+        <div className={styles.divergences}>
+          <p className={styles.divergencesTitle}>
+            {divergences.length}&nbsp;
+            {divergences.length > 1 ? 'éléments ne sont plus annoncés' : 'élément n’est plus annoncé'}{' '}
+            par la source
+          </p>
+          <p className={styles.divergencesNote}>
+            Ils restent ici : quelqu’un les a peut-être déjà cochés. Rien n’a été supprimé.
+          </p>
+          <ul className={styles.divergencesList}>
+            {divergences.map((entry) => (
+              <li key={entry.id} className={styles.divergence}>
+                <span className={styles.divergenceKind}>{DIVERGENCE_KIND[entry.kind]}</span>
+                <span className={styles.divergenceLabel}>{entry.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <button type="button" className={styles.refreshDismiss} onClick={onDismiss}>
+        Masquer ce compte rendu
+      </button>
+    </div>
+  )
+}
+
+const DIVERGENCE_KIND: Record<RefreshResponse['divergences'][number]['kind'], string> = {
+  season: 'Saison',
+  episode: 'Épisode',
+  volume: 'Tome',
+}
+
+const describeChanges = (result: RefreshResponse) => {
   const { changes } = result
   const parts: string[] = []
   if (changes.seasons_added > 0) parts.push(`${changes.seasons_added} saison(s) ajoutée(s)`)

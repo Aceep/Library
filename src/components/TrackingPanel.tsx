@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { TrackingPatch } from '../api/endpoints'
 import { isDerivedStatusType, statusLabel } from '../api/schema'
-import type { Account, MediaType, TrackingStatus, UserTracking } from '../api/schema'
+import type {
+  Account,
+  FollowedTracking,
+  MediaType,
+  OthersSummary,
+  TrackingStatus,
+  UserTracking,
+} from '../api/schema'
 import ErrorNotice from './ErrorNotice'
 import styles from './TrackingPanel.module.css'
 
@@ -229,10 +236,61 @@ function ReviewField({
 }
 
 /**
- * Le suivi du partenaire : lisible, jamais modifiable. Aucun champ de saisie
- * ici — ce n'est pas une désactivation, c'est une absence.
+ * Ce que les comptes suivis font de cette œuvre : lisible, jamais modifiable.
+ * Aucun champ de saisie ici — ce n'est pas une désactivation, c'est une absence.
+ *
+ * Seuls les abonnements sont nommés. Les autres suiveurs se résument à un
+ * compte et une moyenne : l'abonnement trie ce qu'on voit, il ne cache rien,
+ * mais l'API ne déballe pas la liste entière pour autant.
  */
-export function PartnerTracking({
+export function FollowedTrackings({
+  following,
+  others,
+  type,
+}: {
+  following: FollowedTracking[]
+  others: OthersSummary
+  type: MediaType
+}) {
+  if (following.length === 0 && others.count === 0) {
+    return (
+      <section className={styles.panel}>
+        <h2 className={styles.heading}>Ailleurs dans la médiathèque</h2>
+        <p className={styles.absent}>Personne d'autre ne suit cette œuvre pour l'instant.</p>
+      </section>
+    )
+  }
+
+  return (
+    <section className={styles.panel}>
+      <h2 className={styles.heading}>Ailleurs dans la médiathèque</h2>
+
+      {following.map((entry) => (
+        <ReadOnlyTracking
+          key={entry.user.id}
+          tracking={entry.tracking}
+          account={entry.user}
+          type={type}
+        />
+      ))}
+
+      {others.count > 0 ? (
+        <p className={styles.others}>
+          {others.count} autre{others.count > 1 ? 's' : ''} membre
+          {others.count > 1 ? 's' : ''} suit{others.count > 1 ? 'vent' : ''} cette œuvre
+          {others.average_rating !== null ? (
+            <>
+              , note moyenne <strong>{others.average_rating}/10</strong>
+            </>
+          ) : null}
+          .
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+function ReadOnlyTracking({
   tracking,
   account,
   type,
@@ -242,15 +300,15 @@ export function PartnerTracking({
   type: MediaType
 }) {
   return (
-    <section className={styles.panel}>
-      <h2 className={styles.heading}>
+    <div className={styles.followedBlock}>
+      <h3 className={styles.followedName}>
         <span
           className={styles.dot}
           style={{ background: account.identity_color }}
           aria-hidden="true"
         />
-        Le suivi de {account.pseudo}
-      </h2>
+        {account.pseudo}
+      </h3>
 
       {/* Un suivi nul, ce n'est pas « à voir » : c'est ne pas suivre l'œuvre. */}
       {!tracking ? (
@@ -296,7 +354,7 @@ export function PartnerTracking({
           ) : null}
         </dl>
       )}
-    </section>
+    </div>
   )
 }
 

@@ -19,7 +19,7 @@ import ErrorNotice from '../components/ErrorNotice'
 import MediaMetadata from '../components/MediaMetadata'
 import ProgressBar from '../components/ProgressBar'
 import SeasonList from '../components/SeasonList'
-import TrackingPanel, { PartnerTracking } from '../components/TrackingPanel'
+import TrackingPanel, { FollowedTrackings } from '../components/TrackingPanel'
 import VolumeGrid from '../components/VolumeGrid'
 import { useSession } from '../session/SessionContext'
 import styles from './MediaDetail.module.css'
@@ -31,7 +31,7 @@ export default function MediaDetail() {
 }
 
 function Detail({ id }: { id: string }) {
-  const { user, partner } = useSession()
+  const { user } = useSession()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [refreshResult, setRefreshResult] = useState<RefreshResponse | null>(null)
@@ -111,19 +111,14 @@ function Detail({ id }: { id: string }) {
 
           {detail.summary ? <p className={styles.summary}>{detail.summary}</p> : null}
 
+          {/* L'API ne renvoie plus que ma progression sur la fiche : celle des
+              autres se lit œuvre par œuvre dans leurs suivis, plus bas. */}
           <div className={styles.progressPair}>
             <ProgressLine
               label={user.pseudo}
               color={user.identity_color}
               progress={detail.progress.me}
             />
-            {partner ? (
-              <ProgressLine
-                label={partner.pseudo}
-                color={partner.identity_color}
-                progress={detail.progress.partner}
-              />
-            ) : null}
           </div>
 
           <MediaMetadata detail={detail} />
@@ -166,24 +161,21 @@ function Detail({ id }: { id: string }) {
           error={patch.error ?? removeTracking.error}
         />
 
-        {partner ? (
-          <PartnerTracking tracking={detail.tracking.partner} account={partner} type={detail.type} />
-        ) : null}
+        <FollowedTrackings
+          following={detail.tracking.following}
+          others={detail.tracking.others}
+          type={detail.type}
+        />
       </div>
 
       {/* Saisons, épisodes et tomes : chargés à la demande, jamais avec la
           fiche — `GET /media/:id` n'en contient qu'un résumé. */}
       {detail.type === 'tv' ? (
-        <SeasonList
-          mediaId={id}
-          seasons={detail.seasons}
-          user={user}
-          partner={partner}
-        />
+        <SeasonList mediaId={id} seasons={detail.seasons} user={user} />
       ) : null}
 
       {detail.type === 'comic_series' ? (
-        <VolumeGrid mediaId={id} user={user} partner={partner} />
+        <VolumeGrid mediaId={id} user={user} />
       ) : null}
 
       <DangerZone

@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchCompare } from '../api/endpoints'
+import { fetchCompare, fetchFollowing } from '../api/endpoints'
 import type { CompareResponse } from '../api/schema'
 import Cover from '../components/Cover'
 import EmptyState from '../components/EmptyState'
@@ -10,39 +11,90 @@ import { queryKeys } from '../api/keys'
 import styles from './Compare.module.css'
 
 type BothFinished = CompareResponse['both_finished'][number]
-type Loved = CompareResponse['loved_by_partner'][number]
+type Loved = CompareResponse['loved_by_them'][number]
 
 export default function Compare() {
-  // `data.partner` fait foi ici : c'est la réponse de `/compare` qui dit avec
-  // qui la comparaison a été faite, pas l'état de session.
   const { user } = useSession()
-  const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.compare,
-    queryFn: ({ signal }) => fetchCompare(signal),
+
+  // `/compare` exige désormais un `user_id` : il n'y a plus de partenaire
+  // implicite, donc plus de comparaison par défaut. On propose les comptes
+  // suivis, seuls candidats naturels.
+  const following = useQuery({
+    queryKey: queryKeys.following(user.id),
+    queryFn: ({ signal }) => fetchFollowing(user.id, null, signal),
   })
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
-  if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
+  const [withId, setWithId] = useState<string | null>(null)
+  const candidates = following.data?.items ?? []
+  const targetId = withId ?? candidates[0]?.user.id ?? null
 
-  // Sans partenaire, il n'y a rien à comparer — et ce n'est pas une erreur.
-  if (!data.partner) {
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: queryKeys.compareWith(targetId ?? ''),
+    queryFn: ({ signal }) => fetchCompare(targetId as string, signal),
+    enabled: targetId !== null,
+  })
+
+  if (following.isPending) return <p className={styles.loading}>Chargement…</p>
+  if (following.error) {
+    return <ErrorNotice error={following.error} onRetry={() => void following.refetch()} />
+  }
+
+  // Ne suivre personne n'est pas une erreur : c'est un état de départ.
+  if (candidates.length === 0) {
     return (
       <div className={styles.page}>
         <Intro />
         <EmptyState
           title="Personne avec qui comparer"
-          note="Cette page prendra son sens quand un autre compte partagera la médiathèque."
+          note="Cette page prendra son sens dès que tu suivras un autre membre de la médiathèque."
         />
       </div>
     )
   }
 
-  const theirName = data.partner.pseudo
-  const theirColor = data.partner.identity_color
+  const picker =
+    candidates.length > 1 ? (
+      <label className={styles.picker}>
+        Comparer avec
+        <select
+          value={targetId ?? ''}
+          onChange={(event) => setWithId(event.target.value)}
+        >
+          {candidates.map((entry) => (
+            <option key={entry.user.id} value={entry.user.id}>
+              {entry.user.pseudo}
+            </option>
+          ))}
+        </select>
+      </label>
+    ) : null
+
+  if (isPending) {
+    return (
+      <div className={styles.page}>
+        <Intro />
+        {picker}
+        <p className={styles.loading}>Chargement…</p>
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <Intro />
+        {picker}
+        <ErrorNotice error={error} onRetry={() => void refetch()} />
+      </div>
+    )
+  }
+
+  const theirName = data.with.pseudo
+  const theirColor = data.with.identity_color
 
   return (
     <div className={styles.page}>
       <Intro />
+      {picker}
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Vus par {user.pseudo} et {theirName}</h2>
@@ -74,13 +126,13 @@ export default function Compare() {
           Les coups de cœur de {theirName}
           <span className={styles.sectionNote}>notés 8 ou plus, que tu n'as pas terminés</span>
         </h2>
-        {data.loved_by_partner.length === 0 ? (
+        {data.loved_by_them.length === 0 ? (
           <p className={styles.quiet}>
             Rien à te recommander pour le moment — vous avez vu les mêmes choses.
           </p>
         ) : (
           <ul className={styles.lovedGrid}>
-            {data.loved_by_partner.map((entry) => (
+            {data.loved_by_them.map((entry) => (
               <LovedCard key={entry.media.id} entry={entry} color={theirColor} />
             ))}
           </ul>
@@ -135,7 +187,7 @@ function BothFinishedRow({
 
         <div className={styles.ratings}>
           <RatingChip name={meName} color={meColor} rating={entry.me.rating} />
-          <RatingChip name={theirName} color={theirColor} rating={entry.partner.rating} />
+          <RatingChip name={theirName} color={theirColor} rating={entry.them.rating} />
         </div>
 
         <div className={styles.gap}>
@@ -185,10 +237,10 @@ function LovedCard({ entry, color }: { entry: Loved; color: string }) {
         <div className={styles.lovedBody}>
           <p className={styles.lovedTitle}>{entry.media.title}</p>
           <p className={styles.lovedRating} style={{ color }}>
-            {entry.partner_rating}/10
+            {entry.their_rating}/10
           </p>
-          {entry.partner_review ? (
-            <p className={styles.lovedReview}>« {entry.partner_review} »</p>
+          {entry.their_review ? (
+            <p className={styles.lovedReview}>« {entry.their_review} »</p>
           ) : null}
         </div>
       </Link>

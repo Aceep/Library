@@ -232,3 +232,10 @@
   background: var(--paper-sunken);
   color: var(--ink);
 }
+
+/* Les suiveurs hors abonnements : un nombre, jamais des noms. */
+.othersLine {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  padding-left: calc(7px + var(--space-2));
+}

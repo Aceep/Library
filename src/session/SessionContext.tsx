@@ -6,19 +6,17 @@ import { queryKeys } from '../api/keys'
 import type { Account, Session } from '../api/schema'
 
 /**
- * Point unique où vit l'hypothèse « il y a un partenaire ».
+ * Qui je suis, et rien d'autre.
  *
- * L'API répond aujourd'hui `{ user, partner }` avec `partner` nullable, et
- * passera à plus de deux comptes plus tard. Tous les écrans passent par
- * `partners` (une liste) plutôt que par `partner` : le jour où le back change,
- * seul ce fichier bouge.
+ * L'API ne renvoie plus de partenaire depuis le passage aux comptes multiples :
+ * les autres membres n'accompagnent plus la session mais chaque charge utile,
+ * dans `tracking.following`. C'est plus juste — qui apparaît à côté d'une œuvre
+ * dépend de l'œuvre, pas d'un binôme fixé une fois pour toutes.
  */
 interface SessionValue {
   user: Account
-  /** Les autres comptes de la médiathèque. Aujourd'hui zéro ou un. */
-  partners: Account[]
-  /** Raccourci pour les écrans encore binaires (comparaison, double colonne). */
-  partner: Account | null
+  /** L'administration n'est ouverte qu'à ce rôle ; le back revérifie de son côté. */
+  isAdmin: boolean
   logout: () => Promise<void>
 }
 
@@ -64,8 +62,7 @@ export function SessionProvider({ session, children }: { session: Session; child
   const value = useMemo<SessionValue>(
     () => ({
       user: session.user,
-      partners: session.partner ? [session.partner] : [],
-      partner: session.partner,
+      isAdmin: session.user.role === 'admin',
       logout: handleLogout,
     }),
     [session, handleLogout],

@@ -1,5 +1,6 @@
 import { api, ApiError } from './client'
 import type {
+  Account,
   CompareResponse,
   EpisodeDetail,
   HomeResponse,
@@ -43,7 +44,7 @@ export const fetchSession = async (): Promise<Session | null> => {
 
 /**
  * Écran d'accueil. Volontairement borné côté back — trois en-cours par type,
- * activité du partenaire sur 30 jours et 10 entrées — et donc jamais paginé.
+ * fil des comptes suivis sur 30 jours et 10 entrées — et donc jamais paginé.
  */
 export const fetchHome = () => api.get<HomeResponse>('/home')
 
@@ -171,8 +172,36 @@ export const addMedia = (body: {
   owned?: boolean
 }) => api.post<{ created: boolean; media: { id: string } }>('/media', body)
 
-export const fetchCompare = (signal?: AbortSignal) =>
-  api.get<CompareResponse>('/compare', undefined, signal)
+/* ------------------------------------------------------------------ */
+/* Comptes et abonnements                                              */
+/* ------------------------------------------------------------------ */
+
+/** Un compte accompagné de ses compteurs, tel que listé par l'annuaire. */
+export interface UserSummary {
+  user: Account
+  following_count: number
+  followers_count: number
+  tracked_count: number
+  followed_by_me: boolean
+  joined_at: string
+}
+
+/** Les comptes auxquels `userId` est abonné. */
+export const fetchFollowing = (userId: string, cursor: string | null, signal?: AbortSignal) =>
+  api.get<Page<UserSummary>>(
+    `/users/${userId}/following`,
+    { cursor: cursor ?? undefined },
+    signal,
+  )
+
+/**
+ * Comparaison avec **un** compte donné.
+ *
+ * `user_id` est désormais obligatoire : il n'y a plus de partenaire implicite,
+ * donc plus de comparaison par défaut. C'est à l'écran de dire avec qui.
+ */
+export const fetchCompare = (userId: string, signal?: AbortSignal) =>
+  api.get<CompareResponse>('/compare', { user_id: userId }, signal)
 
 /* ------------------------------------------------------------------ */
 /* Épisodes                                                            */

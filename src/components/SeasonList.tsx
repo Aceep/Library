@@ -15,12 +15,10 @@ export default function SeasonList({
   mediaId,
   seasons,
   user,
-  partner,
 }: {
   mediaId: string
   seasons: Season[]
   user: Account
-  partner: Account | null
 }) {
   if (seasons.length === 0) return null
 
@@ -29,13 +27,7 @@ export default function SeasonList({
       <h2 className={styles.sectionTitle}>Saisons</h2>
       <ul className={styles.seasons}>
         {seasons.map((season) => (
-          <SeasonRow
-            key={season.id}
-            mediaId={mediaId}
-            season={season}
-            user={user}
-            partner={partner}
-          />
+          <SeasonRow key={season.id} mediaId={mediaId} season={season} user={user} />
         ))}
       </ul>
     </section>
@@ -46,12 +38,10 @@ function SeasonRow({
   mediaId,
   season,
   user,
-  partner,
 }: {
   mediaId: string
   season: Season
   user: Account
-  partner: Account | null
 }) {
   const mediaQueryKey = queryKeys.media(mediaId)
   // Replié par défaut : les épisodes ne sont demandés qu'au dépliage, jamais
@@ -155,13 +145,6 @@ function SeasonRow({
             progress={season.progress.me}
             label={`Progression de ${user.pseudo} sur ${label}`}
           />
-          {partner ? (
-            <ProgressLine
-              account={partner}
-              progress={season.progress.partner}
-              label={`Progression de ${partner.pseudo} sur ${label}`}
-            />
-          ) : null}
         </div>
 
         {/* Un seul aller-retour pour toute la saison, jamais N requêtes. */}
@@ -194,7 +177,6 @@ function SeasonRow({
                     key={episode.id}
                     episode={episode}
                     seasonNumber={season.number}
-                    partner={partner}
                     disabled={write.isPending}
                     onToggle={(watched) =>
                       write.mutate({ kind: 'one', episodeId: episode.id, watched })
@@ -232,14 +214,12 @@ function SeasonRow({
 function EpisodeRow({
   episode,
   seasonNumber,
-  partner,
   disabled,
   onToggle,
   onUntilHere,
 }: {
   episode: EpisodeDetail
   seasonNumber: number
-  partner: Account | null
   disabled: boolean
   onToggle: (watched: boolean) => void
   onUntilHere: () => void
@@ -266,17 +246,16 @@ function EpisodeRow({
           <span className={styles.episodeRuntime}>{episode.runtime_min} min</span>
         ) : null}
 
-        {/* Ce que le partenaire a vu se lit, ne se coche pas. */}
-        {partner ? (
+        {/* L'API ne nomme plus qui a vu quoi épisode par épisode : elle en
+            donne le nombre. Les identités sont derrière
+            `GET /episodes/:id/watchers`, qu'on ne demande pas ici. */}
+        {episode.watched.others > 0 ? (
           <span
-            className={episode.watched.partner ? styles.partnerSeen : styles.partnerUnseen}
-            style={episode.watched.partner ? { background: partner.identity_color } : undefined}
-            title={
-              episode.watched.partner
-                ? `${partner.pseudo} l'a vu`
-                : `${partner.pseudo} ne l'a pas vu`
-            }
-          />
+            className={styles.othersCount}
+            title={`${episode.watched.others} autre${episode.watched.others > 1 ? 's' : ''} membre${episode.watched.others > 1 ? 's l’ont' : ' l’a'} vu`}
+          >
+            +{episode.watched.others}
+          </span>
         ) : null}
 
         {!episode.watched.me ? (

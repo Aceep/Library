@@ -9,6 +9,8 @@ export const queryKeys = {
   session: ['session'] as const,
   home: ['home'] as const,
   compare: ['compare'] as const,
+  compareWith: (userId: string) => ['compare', userId] as const,
+  following: (userId: string) => ['following', userId] as const,
   library: ['library'] as const,
   libraryWith: (filters: unknown) => ['library', filters] as const,
   media: (id: string) => ['media', id] as const,

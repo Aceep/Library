@@ -200,3 +200,21 @@
   color: var(--ink-faint);
   font-style: italic;
 }
+
+/* Avec qui comparer : la question n'a plus de réponse implicite. */
+.picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.picker select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}

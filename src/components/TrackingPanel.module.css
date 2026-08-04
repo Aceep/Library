@@ -274,3 +274,33 @@
 .review {
   font-style: italic;
 }
+
+/* ---- Suivis des comptes abonnés ---- */
+
+.followedBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.followedBlock + .followedBlock {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-4);
+}
+
+.followedName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+
+/* Les suiveurs hors abonnements : un compte et une moyenne, jamais des noms. */
+.others {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+}

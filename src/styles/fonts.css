@@ -1,7 +1,12 @@
 /**
  * Fontes auto-hébergées (WOFF2 variables), comme l'exige la spécification :
  * pas d'appel à un tiers au chargement, et un repli métrique local pendant le
- * swap. Sous-ensembles latin + latin-ext — « œuvre » vit dans latin-ext.
+ * swap.
+ *
+ * Sous-ensembles latin + latin-ext. Le français tient entièrement dans latin
+ * (« œ » compris : U+0152-0153 fait partie de sa plage). latin-ext n'est donc
+ * jamais téléchargé pour l'interface — il est là pour les titres venus des
+ * sources externes, qui portent des noms d'Europe centrale.
  */
 
 @font-face {

@@ -20,16 +20,25 @@ export default function Cover({
   title,
   type,
   size = 'base',
+  ratio = '2/3',
 }: {
   url: string | null
   title: string
   type: MediaType
-  size?: 'sm' | 'base' | 'lg'
+  size?: 'sm' | 'base' | 'lg' | 'full'
+  /**
+   * 2:3 en grille, 3:4 en grand format. Le ratio est une propriété du
+   * composant : une page qui le veut différent le demande, elle ne va pas
+   * réécrire l'intérieur de la couverture depuis sa propre feuille.
+   */
+  ratio?: '2/3' | '3/4'
 }) {
   // On mémorise l'URL en échec, pas un booléen : quand le back renvoie une
   // nouvelle jaquette, l'image est retentée d'elle-même.
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
-  const className = `${styles.cover} ${styles[size]}`
+  const className = `${styles.cover} ${styles[size]}${
+    ratio === '3/4' ? ` ${styles.ratio34}` : ''
+  }`
 
   // Les jaquettes recopiées par l'API arrivent en URL absolue, composée depuis
   // une base qui n'est pas forcément joignable d'ici. On la ramène à un chemin
@@ -54,7 +63,7 @@ export default function Cover({
   // lit, elle ne s'abrège pas. En vignette (`sm`), la place manque et on
   // retombe sur l'initiale seule.
   return (
-    <div className={`${className} ${styles.fallback}`} data-type={type}>
+    <div className={`${className} ${styles.fallback}`}>
       <span className={styles.typeTag}>{typeLabel(type)}</span>
       <span className={styles.fallbackTitle}>
         {size === 'sm' ? firstLetter(title) : title}

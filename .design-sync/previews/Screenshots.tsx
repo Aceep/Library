@@ -20,14 +20,20 @@ const shot = (from: string, to: string, sun: string) =>
 
 const frame: React.CSSProperties = { padding: 'var(--space-4)', maxWidth: '46rem' }
 
+/* Construites une fois : `shot()` reconstruisait trois chaînes encodées à
+   chaque rendu, et donnait au passage un `src` neuf à chaque image. */
+const DUSK = shot('#2f3d52', '#7a5a48', '#e4572e')
+const MOSS = shot('#243b3b', '#6a7a4a', '#e8c46a')
+const PLUM = shot('#3a2f52', '#8a5a72', '#f0e0d0')
+
 /** La bande d'images d'un jeu — le seul type d'œuvre qui en porte. */
 export const Bande = () => (
   <div style={frame}>
     <Screenshots
       urls={[
-        shot('#2f3d52', '#7a5a48', '#e4572e'),
-        shot('#243b3b', '#6a7a4a', '#e8c46a'),
-        shot('#3a2f52', '#8a5a72', '#f0e0d0'),
+        DUSK,
+        MOSS,
+        PLUM,
       ]}
       title="Outer Wilds"
     />
@@ -42,9 +48,9 @@ export const VignetteCassee = () => (
   <div style={frame}>
     <Screenshots
       urls={[
-        shot('#2f3d52', '#7a5a48', '#e4572e'),
+        DUSK,
         'https://example.invalid/capture.jpg',
-        shot('#243b3b', '#6a7a4a', '#e8c46a'),
+        MOSS,
       ]}
       title="Outer Wilds"
     />
@@ -54,6 +60,6 @@ export const VignetteCassee = () => (
 /** Une seule capture reste une bande — elle ne s'étale pas pour compenser. */
 export const UneSeule = () => (
   <div style={frame}>
-    <Screenshots urls={[shot('#3a2f52', '#8a5a72', '#f0e0d0')]} title="Celeste" />
+    <Screenshots urls={[PLUM]} title="Celeste" />
   </div>
 )

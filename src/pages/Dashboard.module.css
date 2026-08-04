@@ -36,7 +36,8 @@
 }
 
 /* Une section = un numéro dans la marge, un titre, puis le contenu. */
-.section {
+.section,
+.partnerSection {
   display: grid;
   grid-template-columns: 120px 1fr;
   gap: 0 var(--s-7);
@@ -65,7 +66,6 @@
 }
 
 .groupTitle {
-  font-family: var(--font-sans);
   font: var(--eyebrow);
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -161,14 +161,7 @@
   border-bottom-color: var(--ink-muted);
 }
 
-.partnerSection {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 0 var(--s-7);
-}
-
 .partnerTitle {
-  font-family: var(--font-sans);
   font: var(--eyebrow);
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -224,7 +217,7 @@
   font-family: var(--font-serif);
   font-size: 19px;
   font-variant-numeric: tabular-nums;
-  color: var(--identity, var(--ink-soft));
+  color: var(--identity);
 }
 
 .activityReview {
@@ -250,7 +243,6 @@
   align-items: center;
   min-height: 44px;
   border: var(--rule-w) solid var(--ink);
-  border-radius: var(--radius-0);
   padding: 0 var(--s-5);
   font: var(--eyebrow);
   letter-spacing: 0.12em;

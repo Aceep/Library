@@ -10,14 +10,12 @@
   flex: 1;
   height: var(--bar-h);
   min-width: 40px;
-  border-radius: var(--radius-0);
   background: var(--rule);
   overflow: hidden;
 }
 
 .fill {
   height: 100%;
-  border-radius: var(--radius-0);
   transition: width var(--dur-4) var(--ease-page);
 }
 

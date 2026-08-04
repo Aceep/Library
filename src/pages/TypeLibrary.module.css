@@ -134,18 +134,22 @@
   padding-top: var(--space-3);
 }
 
+/* Même contrôle que sur la une : c'est le même bouton, sur deux pages. */
 .emptyAction {
-  display: inline-block;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--text-sm);
-  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  border: var(--rule-w) solid var(--ink);
+  padding: 0 var(--s-5);
+  font: var(--eyebrow);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  transition: background var(--dur-2) var(--ease-page);
 }
 
 .emptyAction:hover {
-  background: var(--paper-sunken);
-  color: var(--ink);
+  background: var(--surface-sunken);
 }
 
 /**

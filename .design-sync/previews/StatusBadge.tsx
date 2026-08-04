@@ -1,4 +1,4 @@
-import { StatusBadge } from 'mediatheque-front'
+import { IdentityDot, StatusBadge } from 'mediatheque-front'
 
 const row: React.CSSProperties = {
   display: 'flex',
@@ -27,23 +27,43 @@ export const DansUneLigneDeSuivi = () => (
       { pseudo: 'Bob', color: '#3a7ca5', status: 'done' as const, rating: 6 },
       { pseudo: 'Camille', color: '#4f7a52', status: 'todo' as const, rating: null },
     ].map((entry) => (
-      <div key={entry.pseudo} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-        <span
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            background: entry.color,
-            flex: 'none',
-          }}
-        />
-        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-soft)', minWidth: '5rem' }}>
-          {entry.pseudo}
+      <div
+        key={entry.pseudo}
+        style={
+          {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+            '--identity': entry.color,
+          } as React.CSSProperties
+        }
+      >
+        {/* Le vrai composant d'identité, pas une pastille refaite à la main :
+            l'aperçu suit `IdentityDot` quand il change. */}
+        <span style={{ minWidth: '6rem' }}>
+          <IdentityDot
+            account={{
+              id: `00000000-0000-4000-8000-${entry.pseudo}`,
+              pseudo: entry.pseudo,
+              avatar_url: null,
+              identity_color: entry.color,
+              role: 'user',
+              deactivated: false,
+            }}
+            withName
+          />
         </span>
         <StatusBadge status={entry.status} />
+        {/* « Un chiffre, pas une pastille » : l'idiome de note de l'application. */}
         {entry.rating !== null ? (
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-muted)' }}>
-            {entry.rating}/10
+          <span
+            style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: 17,
+              color: 'var(--identity)',
+            }}
+          >
+            {entry.rating}
           </span>
         ) : null}
       </div>

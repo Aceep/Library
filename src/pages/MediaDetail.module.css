@@ -31,15 +31,10 @@
   padding-bottom: var(--s-8);
 }
 
-/* L'artwork passe à droite, en 3/4 : le grand format d'une fiche. */
+/* L'artwork passe à droite ; sa taille et son ratio sont demandés à `Cover`. */
 .headerCover {
   grid-column: 2;
   grid-row: 1;
-  width: 100%;
-}
-
-.headerCover > * {
-  aspect-ratio: 3 / 4;
 }
 
 .headerBody {

@@ -120,6 +120,31 @@ jamais par comparaison de chaîne sur le message.
 - Les variantes se portent en attribut de données, pas en classe conditionnelle :
   `data-status={status}` puis `.badge[data-status='doing']`.
 
+### Un écran ne restyle jamais l'intérieur d'un composant
+
+La feuille d'une page pose l'emplacement du composant — grille, colonne, largeur
+maximale — et s'arrête là. Ce qu'il y a *dedans* se demande par une prop, et si la prop
+n'existe pas, on l'ajoute au composant.
+
+```css
+/* Non. À spécificité égale avec la règle du composant, c'est l'ordre d'émission
+   des feuilles qui départage — donc un rendu qui dépend du bundle. */
+.headerCover > * { aspect-ratio: 3 / 4; }
+```
+
+```jsx
+/* Oui. Le composant expose le besoin, la page le demande. */
+<div className={styles.headerCover}>
+  <Cover url={detail.cover_url} title={detail.title} type={detail.type} size="full" ratio="3/4" />
+</div>
+```
+
+La règle vaut pour nous comme pour l'extérieur : `.design-sync/conventions.md` l'énonce
+déjà aux consommateurs du bundle, et un écran de ce dépôt n'a pas plus de droits sur les
+internes d'un composant qu'une maquette dans claude.ai/design. Elle vaut aussi contre les
+classes hachées des CSS Modules, qu'on pourrait croire hors d'atteinte : `> *` et les
+sélecteurs de descendance les contournent, et c'est précisément ce qu'il ne faut pas.
+
 ## Composants
 
 - Props typées **en ligne dans la signature** tant qu'elles tiennent ; une `interface`

@@ -10,7 +10,10 @@ import type {
   TrackingStatus,
   UserTracking,
 } from '../api/schema'
+import { fetchMediaTrackers } from '../api/endpoints'
+import { queryKeys } from '../api/keys'
 import ErrorNotice from './ErrorNotice'
+import PeopleDisclosure from './PeopleDisclosure'
 import styles from './TrackingPanel.module.css'
 
 const STATUSES: TrackingStatus[] = ['todo', 'doing', 'done']
@@ -245,10 +248,12 @@ function ReviewField({
  * mais l'API ne déballe pas la liste entière pour autant.
  */
 export function FollowedTrackings({
+  mediaId,
   following,
   others,
   type,
 }: {
+  mediaId: string
   following: FollowedTracking[]
   others: OthersSummary
   type: MediaType
@@ -277,14 +282,28 @@ export function FollowedTrackings({
 
       {others.count > 0 ? (
         <p className={styles.others}>
-          {others.count} autre{others.count > 1 ? 's' : ''} membre
-          {others.count > 1 ? 's' : ''} suit{others.count > 1 ? 'vent' : ''} cette œuvre
+          {/* Le compteur se déplie : l'API ne nomme pas ces membres dans la
+              fiche, mais `/media/:id/trackers` sait le faire à la demande. */}
+          <PeopleDisclosure
+            count={others.count}
+            label={['autre membre', 'autres membres']}
+            panelTitle="Tous ceux qui suivent cette œuvre" 
+            queryKey={queryKeys.mediaTrackers(mediaId)}
+            fetcher={(signal) =>
+              fetchMediaTrackers(mediaId, null, signal).then((page) => ({
+                ...page,
+                items: page.items.map((entry) => ({
+                  user: entry.user,
+                  note: entry.tracking.rating !== null ? `${entry.tracking.rating}/10` : null,
+                })),
+              }))
+            }
+          />
           {others.average_rating !== null ? (
-            <>
-              , note moyenne <strong>{others.average_rating}/10</strong>
-            </>
+            <span className={styles.average}>
+              note moyenne <strong>{others.average_rating}/10</strong>
+            </span>
           ) : null}
-          .
         </p>
       ) : null}
     </section>

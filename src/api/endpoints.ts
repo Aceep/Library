@@ -187,6 +187,37 @@ export interface UserSummary {
 }
 
 /* ------------------------------------------------------------------ */
+/* Déplier les compteurs                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Ailleurs, l'API ne donne qu'un nombre : `others.count` sur une œuvre,
+ * `watched.others` sur un épisode, `tracking.others` sur un tome. Ces trois
+ * routes sont le seul moyen d'aller voir qui se cache derrière, et elles ne
+ * sont appelées qu'à la demande — jamais ligne par ligne dans une liste.
+ *
+ * Elles renvoient **tout le monde**, pas seulement mes abonnements : suivre
+ * quelqu'un trie ce qui remonte, ça ne protège rien.
+ */
+export const fetchMediaTrackers = (id: string, cursor: string | null, signal?: AbortSignal) =>
+  api.get<Page<{ user: Account; tracking: UserTracking }>>(
+    `/media/${id}/trackers`,
+    { cursor: cursor ?? undefined },
+    signal,
+  )
+
+/** Les épisodes renvoient des comptes à plat, sans suivi : cocher n'a pas de nuance. */
+export const fetchEpisodeWatchers = (id: string, cursor: string | null, signal?: AbortSignal) =>
+  api.get<Page<Account>>(`/episodes/${id}/watchers`, { cursor: cursor ?? undefined }, signal)
+
+export const fetchVolumeTrackers = (id: string, cursor: string | null, signal?: AbortSignal) =>
+  api.get<Page<{ user: Account; tracking: VolumeTracking }>>(
+    `/volumes/${id}/trackers`,
+    { cursor: cursor ?? undefined },
+    signal,
+  )
+
+/* ------------------------------------------------------------------ */
 /* Mon compte                                                          */
 /* ------------------------------------------------------------------ */
 

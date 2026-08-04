@@ -320,3 +320,7 @@
   color: var(--ink-faint);
   font-style: italic;
 }
+
+.average {
+  margin-left: var(--space-3);
+}

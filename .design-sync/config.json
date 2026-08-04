@@ -1,0 +1,37 @@
+{
+  "projectId": "8c5d0f7e-68f8-4b6f-8837-91afb1c29967",
+  "shape": "package",
+  "pkg": "mediatheque-front",
+  "globalName": "Mediatheque",
+  "srcDir": "src",
+  "tsconfig": "tsconfig.json",
+  "buildCmd": "npx vite build --config .design-sync/vite.lib.config.ts",
+  "cssEntry": ".design-sync/.cache/dist-ds/style.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "provider": {
+    "component": "DesignPreviewProvider"
+  },
+  "overrides": {
+    "Cover": {
+      "cardMode": "column"
+    }
+  },
+  "componentSrcMap": {
+    "AppShell": "src/components/AppShell.tsx",
+    "Cover": "src/components/Cover.tsx",
+    "EmptyState": "src/components/EmptyState.tsx",
+    "ErrorNotice": "src/components/ErrorNotice.tsx",
+    "FollowButton": "src/components/FollowButton.tsx",
+    "FollowedTrackings": "src/components/TrackingPanel.tsx",
+    "IdentityDot": "src/components/IdentityDot.tsx",
+    "MediaMetadata": "src/components/MediaMetadata.tsx",
+    "NewContentBadge": "src/components/StatusBadge.tsx",
+    "PeopleDisclosure": "src/components/PeopleDisclosure.tsx",
+    "ProgressBar": "src/components/ProgressBar.tsx",
+    "Screenshots": "src/components/Screenshots.tsx",
+    "SeasonList": "src/components/SeasonList.tsx",
+    "StatusBadge": "src/components/StatusBadge.tsx",
+    "TrackingPanel": "src/components/TrackingPanel.tsx",
+    "VolumeGrid": "src/components/VolumeGrid.tsx"
+  }
+}

@@ -4,46 +4,54 @@
   min-height: 100vh;
 }
 
+/**
+ * Le bandeau est un filet, pas une barre : fond de page, une règle en bas, et
+ * rien qui flotte. L'élévation est réservée à ce qui flotte réellement.
+ */
 .header {
-  border-bottom: 1px solid var(--rule);
-  background: var(--paper);
+  border-bottom: var(--rule-w) solid var(--ink);
+  background: var(--surface-page);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
 .headerInner {
-  max-width: 1180px;
+  max-width: var(--max-content);
   margin: 0 auto;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--s-4) var(--page-margin);
   display: flex;
   align-items: center;
-  gap: var(--space-5);
+  gap: var(--s-5);
   flex-wrap: wrap;
 }
 
 .brand {
   font-family: var(--font-serif);
-  font-size: var(--text-lg);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
   flex: none;
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--s-5);
   flex-wrap: wrap;
   flex: 1;
 }
 
+/* Navigation en sourcils : petites capitales, filet actif de 2px. */
 .navLink {
-  font-size: var(--text-sm);
+  font: var(--eyebrow);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--ink-muted);
-  padding-bottom: 2px;
-  border-bottom: 1px solid transparent;
+  padding-bottom: 4px;
+  border-bottom: var(--rule-w-strong) solid transparent;
   white-space: nowrap;
+  transition: color var(--dur-2) var(--ease-page);
 }
 
 .navLink:hover {
@@ -57,33 +65,41 @@
 
 .navLinkPending {
   color: var(--ink-faint);
-  font-style: italic;
 }
 
 .navSeparator {
-  width: 1px;
-  height: 14px;
+  width: var(--rule-w);
+  height: 12px;
   background: var(--rule-strong);
 }
 
 .account {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--s-4);
   flex: none;
 }
 
-.searchLink {
-  font-size: var(--text-sm);
+/* Contrôle standard : 44px de cible, rayon nul, un filet qui se ferme. */
+.searchLink,
+.adminLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font: var(--eyebrow);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--ink-soft);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3);
+  border: var(--rule-w) solid var(--rule);
+  border-radius: var(--radius-0);
+  padding: 0 var(--s-4);
   white-space: nowrap;
+  transition: border-color var(--dur-2) var(--ease-page);
 }
 
-.searchLink:hover {
-  background: var(--paper-sunken);
+.searchLink:hover,
+.adminLink:hover {
+  border-color: var(--ink);
   color: var(--ink);
 }
 
@@ -91,7 +107,7 @@
   background: none;
   border: none;
   padding: 0;
-  font-size: var(--text-sm);
+  font: var(--caption);
   color: var(--ink-muted);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -102,21 +118,26 @@
   color: var(--ink);
 }
 
+/**
+ * Le champ de la page : marges et largeur maximale viennent des jetons, donc
+ * les quatre paliers se règlent dans `tokens.css` et nulle part ailleurs.
+ */
 .main {
   flex: 1;
-  max-width: 1180px;
+  max-width: var(--max-content);
   width: 100%;
   margin: 0 auto;
-  padding: var(--space-7) var(--space-5) var(--space-8);
+  padding: var(--s-8) var(--page-margin) var(--s-10);
 }
 
-@media (max-width: 800px) {
+@media (max-width: 767px) {
   .headerInner {
-    gap: var(--space-3);
+    gap: var(--s-3);
+    padding: var(--s-3) var(--page-margin);
   }
 
   .main {
-    padding: var(--space-5) var(--space-4) var(--space-7);
+    padding: var(--s-6) var(--page-margin) var(--s-8);
   }
 }
 
@@ -125,21 +146,7 @@
   opacity: 0.75;
 }
 
-/* Réservé au rôle admin — le back revérifie de son côté. */
-.adminLink {
-  font-size: var(--text-sm);
-  color: var(--ink-muted);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3);
-}
-
-.adminLink:hover {
-  background: var(--paper-sunken);
-  color: var(--ink);
-}
-
 .adminGroup {
   display: inline-flex;
-  gap: var(--space-2);
+  gap: var(--s-2);
 }

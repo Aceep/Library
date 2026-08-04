@@ -50,12 +50,15 @@ export default function Cover({
     )
   }
 
+  // Le repli compose le titre, pas une initiale : une notice de catalogue se
+  // lit, elle ne s'abrège pas. En vignette (`sm`), la place manque et on
+  // retombe sur l'initiale seule.
   return (
     <div className={`${className} ${styles.fallback}`} data-type={type}>
-      <span className={styles.initial} aria-hidden="true">
-        {firstLetter(title)}
-      </span>
       <span className={styles.typeTag}>{typeLabel(type)}</span>
+      <span className={styles.fallbackTitle}>
+        {size === 'sm' ? firstLetter(title) : title}
+      </span>
     </div>
   )
 }

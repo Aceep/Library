@@ -5,24 +5,25 @@
   min-width: 0;
 }
 
+/* « Barre 2px, jamais arrondie » — la progression est un filet, pas une gélule. */
 .track {
   flex: 1;
-  height: 4px;
+  height: var(--bar-h);
   min-width: 40px;
-  border-radius: 2px;
+  border-radius: var(--radius-0);
   background: var(--rule);
   overflow: hidden;
 }
 
 .fill {
   height: 100%;
-  border-radius: 2px;
-  transition: width 200ms ease;
+  border-radius: var(--radius-0);
+  transition: width var(--dur-4) var(--ease-page);
 }
 
 .count {
   flex: none;
-  font-size: var(--text-xs);
+  font: var(--caption);
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
 }

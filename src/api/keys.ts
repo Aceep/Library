@@ -36,7 +36,8 @@ export const queryKeys = {
    * chiffres bougent dès qu'on coche un épisode, et l'écran se relit au retour
    * dessus plutôt que d'afficher un total d'avant.
    */
-  stats: (userId: string | null) => ['stats', userId] as const,
+  stats: (userId: string | null, compareWith: string | null = null) =>
+    ['stats', userId, compareWith] as const,
   home: ['home'] as const,
   compare: ['compare'] as const,
   compareWith: (userId: string) => ['compare', userId] as const,

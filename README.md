@@ -249,10 +249,40 @@ par un lien reçu, sans compte.
 ## Sections en attente
 
 **Plus aucune.** Tout ce que l'API sert a son écran, et `ComingSoon` a été
-supprimé. La dernière à tomber est la comparaison de deux tableaux de bord
-(`compare_with` sur `/stats`), qui est **reportée** et non oubliée : elle
-double la surface de l'écran — deux séries, des écarts — et `/comparer` couvre
-déjà la comparaison des bibliothèques.
+supprimé.
+
+## Comparer deux tableaux de bord
+
+Le sélecteur « Comparer avec » sur `/statistiques` propose les comptes suivis
+et rend les deux tableaux en une seule requête (`compare_with`), donc dans les
+mêmes conditions — même fuseau, même instant de calcul.
+
+**Deux séries de données coexistent, et la teinte devient nécessaire.** C'est
+la couleur d'identité, qui existe précisément pour distinguer des personnes et
+sert déjà partout où deux suivis se côtoient. Aucune autre chromie n'est
+introduite, et le pseudo reste écrit à côté de la pastille : la couleur ne
+porte jamais l'information seule.
+
+**Aucune différence n'est calculée.** Imprimer un écart, c'est affirmer qu'il
+veut dire quelque chose. Entre deux valeurs de couvertures différentes, la
+soustraction hérite des deux trous sans pouvoir les nommer ; et même à
+couverture égale, « 888 pages de plus » ne dit rien quand l'une a terminé
+quatre livres et l'autre un seul.
+
+Trois grandeurs survivent à un écart de volume, et elles seules sont montrées :
+
+- **les parts** — la répartition par type rapportée au total de chacun ;
+- **les moyennes par œuvre comptée** — `value / coverage.counted`, le seul
+  rapport dont numérateur et dénominateur décrivent le *même* sous-ensemble,
+  garanti par le contrat, donc insensible autant au volume qu'aux trous ;
+- **les notes**, normalisées par nature, chacune avec son assiette.
+
+Sur l'instance de démonstration, les deux lectures pointent en sens inverse :
+alice a lu 1 232 pages contre 344, mais **par livre c'est bob** — 344 contre
+308. C'est exactement ce que la moyenne par œuvre est là pour montrer.
+
+« En commun » est une intersection des **palmarès**, pas des goûts : les
+palmarès sont tronqués, et la phrase qui accompagne la liste le dit.
 
 ## Ce que les statistiques ne font pas
 

@@ -840,7 +840,21 @@ export const removeQuestItem = (id: string, mediaId: string) =>
 /**
  * Le tableau de bord d'un membre — le mien quand `userId` est absent.
  *
- * `compare_with` existe aussi côté API ; l'écran ne s'en sert pas encore.
+ * `compareWith` rend un **second tableau de bord complet**, dans exactement la
+ * même forme, sous `comparison`. Une seule requête pour les deux : rien à
+ * synchroniser entre deux réponses, et les deux membres sont mesurés dans les
+ * mêmes conditions — même fuseau, même instant de calcul.
+ *
+ * L'API refuse `compare_with` identique à `user_id` ; l'écran ne le propose
+ * pas.
  */
-export const fetchStats = (userId?: string, signal?: AbortSignal) =>
-  api.get<StatsResponse>('/stats', userId ? { user_id: userId } : undefined, signal)
+export const fetchStats = (
+  userId?: string,
+  compareWith?: string | null,
+  signal?: AbortSignal,
+) => {
+  const query: Record<string, string> = {}
+  if (userId) query.user_id = userId
+  if (compareWith) query.compare_with = compareWith
+  return api.get<StatsResponse>('/stats', Object.keys(query).length ? query : undefined, signal)
+}

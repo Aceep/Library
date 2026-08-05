@@ -37,6 +37,7 @@
     "Screenshots": "src/components/Screenshots.tsx",
     "SeasonList": "src/components/SeasonList.tsx",
     "StatBars": "src/components/StatBars.tsx",
+    "StatDuel": "src/components/StatDuel.tsx",
     "StatFigure": "src/components/StatFigure.tsx",
     "StatRanking": "src/components/StatRanking.tsx",
     "StatusBadge": "src/components/StatusBadge.tsx",

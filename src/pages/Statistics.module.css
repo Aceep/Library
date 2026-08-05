@@ -1,8 +1,14 @@
 /**
  * Aucun vocabulaire visuel nouveau : les filets, les barres d'encre, les
  * chiffres tabulaires et les sourcils viennent tous d'ailleurs dans
- * l'application. Rien n'est teinté — il n'y a qu'une série de données à la
- * fois, et rien à distinguer par la couleur.
+ * l'application.
+ *
+ * Seul en solo, rien n'est teinté : il n'y a qu'une série de données à la fois,
+ * et rien à distinguer par la couleur. En comparaison, deux séries coexistent
+ * et la teinte devient nécessaire — c'est alors la **couleur d'identité**, qui
+ * existe précisément pour distinguer des personnes et sert déjà partout où deux
+ * suivis se côtoient. Aucune autre chromie n'est introduite, et le nom reste
+ * écrit à côté de la pastille.
  */
 .page {
   max-width: var(--max-content);
@@ -221,4 +227,51 @@
 .loading {
   color: var(--ink-faint);
   font-size: var(--text-sm);
+}
+
+/* ---- Comparaison ---- */
+
+.picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.select {
+  font: inherit;
+  font-size: var(--text-sm);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--paper-raised);
+  border: var(--rule-w) solid var(--rule-strong);
+  border-radius: var(--radius);
+  color: var(--ink);
+}
+
+.select:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.duels {
+  border-top: var(--rule-w) solid var(--rule);
+}
+
+.communs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.commun {
+  font-size: var(--text-sm);
+  color: var(--ink);
+  border: var(--rule-w) solid var(--rule-strong);
+  padding: var(--space-2) var(--space-3);
 }

@@ -72,15 +72,10 @@ function GatedApp() {
           <Route path="a-propos" element={<About />} />
           <Route path="administration/invitations" element={<AdminInvitations />} />
           <Route path="administration/membres" element={<AdminUsers />} />
-          <Route
-            path="musique"
-            element={
-              <ComingSoon
-                title="Musique"
-                note="La musique est en cours de développement côté API — elle rejoindra les films, les séries, les livres, les mangas et les jeux. Cette page l'attend, et rien n'y sera inventé en attendant."
-              />
-            }
-          />
+          {/* La musique a désormais son rayon comme les cinq autres. L'ancienne
+              adresse survit en redirection : elle a été en navigation, elle est
+              peut-être dans un signet. */}
+          <Route path="musique" element={<Navigate to="/bibliotheque/music" replace />} />
           <Route
             path="quetes"
             element={

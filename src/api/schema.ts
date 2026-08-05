@@ -113,8 +113,8 @@ export interface Page<T> {
   next_cursor: string | null
 }
 
-/** Les cinq types d'œuvres, dans l'ordre d'affichage retenu pour la navigation. */
-export const MEDIA_TYPES = ['movie', 'tv', 'book', 'comic_series', 'game'] as const
+/** Les six types d'œuvres, dans l'ordre d'affichage retenu pour la navigation. */
+export const MEDIA_TYPES = ['movie', 'tv', 'book', 'comic_series', 'game', 'music'] as const
 
 const TYPE_LABELS: Record<MediaType, { singular: string; plural: string }> = {
   movie: { singular: 'Film', plural: 'Films' },
@@ -122,6 +122,9 @@ const TYPE_LABELS: Record<MediaType, { singular: string; plural: string }> = {
   book: { singular: 'Livre', plural: 'Livres' },
   comic_series: { singular: 'Manga / BD', plural: 'Mangas & BD' },
   game: { singular: 'Jeu', plural: 'Jeux vidéo' },
+  // L'unité est l'album, pas la piste ni l'artiste — le pluriel nomme le rayon,
+  // comme « Jeux vidéo » nomme celui dont l'unité est « Jeu ».
+  music: { singular: 'Album', plural: 'Musique' },
 }
 
 export const typeLabel = (type: MediaType) => TYPE_LABELS[type].singular
@@ -148,6 +151,7 @@ const TIMES_NOUNS: Record<MediaType, [string, string]> = {
   book: ['lecture', 'lectures'],
   comic_series: ['lecture', 'lectures'],
   game: ['partie', 'parties'],
+  music: ['écoute', 'écoutes'],
 }
 
 export const timesNoun = (type: MediaType, times: number) =>
@@ -159,6 +163,31 @@ export const timesNoun = (type: MediaType, times: number) =>
  * ne doit même pas proposer le geste.
  */
 export const isDerivedStatusType = (type: MediaType) => type === 'tv' || type === 'comic_series'
+
+/**
+ * Les types à **deux états** : envie de l'écouter, écouté.
+ *
+ * Un album se consomme d'un bloc — « en cours » n'y décrit rien qu'on puisse
+ * observer, et le tolérer produirait des bibliothèques où la moitié des albums
+ * traînent « en cours » depuis deux ans. Le back refuse `doing` explicitement
+ * (`400 VALIDATION`) ; l'interface ne doit donc pas le **proposer**, plutôt que
+ * de laisser le geste échouer.
+ *
+ * Troisième régime, à ne confondre ni avec le statut libre ni avec le statut
+ * dérivé de `isDerivedStatusType` : ici le statut s'écrit, il a juste une
+ * valeur de moins.
+ *
+ * ⚠ Cette règle est **recopiée** de `packages/shared/src/enums.ts` côté back
+ * (`TWO_STATE_TYPES`). C'est une fonction, pas un champ de réponse : elle ne
+ * traverse pas le contrat OpenAPI, et c'est la seule règle du back que
+ * `types.ts` ne peut pas nous imposer. Si un deuxième type à deux états
+ * apparaît, rien ici ne le signalera — à revérifier lors d'un `contract:pull`.
+ */
+export const hasTwoStateStatus = (type: MediaType) => type === 'music'
+
+/** Les statuts qu'un type accepte, dans l'ordre où ils se succèdent. */
+export const allowedStatuses = (type: MediaType): readonly TrackingStatus[] =>
+  hasTwoStateStatus(type) ? (['todo', 'done'] as const) : (['todo', 'doing', 'done'] as const)
 
 /** Pourcentage de progression, avec la garde sur `total === 0`. */
 export const progressRatio = (progress: Progress | null | undefined): number | null => {

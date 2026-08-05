@@ -11,7 +11,7 @@ on:
 
 jobs:
   verifier:
-    name: Lint et build
+    name: Contrat, lint, tests et build
     runs-on: ubuntu-latest
 
     steps:
@@ -30,8 +30,26 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
+      # Le garde-fou du contrat.
+      #
+      # `src/api/types.ts` est **engendré** depuis `contract/openapi.json`, et
+      # commité pour que le dépôt compile sans le back sous la main. Deux
+      # dérives sont possibles, cette étape ferme les deux : quelqu'un édite
+      # `types.ts` à la main, ou quelqu'un met à jour le contrat sans
+      # régénérer. Dans les deux cas, `diff` affiche exactement ce qui manque.
+      #
+      # Ce qu'elle ne peut pas voir : que `contract/openapi.json` a pris du
+      # retard sur le back, qui est un dépôt privé et séparé. C'est
+      # `npm run contract:pull` qui met les deux à jour d'un geste, et la revue
+      # de la PR qui lit ce que le contrat a changé.
+      - name: Contrat et types engendrés
+        run: npm run types:check
+
       - name: Lint
         run: npm run lint
+
+      - name: Tests
+        run: npm test
 
       # `npm run build` enchaîne `tsc --noEmit` puis `vite build` : la
       # compilation des types est donc couverte ici, pas besoin d'une étape à

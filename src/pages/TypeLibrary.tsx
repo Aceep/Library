@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchLibrary } from '../api/endpoints'
 import type { LibraryFilters, LibrarySort } from '../api/endpoints'
-import { MEDIA_TYPES, statusLabel, typeLabelPlural } from '../api/schema'
+import { MEDIA_TYPES, allowedStatuses, statusLabel, typeLabelPlural } from '../api/schema'
 import type { MediaType, TrackingStatus } from '../api/schema'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
@@ -12,11 +12,14 @@ import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
 import styles from './TypeLibrary.module.css'
 
-const STATUS_FILTERS: Array<{ value: TrackingStatus | null; label: string }> = [
+/**
+ * Les filtres suivent les statuts que le type accepte : sur un rayon de
+ * musique, « En cours » ne ramènerait jamais rien puisque le back refuse
+ * d'écrire ce statut sur un album.
+ */
+const statusFilters = (type: MediaType): Array<{ value: TrackingStatus | null; label: string }> => [
   { value: null, label: 'Tout' },
-  { value: 'todo', label: statusLabel('todo') },
-  { value: 'doing', label: statusLabel('doing') },
-  { value: 'done', label: statusLabel('done') },
+  ...allowedStatuses(type).map((value) => ({ value, label: statusLabel(value) })),
 ]
 
 const SORTS: Array<{ value: LibrarySort; label: string }> = [
@@ -73,7 +76,7 @@ function Library({ type }: { type: MediaType }) {
 
       <div className={styles.filters}>
         <div className={styles.filterGroup} role="group" aria-label="Filtrer par statut">
-          {STATUS_FILTERS.map((filter) => (
+          {statusFilters(type).map((filter) => (
             <button
               key={filter.label}
               type="button"

@@ -1,6 +1,7 @@
 # Médiathèque — front
 
-Interface de la médiathèque partagée, branchée sur l'API `bibliotheque-back`.
+Interface de la médiathèque partagée, branchée sur l'API `bibliotheque-back`
+(dépôt voisin, cloné en `../biblio-back`).
 React 18 + TypeScript + Vite, TanStack Query et CSS Modules. Tout est en
 français, sans i18n.
 
@@ -35,47 +36,73 @@ est en `SameSite=Lax`. En appel direct depuis un autre port, **la connexion
 réussit puis tout répond `401`** sans que rien ne l'explique. Si ce symptôme
 apparaît, c'est le proxy qu'il faut regarder, pas l'authentification.
 
-### Quand l'adresse de l'API change
+### Viser une API qui tourne ailleurs
 
-Le back tourne sur une machine de l'équipe, dont l'IP bouge. Symptôme : les
-appels échouent en `500` côté navigateur, et le **terminal Vite** — pas la
-console du navigateur — affiche :
+Le défaut est `http://localhost:3000` — la seule adresse qui ne se démode pas.
+Si le back tourne sur une autre machine, son IP se donne par variable :
+
+```bash
+VITE_API_TARGET=http://<adresse>:3000 npm run dev
+```
+
+Ou une fois pour toutes dans `.env.local`, qui n'est pas versionné. **Ne
+remets pas d'IP dans `vite.config.ts`** : celle qui s'y trouvait a fini par
+désigner une machine qui n'existait plus, et un défaut faux coûte plus qu'un
+défaut restrictif — l'application démarre, se connecte même, puis échoue
+partout sans dire pourquoi.
+
+Symptôme d'une adresse morte : les appels échouent côté navigateur et le
+**terminal Vite** — pas la console — affiche :
 
 ```
 [vite] http proxy error: /health
 Error: connect EHOSTUNREACH 192.168.86.219:3000
 ```
 
-Deux remèdes :
-
-```bash
-# 1. nouvelle adresse, sans toucher au fichier
-VITE_API_TARGET=http://<nouvelle-ip>:3000 npm run dev
-
-# 2. durablement : changer l'unique ligne de vite.config.ts
-```
-
 Repli local complet, si la machine est éteinte :
 
 ```bash
-cd ../bibliotheque-back && cp .env.example .env
+cd ../biblio-back && cp .env.example .env
 docker compose --profile full up -d --build
 cd -
-VITE_API_TARGET=http://localhost:3000 npm run dev
+npm run dev
 ```
 
-## Types générés depuis le contrat
+## Le contrat, vendorisé
 
-`src/api/types.ts` est **généré**, jamais édité à la main :
+`contract/openapi.json` est une **copie** du contrat du back, versionnée ici.
+`src/api/types.ts` en est engendré, et n'est jamais édité à la main.
 
 ```bash
-npm run types      # openapi-typescript ../bibliotheque-back/docs/openapi.json
+npm run contract:pull   # récupère le contrat du back, puis régénère les types
+npm run types           # régénère seulement, depuis la copie locale
+npm run types:check     # échoue si les types ne correspondent plus au contrat
 ```
 
-Quand le contrat du back bouge, cette commande met les types à jour et la
-compilation signale ce qui ne colle plus. C'est le mécanisme qui garde le front
-honnête vis-à-vis de l'API — il a déjà rattrapé plusieurs suppositions fausses,
-dont l'essentiel du passage aux comptes multiples.
+Pourquoi une copie plutôt qu'une lecture directe : le back est un dépôt
+**privé et séparé**, que la CI d'ici ne peut pas lire sans secret. La copie
+rend le dépôt autonome — il compile et se teste sans le back sous la main — et
+transforme chaque évolution du contrat en un diff qu'on relit dans la PR au
+lieu d'un changement invisible.
+
+`contract:pull` cherche le back dans `../biblio-back`, surchargeable :
+
+```bash
+BACK_REPO=~/ailleurs/bibliotheque-back npm run contract:pull
+```
+
+`types:check` tourne en CI et ferme deux dérives : un `types.ts` édité à la
+main, et un contrat mis à jour sans régénération. Il ne peut pas voir que la
+copie a pris du retard sur le back — c'est `contract:pull` qui s'en charge, et
+la revue qui lit ce qu'il rapporte.
+
+### Une règle du back que le contrat ne transporte pas
+
+Les types à **deux états** (`music` : à écouter, écouté — jamais « en cours »)
+sont une *fonction* de `packages/shared` côté back, pas un champ de réponse.
+`hasTwoStateStatus` dans `src/api/schema.ts` la recopie donc, et c'est la seule
+règle que `types.ts` ne peut pas imposer. À revérifier lors d'un
+`contract:pull`.
 
 ## Le modèle : tout est public, l'abonnement trie
 
@@ -138,28 +165,36 @@ erreurs, ou des affichages faux.
 | `availability` est nul très souvent, et ce n'est pas une erreur | La fiche ne passe **jamais** d'appel sortant : elle sert le bloc depuis le cache seul. Sur cache froid il vaut `null`, et c'est `GET /media/:id/availability` qui va chercher. Cache froid, aucune plateforme dans le pays, ou source injoignable : trois cas, une réponse `200`, aucun écran d'erreur. |
 | Passer une œuvre à `done` crée l'entrée de journal **toute seule** | Y compris quand le statut est dérivé — cocher le dernier épisode journalise. D'où la clé `log` préfixée par celle de la fiche : invalider `media(id)` emporte le journal. |
 | La note d'une entrée de journal remonte au suivi **si l'entrée est la plus récente** | L'inverse n'existe pas : corriger la note de l'œuvre ne réécrit pas l'histoire. Chaque écriture de journal renvoie donc le suivi recalculé, qu'on range tel quel. |
-| `favorite` s'écrit sur **les cinq types**, `status` non | Le coup de cœur n'a rien à voir avec ce qui est coché, ni avec la note. Affiché comme un signe distinct, jamais comme un seuil de note. |
+| `favorite` s'écrit sur **les six types**, `status` non | Le coup de cœur n'a rien à voir avec ce qui est coché, ni avec la note. Affiché comme un signe distinct, jamais comme un seuil de note. |
+| Un album n'a que **deux états** | `todo` et `done`, jamais `doing` : le back refuse le troisième en `400`. L'interface ne le propose donc ni dans le panneau de suivi, ni dans les filtres d'un rayon de musique. La règle vit dans `hasTwoStateStatus` — et c'est la seule du back que le contrat OpenAPI ne transporte pas. |
 | `PUT /me/showcase` **remplace** la vitrine entière | Ni ajout, ni retrait : l'éditeur travaille sur un brouillon local et n'écrit qu'une fois. Les refus sont complets — rien n'est écrit à moitié. |
 | Sur `GET /users/:id/media`, `status`, `owned` et `favorite` portent sur **son** suivi à lui | Seul endroit de l'API où ces filtres changent de sujet. L'écran le rappelle en toutes lettres, sans quoi on filtre « en cours » en croyant voir le sien. |
 
 ## Organisation
 
 ```
+contract/     openapi.json — la copie du contrat du back (voir plus haut)
 src/
-  api/        types.ts (généré), schema.ts (alias + libellés FR),
-              client.ts (fetch + ApiError), endpoints.ts (un appel par route),
-              keys.ts (clés de cache), cache.ts (rangement des agrégats),
-              colors.ts (distance perceptuelle des couleurs d'identité)
+  api/        types.ts (engendré), schema.ts (alias + libellés FR + règles
+              de statut), client.ts (fetch + ApiError), endpoints.ts (un appel
+              par route), keys.ts (clés de cache), cache.ts (rangement des
+              agrégats), colors.ts (distance perceptuelle des identités)
   session/    SessionContext.tsx — qui je suis, et `isAdmin`
   components/ AppShell, AppFooter, Cover, MediaCard, ProgressBar, StatusBadge,
               TrackingPanel, MediaMetadata, MediaLog, Availability, SeasonList,
               VolumeGrid, Showcase, MemberLibrary, FollowButton, IdentityDot,
-              ErrorNotice, EmptyState
+              ErrorNotice, ErrorBoundary, EmptyState
   pages/      Login, Dashboard, TypeLibrary, MediaDetail, Search, Compare,
               Members, UserProfile, MyAccount, About, Invitation,
               AdminInvitations, AdminUsers, ComingSoon
   styles/     tokens.css, global.css
+  test/       setup.ts, render.tsx — providers et échantillons des tests
 ```
+
+Un composant ajouté à `components/` doit aussi être inscrit **au barillet**
+`.design-sync/ds-entry.tsx` **et** à `componentSrcMap` dans
+`.design-sync/config.json`. L'oubli ne casse rien de visible : le composant
+disparaît simplement du bundle de design.
 
 `App.tsx` est scindé en **deux couches** : une publique et une gardée.
 `/invitation/:token` est la seule route accessible sans session — on y arrive
@@ -170,7 +205,7 @@ par un lien reçu, sans compte.
 | Route | Ce qu'on y fait |
 |---|---|
 | `/` | Accueil : en-cours par type, fil attribué des comptes suivis |
-| `/bibliotheque/:type` | Un rayon, filtrable, paginé au curseur |
+| `/bibliotheque/:type` | Un rayon, filtrable, paginé au curseur. Six types, `music` compris — sur un rayon de musique, le filtre « en cours » ne s'affiche pas |
 | `/media/:id` | Fiche : métadonnées, mon suivi, ceux des abonnements, saisons ou tomes, mon journal daté, et — films et séries — où regarder |
 | `/recherche` | Chercher chez les sources externes et ajouter |
 | `/comparer` | Comparaison avec un compte suivi, au choix |
@@ -182,18 +217,30 @@ par un lien reçu, sans compte.
 
 ## Sections en attente
 
-Music History et Quests figurent dans la navigation et affichent un écran
-« bientôt disponible ». Vérification faite contre l'API : ces domaines n'y sont
-**pas** — ni route, ni type d'œuvre. Les cinq types restent `movie`, `tv`,
-`book`, `comic_series`, `game`. **Aucune donnée fictive** n'est affichée en
+Les **quêtes** affichent un écran « bientôt disponible ». Le domaine existe
+désormais côté API et le front ne l'a pas encore câblé — c'est du travail à
+faire, pas une absence côté back. **Aucune donnée fictive** n'est affichée en
 attendant.
+
+Restent également non câblés, tous servis par l'API : les notifications, les
+sagas, la veille, les badges et les statistiques.
+
+La **musique** n'est plus dans cette liste : elle a son rayon comme les cinq
+autres types depuis l'étape 11. `/musique` redirige vers `/bibliotheque/music`.
 
 ## Vérifications
 
 ```bash
-npm run lint       # zéro avertissement toléré
-npm run build      # tsc --noEmit puis vite build
+npm run types:check  # les types collent-ils au contrat ?
+npm run lint         # zéro avertissement toléré
+npm test             # tests de fumée (Vitest + Testing Library)
+npm run build        # tsc --noEmit puis vite build
 ```
+
+Les tests ne visent **pas** la couverture : ils existent pour qu'un écran cassé
+se voie. Ils montent la fiche, le rayon et le panneau de suivi pour de vrai,
+avec `api/endpoints` simulé, et interrogent les rôles et les textes — jamais
+les classes CSS, qui sont vides en test.
 
 Les deux tournent en intégration continue sur `main` et sur chaque proposition
 de fusion (`.github/workflows/ci.yml`), sur la version de Node lue dans

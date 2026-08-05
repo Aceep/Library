@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { TrackingPatch } from '../api/endpoints'
-import { isDerivedStatusType, statusLabel, timesNoun } from '../api/schema'
+import { allowedStatuses, isDerivedStatusType, statusLabel, timesNoun } from '../api/schema'
 import type {
   Account,
   FollowedTracking,
   MediaType,
   OthersSummary,
-  TrackingStatus,
   UserTracking,
 } from '../api/schema'
 import { fetchMediaTrackers } from '../api/endpoints'
@@ -16,15 +15,19 @@ import ErrorNotice from './ErrorNotice'
 import PeopleDisclosure from './PeopleDisclosure'
 import styles from './TrackingPanel.module.css'
 
-const STATUSES: TrackingStatus[] = ['todo', 'doing', 'done']
 const RATINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 /**
  * Mon suivi, seul panneau éditable de la fiche.
  *
- * Le sélecteur de statut n'apparaît pas sur `tv` ni `comic_series` : leur
- * statut est dérivé des épisodes ou des tomes cochés, et le back refuse de
- * l'écrire. On ne propose donc pas un geste qui serait rejeté.
+ * Le sélecteur de statut suit ce que le type accepte, et jamais davantage —
+ * proposer un geste que le back rejetterait est un piège, pas une souplesse :
+ *
+ * - `tv` et `comic_series` : **aucun sélecteur**. Leur statut est dérivé des
+ *   épisodes ou des tomes cochés, et le back refuse de l'écrire.
+ * - `music` : **deux segments**, sans « en cours ». Un album se consomme d'un
+ *   bloc (voir `allowedStatuses`).
+ * - les autres : les trois statuts.
  */
 export default function TrackingPanel({
   tracking,
@@ -87,7 +90,7 @@ export default function TrackingPanel({
         <div className={styles.field}>
           <span className={styles.fieldLabel}>Statut</span>
           <div className={styles.segmented} role="group" aria-label="Statut">
-            {STATUSES.map((status) => (
+            {allowedStatuses(type).map((status) => (
               <button
                 key={status}
                 type="button"

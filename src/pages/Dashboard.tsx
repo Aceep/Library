@@ -25,14 +25,25 @@ type FeedEntry = HomeResponse['feed'][number]
  * annoncé au même poids que les cinq autres : la médiathèque se présente pour
  * ce qu'elle vise, et le lien mène à la page qui l'explique.
  */
-const RAYONS: { key: string; label: string; to: string }[] = [
-  ...MEDIA_TYPES.map((type) => ({
-    key: type as string,
-    label: typeLabelPlural(type),
-    to: `/bibliotheque/${type}`,
-  })),
-  { key: 'music', label: 'Musique', to: '/musique' },
-]
+const RAYONS: { key: string; label: string; to: string }[] = MEDIA_TYPES.map((type) => ({
+  key: type as string,
+  label: typeLabelPlural(type),
+  to: `/bibliotheque/${type}`,
+}))
+
+/**
+ * Les types qui peuvent avoir des en-cours — c'est-à-dire ceux que
+ * `/home` sert, la musique exceptée : un album n'a que deux états, il n'est
+ * jamais « en cours ».
+ *
+ * La liste se déduit de la réponse plutôt que de s'écrire ici. Le jour où le
+ * back servirait un rayon de plus, il apparaîtrait tout seul, dans l'ordre
+ * d'affichage de `MEDIA_TYPES`.
+ */
+type InProgressType = keyof HomeResponse['in_progress']
+
+const inProgressTypes = (inProgress: HomeResponse['in_progress']) =>
+  MEDIA_TYPES.filter((type): type is InProgressType => type in inProgress)
 
 /** Six entrées suffisent à une bande de couvertures : on n'en télécharge pas 40. */
 const RECENT_FILTERS: LibraryFilters = { sort: 'added', limit: 6 }
@@ -61,9 +72,9 @@ export default function Dashboard() {
   if (isPending) return <p className={styles.loading}>Chargement…</p>
   if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
 
-  const groups = MEDIA_TYPES.map((type) => ({ type, entries: data.in_progress[type] })).filter(
-    (group) => group.entries.length > 0,
-  )
+  const groups = inProgressTypes(data.in_progress)
+    .map((type) => ({ type, entries: data.in_progress[type] }))
+    .filter((group) => group.entries.length > 0)
   const hero = pickHero(data.in_progress)
 
   return (
@@ -208,7 +219,9 @@ interface HeroPick {
  * que de disparaître.
  */
 function pickHero(inProgress: HomeResponse['in_progress']): HeroPick | null {
-  const all = MEDIA_TYPES.flatMap((type) => inProgress[type].map((entry) => ({ entry, type })))
+  const all = inProgressTypes(inProgress).flatMap((type) =>
+    inProgress[type].map((entry) => ({ entry, type })),
+  )
   if (all.length === 0) return null
 
   let best: (HeroPick & { ratio: number }) | null = null

@@ -407,7 +407,9 @@ export interface paths {
      * Chercher une œuvre chez les sources externes
      * @description Résultats **normalisés** : un tronc commun identique pour tous les types (identifiant externe, source, titre, année, jaquette, `detail_level`, `in_library`) et un bloc `metadata` typé par type, discriminé sur `type`.
      *
-     * **Sources par type** — `movie` et `tv` : TMDB. `book` : Open Library pour la recherche, Google Books pour les résumés et les couvertures, fusionnés sur l’ISBN-13. `comic_series` : AniList, avec repli Jikan si AniList ne répond pas. `game` : IGDB, authentifié par un jeton Twitch renouvelé automatiquement.
+     * **Sources par type** — `movie` et `tv` : TMDB. `book` : Open Library pour la recherche, Google Books pour les résumés et les couvertures, fusionnés sur l’ISBN-13. `comic_series` : AniList, avec repli Jikan si AniList ne répond pas. `game` : IGDB, authentifié par un jeton Twitch renouvelé automatiquement. `music` : MusicBrainz, pochettes Cover Art Archive, sans clé.
+     *
+     * **Albums** — l’unité est le *groupe de publication* MusicBrainz, c’est-à-dire l’œuvre et non l’une de ses éditions : *OK Computer* apparaît une fois, pas une fois par pressage. La recherche est restreinte aux albums et EP — singles et compilations de labels noieraient le reste. La liste des pistes n’est pas dans les résultats : elle arrive avec `POST /media`, qui interroge l’édition retenue.
      *
      * **Recherche de livres** — `q` cherche titre et auteur, `isbn` fait une recherche exacte (ISBN-10 ou ISBN-13, tirets tolérés). L’un des deux est obligatoire ; `isbn` est réservé au type `book`.
      *
@@ -425,7 +427,7 @@ export interface paths {
           /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
           cursor?: string;
           /** @description Type d’œuvre */
-          type: "book" | "comic_series" | "game" | "movie" | "tv";
+          type: "book" | "comic_series" | "game" | "movie" | "music" | "tv";
           /** @description Termes recherchés — titre, auteur. Obligatoire sauf si `isbn` est fourni */
           q?: string;
           /** @description ISBN-10 ou ISBN-13, tirets tolérés. Réservé aux livres — recherche exacte */
@@ -495,7 +497,7 @@ export interface paths {
           /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
           cursor?: string;
           /** @description Filtre par type d’œuvre */
-          type?: "book" | "comic_series" | "movie" | "tv" | "game";
+          type?: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
           /** @description Filtre sur **ton** statut */
           status?: "todo" | "doing" | "done";
           /** @description Filtre sur **ta** possession */
@@ -554,14 +556,14 @@ export interface paths {
              * @description Source du résultat — `tmdb` pour les films et séries
              * @enum {string}
              */
-            source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+            source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
             /** @description Identifiant du résultat chez la source */
             external_id: string;
             /**
              * @description Type d’œuvre
              * @enum {string}
              */
-            type: "book" | "comic_series" | "game" | "movie" | "tv";
+            type: "book" | "comic_series" | "game" | "movie" | "music" | "tv";
             /**
              * @description Possession, sur le suivi de l’utilisateur de la session
              * @default false
@@ -649,7 +651,7 @@ export interface paths {
           /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
           cursor?: string;
           /** @description Filtre par type d’œuvre */
-          type?: "book" | "comic_series" | "movie" | "tv" | "game";
+          type?: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
           /** @description Filtre sur **son** statut à lui, pas le tien */
           status?: "todo" | "doing" | "done";
           /** @description Filtre sur **sa** possession à lui, pas la tienne */
@@ -995,6 +997,8 @@ export interface paths {
      * @description Possession, statut, note, critique et dates de l’utilisateur de la session. Seuls les champs envoyés sont modifiés.
      *
      * **`status` est refusé (400) sur `tv` et `comic_series`** : leur statut est dérivé des épisodes ou des tomes cochés et recalculé par le serveur. L’accepter donnerait au client un moyen d’écrire une valeur que le prochain recalcul effacerait — un mensonge à retardement. La possession, elle, reste saisie à la main pour tous les types.
+     *
+     * **`status: "doing"` est refusé (400) sur `music`** : un album n’a que deux états, `todo` (envie de l’écouter) et `done` (écouté). Il n’y a pas d’écoute en cours qu’on puisse observer, et le tolérer en silence remplirait les bibliothèques d’albums « en cours » depuis deux ans. Le front n’a pas à coder la règle en dur : `@mediatheque/shared` exporte `allowedStatuses(type)` et `hasTwoStateStatus(type)`, qui la portent pour tous les types.
      *
      * **`favorite`** est le coup de cœur (§8) : un booléen indépendant de la note, accepté sur tous les types, y compris dérivés. Un film à 7 qu’on adore n’est pas un film à 9 qu’on admire.
      *
@@ -1569,6 +1573,8 @@ export interface paths {
      *
      * **`showcase`** (§8) est la vitrine qu’il a choisie : jusqu’à 8 œuvres, tous types confondus, **dans son ordre à lui**. Vide tant qu’il n’a rien posé. Lui seul la modifie, par `PUT /me/showcase`.
      *
+     * **`badges`** (§13) sont ceux qu’il a obtenus, le plus récent d’abord. Ils s’affichent à côté de la vitrine, sont publics comme le reste, et **ne se retirent jamais** : un badge est un fait daté, `awarded_at` porte le jour où il a été mérité et non celui où la ligne a été écrite.
+     *
      * Pour déplier la liste, `GET /users/:id/media`.
      */
     get: {
@@ -1617,6 +1623,7 @@ export interface paths {
                   movie: number;
                   tv: number;
                   game: number;
+                  music: number;
                 };
                 /** @description Œuvres suivies par statut */
                 by_status: {
@@ -1627,6 +1634,31 @@ export interface paths {
               };
               /** @description Sa vitrine, dans l’ordre qu’il a choisi. Vide tant qu’il n’en a pas posé */
               showcase: components["schemas"]["MediaSummary"][];
+              /** @description Ses badges (§13), le plus récemment obtenu d’abord. Publics comme le reste, et **jamais retirés** — un badge est un fait daté */
+              badges: ({
+                  /** Format: uuid */
+                  id: string;
+                  /** @description Identifiant stable et lisible */
+                  slug: string;
+                  name: string;
+                  description: string | null;
+                  /** @description Un ou deux emoji */
+                  icon: string;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  color: string;
+                  /**
+                   * @description `quest` — obtenu en achevant une quête. `milestone` — obtenu par un seuil calculé
+                   * @enum {string}
+                   */
+                  kind: "quest" | "milestone";
+                  /** @description La quête qui le décerne, si c’en est une */
+                  quest_id: string | null;
+                  /**
+                   * Format: date-time
+                   * @description Le jour de l’achèvement, pas celui de l’écriture — un badge rétroactif porte sa vraie date
+                   */
+                  awarded_at: string;
+                })[];
             };
           };
         };
@@ -3378,6 +3410,2794 @@ export interface paths {
       };
     };
   };
+  "/media/{id}/watch": {
+    /**
+     * Mettre une œuvre sous veille
+     * @description Être prévenu des nouveautés sur cette série ou ce manga : nouveaux épisodes, nouveaux tomes.
+     *
+     * **Sans rapport avec le suivi ni avec la possession.** On peut surveiller une série qu’on n’a pas commencée, et avoir tout lu d’un manga sans vouloir être prévenu de la suite. Rien n’est écrit dans `tracking`.
+     *
+     * **Un repère est posé à l’activation** : rien de ce qui existe déjà ne produira de notification. Mettre un manga de quarante tomes sous veille n’en génère aucune — seul ce qui paraît **après** compte.
+     *
+     * **Idempotent** : reposer une veille déjà posée répond `200` sans déplacer le repère. Un bouton double-cliqué ne rouvre pas la vanne sur tout l’historique.
+     *
+     * Refusé (`400`) sur un film, un livre ou un jeu : une œuvre sans suite à elle-même n’a rien à annoncer. Pour une saga de films, c’est `PUT /sagas/:id/watch`.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description État de veille après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description État après le geste */
+              watched: boolean;
+              watch: ({
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                target: "media" | "saga";
+                /**
+                 * Format: date-time
+                 * @description Repère : rien de paru avant ne notifie
+                 */
+                since: string;
+                /** Format: date-time */
+                created_at: string;
+                media: components["schemas"]["MediaSummary"] | null;
+                saga: ({
+                  /** Format: uuid */
+                  id: string;
+                  title: string;
+                  /**
+                   * @description Source d'origine de la fiche
+                   * @enum {string}
+                   */
+                  source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                  /** @description Parties connues de la source */
+                  part_count: number;
+                  /** @description Parties présentes dans la bibliothèque */
+                  in_library_count: number;
+                  /** @description Est-elle sous veille pour moi ? */
+                  watched: boolean;
+                }) | null;
+                next_check_at: string | null;
+              }) | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Lever la veille sur une œuvre
+     * @description **Idempotent** : lever une veille qu’on n’avait pas répond `200`.
+     *
+     * **Les notifications déjà reçues restent.** Lever la veille arrête l’avenir, il ne réécrit pas le passé — une nouveauté qu’on a lue a bien eu lieu.
+     *
+     * Reposer la veille ensuite pose un **nouveau** repère : ce qui est paru entre-temps ne sera pas annoncé.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description État de veille après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description État après le geste */
+              watched: boolean;
+              watch: ({
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                target: "media" | "saga";
+                /**
+                 * Format: date-time
+                 * @description Repère : rien de paru avant ne notifie
+                 */
+                since: string;
+                /** Format: date-time */
+                created_at: string;
+                media: components["schemas"]["MediaSummary"] | null;
+                saga: ({
+                  /** Format: uuid */
+                  id: string;
+                  title: string;
+                  /**
+                   * @description Source d'origine de la fiche
+                   * @enum {string}
+                   */
+                  source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                  /** @description Parties connues de la source */
+                  part_count: number;
+                  /** @description Parties présentes dans la bibliothèque */
+                  in_library_count: number;
+                  /** @description Est-elle sous veille pour moi ? */
+                  watched: boolean;
+                }) | null;
+                next_check_at: string | null;
+              }) | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/sagas/{id}/watch": {
+    /**
+     * Mettre une saga sous veille
+     * @description Être prévenu quand une nouvelle partie de la saga **sort** — pas quand on apprend son existence.
+     *
+     * C’est la forme qui manquait pour les suites de films : une saga regroupe des œuvres distinctes, chacune avec sa fiche, là où une série a des saisons et un manga des tomes.
+     *
+     * Mêmes règles que pour une œuvre : repère posé à l’activation, geste idempotent, notifications conservées à la levée.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description État de veille après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description État après le geste */
+              watched: boolean;
+              watch: ({
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                target: "media" | "saga";
+                /**
+                 * Format: date-time
+                 * @description Repère : rien de paru avant ne notifie
+                 */
+                since: string;
+                /** Format: date-time */
+                created_at: string;
+                media: components["schemas"]["MediaSummary"] | null;
+                saga: ({
+                  /** Format: uuid */
+                  id: string;
+                  title: string;
+                  /**
+                   * @description Source d'origine de la fiche
+                   * @enum {string}
+                   */
+                  source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                  /** @description Parties connues de la source */
+                  part_count: number;
+                  /** @description Parties présentes dans la bibliothèque */
+                  in_library_count: number;
+                  /** @description Est-elle sous veille pour moi ? */
+                  watched: boolean;
+                }) | null;
+                next_check_at: string | null;
+              }) | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Lever la veille sur une saga
+     * @description Idempotent, et sans effet sur les notifications déjà reçues.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description État de veille après le geste */
+        200: {
+          content: {
+            "application/json": {
+              /** @description État après le geste */
+              watched: boolean;
+              watch: ({
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                target: "media" | "saga";
+                /**
+                 * Format: date-time
+                 * @description Repère : rien de paru avant ne notifie
+                 */
+                since: string;
+                /** Format: date-time */
+                created_at: string;
+                media: components["schemas"]["MediaSummary"] | null;
+                saga: ({
+                  /** Format: uuid */
+                  id: string;
+                  title: string;
+                  /**
+                   * @description Source d'origine de la fiche
+                   * @enum {string}
+                   */
+                  source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                  /** @description Parties connues de la source */
+                  part_count: number;
+                  /** @description Parties présentes dans la bibliothèque */
+                  in_library_count: number;
+                  /** @description Est-elle sous veille pour moi ? */
+                  watched: boolean;
+                }) | null;
+                next_check_at: string | null;
+              }) | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/watches": {
+    /**
+     * Ce que je surveille
+     * @description Mes veilles, la plus récente d’abord, œuvres et sagas mêlées. `target` dit laquelle des deux, et l’autre champ est nul.
+     *
+     * `since` est le repère : rien de paru avant lui ne m’a été annoncé. `next_check_at` dit quand la prochaine vérification est prévue — utile pour expliquer qu’une nouveauté d’aujourd’hui n’est pas encore connue.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+        };
+      };
+      responses: {
+        /** @description Ce que je surveille */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** Format: uuid */
+                  id: string;
+                  /** @enum {string} */
+                  target: "media" | "saga";
+                  /**
+                   * Format: date-time
+                   * @description Repère : rien de paru avant ne notifie
+                   */
+                  since: string;
+                  /** Format: date-time */
+                  created_at: string;
+                  media: components["schemas"]["MediaSummary"] | null;
+                  saga: ({
+                    /** Format: uuid */
+                    id: string;
+                    title: string;
+                    /**
+                     * @description Source d'origine de la fiche
+                     * @enum {string}
+                     */
+                    source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                    /** @description Parties connues de la source */
+                    part_count: number;
+                    /** @description Parties présentes dans la bibliothèque */
+                    in_library_count: number;
+                    /** @description Est-elle sous veille pour moi ? */
+                    watched: boolean;
+                  }) | null;
+                  next_check_at: string | null;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/sagas/{id}": {
+    /**
+     * Fiche d’une saga
+     * @description Les œuvres qui composent la saga, **dans l’ordre de sortie**, et ma progression dessus.
+     *
+     * **Les parties absentes de la bibliothèque en font partie.** `in_library` vaut alors `false` et `media` est nul : c’est ainsi qu’on voit qu’il manque le troisième film, et c’est cette ligne-là que la veille surveille. Elles comptent au dénominateur de `progress` — « 2 sur 3 » doit rester vrai tant que le troisième n’est pas vu.
+     *
+     * Une saga se remplit à l’ajout d’une œuvre qui en fait partie, et se complète aux passes de veille. Aujourd’hui elle vient des **collections TMDB** ; les franchises d’IGDB et les séries d’Open Library entrent dans le même modèle mais ne sont pas encore lues.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Fiche d’une saga */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Fiche d’une saga */
+              saga: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                /**
+                 * @description Source d'origine de la fiche
+                 * @enum {string}
+                 */
+                source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                /** @description Parties connues de la source */
+                part_count: number;
+                /** @description Parties présentes dans la bibliothèque */
+                in_library_count: number;
+                /** @description Est-elle sous veille pour moi ? */
+                watched: boolean;
+                summary: string | null;
+                cover_url: string | null;
+                refreshed_at: string | null;
+                /** @description Les parties, dans l’ordre de sortie */
+                parts: ({
+                    /**
+                     * Format: uuid
+                     * @description Identifiant de la partie, pas de l’œuvre
+                     */
+                    id: string;
+                    /** @description Rang dans la saga, dans l’ordre de sortie */
+                    position: number;
+                    /** @description Titre tel que la source le nomme */
+                    title: string;
+                    release_date: string | null;
+                    /** @description L’œuvre est-elle dans la bibliothèque commune ? */
+                    in_library: boolean;
+                    media: components["schemas"]["MediaSummary"] | null;
+                    my_status: ("todo" | "doing" | "done") | null;
+                  })[];
+                /** @description Parties terminées sur parties connues — les absentes comptent au dénominateur */
+                progress: {
+                  checked: number;
+                  total: number;
+                };
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/notifications": {
+    /**
+     * Mes notifications
+     * @description Les nouveautés qui me concernent, la plus récemment parue d’abord.
+     *
+     * **`unread_count` accompagne chaque page** : la pastille et la liste ne coûtent qu’un appel, et ne peuvent pas se contredire à l’écran. Il compte toutes les non lues, pas seulement celles de la page.
+     *
+     * `?unread=true` ne rend que les non lues.
+     *
+     * `label` est figé au moment de l’envoi : une notification raconte ce qui s’est passé, elle ne change pas si le titre est corrigé ensuite. `released_at` est la date de parution retenue — celle de diffusion quand elle existe, celle de découverte sinon.
+     *
+     * Selon `kind`, l’un des trois champs `episode`, `volume` ou `saga` est renseigné, et les deux autres sont nuls.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+          /** @description `true` pour ne rendre que les non lues. Absent = toutes */
+          unread?: string;
+        };
+      };
+      responses: {
+        /** @description Page de notifications */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** Format: uuid */
+                  id: string;
+                  /**
+                   * @description `episode`, `volume` (tome), `saga_part` (une œuvre d’une saga), `quest_published` (une quête vient de paraître), `quest_completed` (je viens d’achever une quête)
+                   * @enum {string}
+                   */
+                  kind: "episode" | "volume" | "saga_part" | "quest_published" | "quest_completed";
+                  label: string;
+                  /**
+                   * Format: date-time
+                   * @description Date de parution retenue — voir la documentation
+                   */
+                  released_at: string;
+                  read_at: string | null;
+                  /** Format: date-time */
+                  created_at: string;
+                  media: components["schemas"]["MediaSummary"] | null;
+                  episode: ({
+                    /** Format: uuid */
+                    id: string;
+                    season_number: number;
+                    number: number;
+                    title: string | null;
+                  }) | null;
+                  volume: ({
+                    /** Format: uuid */
+                    id: string;
+                    number: number;
+                    title: string | null;
+                  }) | null;
+                  saga: {
+                    /** Format: uuid */
+                    id: string;
+                    title: string;
+                  } | null;
+                  quest: {
+                    /** Format: uuid */
+                    id: string;
+                    title: string;
+                  } | null;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+              /** @description Non lues, toutes pages confondues */
+              unread_count: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/notifications/{id}/read": {
+    /**
+     * Marquer une notification comme lue
+     * @description Idempotent : marquer une notification déjà lue ne change pas sa date de lecture.
+     *
+     * Celle d’un autre membre répond `404` — et non `403` : on ne dit pas à quelqu’un qu’une notification qui ne le concerne pas existe.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Compteur après lecture */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Notifications passées en lues */
+              updated: number;
+              unread_count: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/notifications/read-all": {
+    /**
+     * Tout marquer comme lu
+     * @description Passe toutes mes notifications non lues en lues, et rend le nombre qui a bougé. `unread_count` vaut alors zéro.
+     */
+    post: {
+      responses: {
+        /** @description Compteur après lecture */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Notifications passées en lues */
+              updated: number;
+              unread_count: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/watch/run": {
+    /**
+     * Déclencher une passe de veille
+     * @description La même passe que celle de la boucle de fond, exécutée tout de suite. **C’est ainsi qu’on essaie la veille sans attendre.**
+     *
+     * **Deux temps, comptés séparément.** `content_added` est ce qui a été découvert chez les sources — et qui ne notifie pas encore. `notifications_created` est ce qui vient de **sortir** et a été annoncé. Un épisode découvert aujourd’hui pour une diffusion en mars apparaît dans le premier chiffre aujourd’hui, dans le second en mars.
+     *
+     * `?force=true` traite aussi les cibles qui ne sont pas encore dues : sans lui, une passe lancée deux fois de suite ne fait rien la seconde fois, puisque tout vient d’être vérifié.
+     *
+     * `?limit` borne le lot. Le reste attend la passe suivante, et `remaining` dit combien.
+     *
+     * Réservé aux administrateurs : la passe consomme le quota des sources externes.
+     */
+    post: {
+      parameters: {
+        query?: {
+          /** @description Cibles à traiter au plus dans cette passe */
+          limit?: number;
+          /** @description Traiter aussi les cibles qui ne sont pas encore dues — pour essayer sans attendre */
+          force?: string;
+        };
+      };
+      responses: {
+        /** @description Résultat d’une passe de veille */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Cibles vérifiées lors de cette passe */
+              checked: number;
+              /** @description Cibles effectivement relues chez la source */
+              refreshed: number;
+              /** @description Cibles en échec, replanifiées avec recul */
+              failed: number;
+              /** @description Premier temps : ce qui a été découvert, et qui ne notifie pas encore */
+              content_added: {
+                episodes: number;
+                volumes: number;
+                saga_parts: number;
+              };
+              /** @description Second temps : ce qui vient de sortir et a été annoncé */
+              notifications_created: number;
+              remaining: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/quests": {
+    /**
+     * Les quêtes, avec ma progression sur chacune
+     * @description Des objectifs composés **à la main** par un administrateur : une liste d’œuvres, un titre, une raison. Le thème n’est pas un critère que le serveur évalue — c’est pourquoi une quête mélange les types sans difficulté, des romans et leurs adaptations dans la même.
+     *
+     * **La progression est rétroactive** : elle se calcule sur le suivi déjà en place. Une quête publiée ce matin peut être déjà à moitié remplie par ce que vous avez terminé l’an dernier. Une œuvre compte quand elle est **terminée** — ni la possession ni la note n’entrent en ligne de compte.
+     *
+     * `progress.required` vaut `total`, sauf si la quête porte un seuil (« sept sur dix »).
+     *
+     * **Les brouillons ne sont visibles que des administrateurs.** Un membre ordinaire ne les voit ni ici ni sur la fiche, et `status=draft` lui rend une page vide plutôt qu’une erreur.
+     *
+     * Cette liste ne porte pas l’avancement des autres membres : il est sur la fiche, `GET /quests/:id`.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+          /** @description Filtre. `draft` est réservé aux administrateurs — un membre ordinaire ne verra jamais de brouillon */
+          status?: "draft" | "published";
+          /** @description `true` pour ne rendre que celles qu’il me reste à achever */
+          mine?: string;
+        };
+      };
+      responses: {
+        /** @description Page de quêtes */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** Format: uuid */
+                  id: string;
+                  title: string;
+                  /** @description Pourquoi ces œuvres-là — le fil, l’auteur, l’envie */
+                  description: string | null;
+                  /**
+                   * @description `draft` — visible des seuls administrateurs. `published` — visible de tous et notifiée
+                   * @enum {string}
+                   */
+                  status: "draft" | "published";
+                  threshold: number | null;
+                  /** @description Échéance facultative — indicative, rien ne se ferme */
+                  due_at: string | null;
+                  published_at: string | null;
+                  /** Format: date-time */
+                  created_at: string;
+                  /** @description Ma progression sur une quête */
+                  progress: {
+                    /** @description Œuvres de la quête que j’ai terminées */
+                    done: number;
+                    /** @description Œuvres de la quête */
+                    total: number;
+                    /** @description Combien il en faut pour l’achever — `total` sauf si un seuil est fixé */
+                    required: number;
+                    /** @description Vrai dès que `done` atteint `required` */
+                    completed: boolean;
+                    /** @description Quand je l’ai achevée, figé à ce moment-là */
+                    completed_at: string | null;
+                  };
+                  /** @description Un badge */
+                  badge: {
+                    /** Format: uuid */
+                    id: string;
+                    /** @description Identifiant stable et lisible */
+                    slug: string;
+                    name: string;
+                    description: string | null;
+                    /** @description Un ou deux emoji */
+                    icon: string;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    color: string;
+                    /**
+                     * @description `quest` — obtenu en achevant une quête. `milestone` — obtenu par un seuil calculé
+                     * @enum {string}
+                     */
+                    kind: "quest" | "milestone";
+                    /** @description La quête qui le décerne, si c’en est une */
+                    quest_id: string | null;
+                  };
+                  item_count: number;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Créer une quête (administrateur)
+     * @description Une quête naît **en brouillon**, donc invisible des membres : on la compose, puis on la publie. `PATCH /quests/:id` avec `status: "published"` la rend visible et notifie tout le monde.
+     *
+     * `threshold` est le seuil facultatif — « sept sur dix ». Absent, il faut tout terminer.
+     *
+     * **Un badge est créé avec la quête**, toujours (§13). `badge` en choisit l’apparence — un nom, un ou deux emoji, une couleur `#RRGGBB`. Omis, la quête reçoit 🏅 doré à son propre nom : on ne demande pas d’inventer une récompense avant d’avoir posé la première œuvre, et `PATCH` la changera.
+     */
+    post: {
+      /** @description Création d’une quête — elle naît en brouillon */
+      requestBody: {
+        content: {
+          "application/json": {
+            title: string;
+            description?: string | null;
+            /** @description « Sept sur dix ». Absent ou nul = il faut tout terminer */
+            threshold?: number | null;
+            /** @description Échéance facultative */
+            due_at?: string | null;
+            /** @description L’apparence du badge décerné. Absente, un badge par défaut est posé — 🏅 doré, au nom de la quête */
+            badge?: {
+              name: string;
+              description?: string | null;
+              /** @description Un ou deux emoji — 🏅, 🎬, 📚… */
+              icon: string;
+              /** @description Couleur d'identité au format #RRGGBB */
+              color: string;
+            };
+          };
+        };
+      };
+      responses: {
+        /** @description Une quête */
+        201: {
+          content: {
+            "application/json": {
+              /** @description Une quête et ses œuvres */
+              quest: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                /** @description Pourquoi ces œuvres-là — le fil, l’auteur, l’envie */
+                description: string | null;
+                /**
+                 * @description `draft` — visible des seuls administrateurs. `published` — visible de tous et notifiée
+                 * @enum {string}
+                 */
+                status: "draft" | "published";
+                threshold: number | null;
+                /** @description Échéance facultative — indicative, rien ne se ferme */
+                due_at: string | null;
+                published_at: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** @description Ma progression sur une quête */
+                progress: {
+                  /** @description Œuvres de la quête que j’ai terminées */
+                  done: number;
+                  /** @description Œuvres de la quête */
+                  total: number;
+                  /** @description Combien il en faut pour l’achever — `total` sauf si un seuil est fixé */
+                  required: number;
+                  /** @description Vrai dès que `done` atteint `required` */
+                  completed: boolean;
+                  /** @description Quand je l’ai achevée, figé à ce moment-là */
+                  completed_at: string | null;
+                };
+                /** @description Un badge */
+                badge: {
+                  /** Format: uuid */
+                  id: string;
+                  /** @description Identifiant stable et lisible */
+                  slug: string;
+                  name: string;
+                  description: string | null;
+                  /** @description Un ou deux emoji */
+                  icon: string;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  color: string;
+                  /**
+                   * @description `quest` — obtenu en achevant une quête. `milestone` — obtenu par un seuil calculé
+                   * @enum {string}
+                   */
+                  kind: "quest" | "milestone";
+                  /** @description La quête qui le décerne, si c’en est une */
+                  quest_id: string | null;
+                };
+                /** @description Les œuvres, dans l’ordre voulu */
+                items: {
+                    /** @description Ordre voulu par l’administrateur */
+                    position: number;
+                    media: components["schemas"]["MediaSummary"];
+                    /** @description Vrai si **je** l’ai terminée */
+                    done: boolean;
+                  }[];
+                /** @description Où en sont les autres membres. Tout est public — les achevées d’abord */
+                standings: ({
+                    /** @description Profil public d’un membre */
+                    user: {
+                      /** Format: uuid */
+                      id: string;
+                      pseudo: string;
+                      avatar_url: string | null;
+                      /** @description Couleur d'identité au format #RRGGBB */
+                      identity_color: string;
+                      /**
+                       * @description Rôle du membre
+                       * @enum {string}
+                       */
+                      role: "user" | "admin";
+                      /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                      deactivated: boolean;
+                    };
+                    done: number;
+                    completed: boolean;
+                    completed_at: string | null;
+                  })[];
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/quests/{id}": {
+    /**
+     * Une quête, ses œuvres, et où en sont les autres
+     * @description `items` donne les œuvres dans l’ordre voulu par l’administrateur, chacune avec `done` — **votre** avancement dessus.
+     *
+     * `standings` donne celui de tous les membres actifs, les achevées d’abord. Tout est public dans ce projet, et une quête ne fait pas exception : voir que quelqu’un a fini est la moitié de l’intérêt.
+     *
+     * Un brouillon répond **404** à un membre ordinaire, et non 403 : lui apprendre qu’une quête existe sans pouvoir la lui montrer n’aiderait personne.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Une quête */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une quête et ses œuvres */
+              quest: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                /** @description Pourquoi ces œuvres-là — le fil, l’auteur, l’envie */
+                description: string | null;
+                /**
+                 * @description `draft` — visible des seuls administrateurs. `published` — visible de tous et notifiée
+                 * @enum {string}
+                 */
+                status: "draft" | "published";
+                threshold: number | null;
+                /** @description Échéance facultative — indicative, rien ne se ferme */
+                due_at: string | null;
+                published_at: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** @description Ma progression sur une quête */
+                progress: {
+                  /** @description Œuvres de la quête que j’ai terminées */
+                  done: number;
+                  /** @description Œuvres de la quête */
+                  total: number;
+                  /** @description Combien il en faut pour l’achever — `total` sauf si un seuil est fixé */
+                  required: number;
+                  /** @description Vrai dès que `done` atteint `required` */
+                  completed: boolean;
+                  /** @description Quand je l’ai achevée, figé à ce moment-là */
+                  completed_at: string | null;
+                };
+                /** @description Un badge */
+                badge: {
+                  /** Format: uuid */
+                  id: string;
+                  /** @description Identifiant stable et lisible */
+                  slug: string;
+                  name: string;
+                  description: string | null;
+                  /** @description Un ou deux emoji */
+                  icon: string;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  color: string;
+                  /**
+                   * @description `quest` — obtenu en achevant une quête. `milestone` — obtenu par un seuil calculé
+                   * @enum {string}
+                   */
+                  kind: "quest" | "milestone";
+                  /** @description La quête qui le décerne, si c’en est une */
+                  quest_id: string | null;
+                };
+                /** @description Les œuvres, dans l’ordre voulu */
+                items: {
+                    /** @description Ordre voulu par l’administrateur */
+                    position: number;
+                    media: components["schemas"]["MediaSummary"];
+                    /** @description Vrai si **je** l’ai terminée */
+                    done: boolean;
+                  }[];
+                /** @description Où en sont les autres membres. Tout est public — les achevées d’abord */
+                standings: ({
+                    /** @description Profil public d’un membre */
+                    user: {
+                      /** Format: uuid */
+                      id: string;
+                      pseudo: string;
+                      avatar_url: string | null;
+                      /** @description Couleur d'identité au format #RRGGBB */
+                      identity_color: string;
+                      /**
+                       * @description Rôle du membre
+                       * @enum {string}
+                       */
+                      role: "user" | "admin";
+                      /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                      deactivated: boolean;
+                    };
+                    done: number;
+                    completed: boolean;
+                    completed_at: string | null;
+                  })[];
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Supprimer une quête (administrateur)
+     * @description Emporte ses œuvres, ses achèvements et ses notifications. Le suivi des membres n’est pas touché : une quête ne possède rien, elle désigne.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Modifier ou publier une quête (administrateur)
+     * @description **Publier notifie tous les membres actifs**, une fois et une seule : la garantie est un index unique en base, donc republier ne renotifie personne.
+     *
+     * La publication déclenche aussi le calcul rétroactif : quelqu’un qui a déjà terminé toutes les œuvres reçoit **dans la foulée** sa notification d’achèvement. C’est voulu — une quête qui ignorerait le passé demanderait de tout recommencer.
+     *
+     * Une quête publiée **ne redevient pas brouillon** : les notifications sont parties, les membres l’ont vue. La retirer se fait par `DELETE`.
+     *
+     * `badge` change l’**apparence** du badge, même après que des membres l’ont obtenu — c’est un affichage, pas le fait. Le badge n’est jamais recréé : le remplacer romprait les attributions, et un badge obtenu ne se retire jamais.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Modification d’une quête */
+      requestBody: {
+        content: {
+          "application/json": {
+            title?: string;
+            description?: string | null;
+            /** @description « Sept sur dix ». Absent ou nul = il faut tout terminer */
+            threshold?: number | null;
+            /** @description Échéance facultative */
+            due_at?: string | null;
+            /** @description L’apparence du badge décerné. Absente, un badge par défaut est posé — 🏅 doré, au nom de la quête */
+            badge?: {
+              name: string;
+              description?: string | null;
+              /** @description Un ou deux emoji — 🏅, 🎬, 📚… */
+              icon: string;
+              /** @description Couleur d'identité au format #RRGGBB */
+              color: string;
+            };
+            /**
+             * @description Passer à `published` la rend visible de tous et notifie les membres. Une quête publiée ne redevient pas brouillon
+             * @enum {string}
+             */
+            status?: "draft" | "published";
+          };
+        };
+      };
+      responses: {
+        /** @description Une quête */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une quête et ses œuvres */
+              quest: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                /** @description Pourquoi ces œuvres-là — le fil, l’auteur, l’envie */
+                description: string | null;
+                /**
+                 * @description `draft` — visible des seuls administrateurs. `published` — visible de tous et notifiée
+                 * @enum {string}
+                 */
+                status: "draft" | "published";
+                threshold: number | null;
+                /** @description Échéance facultative — indicative, rien ne se ferme */
+                due_at: string | null;
+                published_at: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** @description Ma progression sur une quête */
+                progress: {
+                  /** @description Œuvres de la quête que j’ai terminées */
+                  done: number;
+                  /** @description Œuvres de la quête */
+                  total: number;
+                  /** @description Combien il en faut pour l’achever — `total` sauf si un seuil est fixé */
+                  required: number;
+                  /** @description Vrai dès que `done` atteint `required` */
+                  completed: boolean;
+                  /** @description Quand je l’ai achevée, figé à ce moment-là */
+                  completed_at: string | null;
+                };
+                /** @description Un badge */
+                badge: {
+                  /** Format: uuid */
+                  id: string;
+                  /** @description Identifiant stable et lisible */
+                  slug: string;
+                  name: string;
+                  description: string | null;
+                  /** @description Un ou deux emoji */
+                  icon: string;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  color: string;
+                  /**
+                   * @description `quest` — obtenu en achevant une quête. `milestone` — obtenu par un seuil calculé
+                   * @enum {string}
+                   */
+                  kind: "quest" | "milestone";
+                  /** @description La quête qui le décerne, si c’en est une */
+                  quest_id: string | null;
+                };
+                /** @description Les œuvres, dans l’ordre voulu */
+                items: {
+                    /** @description Ordre voulu par l’administrateur */
+                    position: number;
+                    media: components["schemas"]["MediaSummary"];
+                    /** @description Vrai si **je** l’ai terminée */
+                    done: boolean;
+                  }[];
+                /** @description Où en sont les autres membres. Tout est public — les achevées d’abord */
+                standings: ({
+                    /** @description Profil public d’un membre */
+                    user: {
+                      /** Format: uuid */
+                      id: string;
+                      pseudo: string;
+                      avatar_url: string | null;
+                      /** @description Couleur d'identité au format #RRGGBB */
+                      identity_color: string;
+                      /**
+                       * @description Rôle du membre
+                       * @enum {string}
+                       */
+                      role: "user" | "admin";
+                      /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                      deactivated: boolean;
+                    };
+                    done: number;
+                    completed: boolean;
+                    completed_at: string | null;
+                  })[];
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/quests/{id}/items": {
+    /**
+     * Ajouter une œuvre à une quête (administrateur)
+     * @description Deux façons, et la seconde est le cœur de l’étape.
+     *
+     * **`{ media_id }`** quand l’œuvre est déjà dans la bibliothèque commune.
+     *
+     * **`{ source, external_id, type }`** sinon : l’œuvre est cherchée chez la source et **ajoutée à la bibliothèque** au passage, exactement comme `POST /media`, déduplication comprise. `media_created` dit si elle vient d’y entrer.
+     *
+     * Sans cette seconde forme, un administrateur ne pourrait proposer que ce que quelqu’un a déjà ajouté, et une quête ne serait jamais qu’un résumé du passé.
+     *
+     * Ajouter une œuvre à une quête publiée **peut la rouvrir** pour quelqu’un qui l’avait achevée : le dénominateur est recompté, jamais figé. Son achèvement passé, lui, reste acquis — on ne retire pas ce qui a été fait.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Ajout d’une œuvre à une quête, depuis la bibliothèque ou depuis une source */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            media_id: string;
+          } | ({
+            /**
+             * @description Source d'origine de la fiche
+             * @enum {string}
+             */
+            source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+            external_id: string;
+            /**
+             * @description Type d’œuvre
+             * @enum {string}
+             */
+            type: "book" | "comic_series" | "game" | "movie" | "music" | "tv";
+          });
+        };
+      };
+      responses: {
+        /** @description Résultat d’un ajout à une quête */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une quête et ses œuvres */
+              quest: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                /** @description Pourquoi ces œuvres-là — le fil, l’auteur, l’envie */
+                description: string | null;
+                /**
+                 * @description `draft` — visible des seuls administrateurs. `published` — visible de tous et notifiée
+                 * @enum {string}
+                 */
+                status: "draft" | "published";
+                threshold: number | null;
+                /** @description Échéance facultative — indicative, rien ne se ferme */
+                due_at: string | null;
+                published_at: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** @description Ma progression sur une quête */
+                progress: {
+                  /** @description Œuvres de la quête que j’ai terminées */
+                  done: number;
+                  /** @description Œuvres de la quête */
+                  total: number;
+                  /** @description Combien il en faut pour l’achever — `total` sauf si un seuil est fixé */
+                  required: number;
+                  /** @description Vrai dès que `done` atteint `required` */
+                  completed: boolean;
+                  /** @description Quand je l’ai achevée, figé à ce moment-là */
+                  completed_at: string | null;
+                };
+                /** @description Un badge */
+                badge: {
+                  /** Format: uuid */
+                  id: string;
+                  /** @description Identifiant stable et lisible */
+                  slug: string;
+                  name: string;
+                  description: string | null;
+                  /** @description Un ou deux emoji */
+                  icon: string;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  color: string;
+                  /**
+                   * @description `quest` — obtenu en achevant une quête. `milestone` — obtenu par un seuil calculé
+                   * @enum {string}
+                   */
+                  kind: "quest" | "milestone";
+                  /** @description La quête qui le décerne, si c’en est une */
+                  quest_id: string | null;
+                };
+                /** @description Les œuvres, dans l’ordre voulu */
+                items: {
+                    /** @description Ordre voulu par l’administrateur */
+                    position: number;
+                    media: components["schemas"]["MediaSummary"];
+                    /** @description Vrai si **je** l’ai terminée */
+                    done: boolean;
+                  }[];
+                /** @description Où en sont les autres membres. Tout est public — les achevées d’abord */
+                standings: ({
+                    /** @description Profil public d’un membre */
+                    user: {
+                      /** Format: uuid */
+                      id: string;
+                      pseudo: string;
+                      avatar_url: string | null;
+                      /** @description Couleur d'identité au format #RRGGBB */
+                      identity_color: string;
+                      /**
+                       * @description Rôle du membre
+                       * @enum {string}
+                       */
+                      role: "user" | "admin";
+                      /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                      deactivated: boolean;
+                    };
+                    done: number;
+                    completed: boolean;
+                    completed_at: string | null;
+                  })[];
+              };
+              media_created: boolean;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/quests/{id}/items/{mediaId}": {
+    /**
+     * Retirer une œuvre d’une quête (administrateur)
+     * @description L’œuvre reste dans la bibliothèque commune : une quête désigne, elle ne possède pas. Retirer une œuvre abaisse le dénominateur, ce qui **peut achever la quête** pour ceux à qui il ne manquait qu’elle.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+          mediaId: string;
+        };
+      };
+      responses: {
+        /** @description Une quête */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une quête et ses œuvres */
+              quest: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                /** @description Pourquoi ces œuvres-là — le fil, l’auteur, l’envie */
+                description: string | null;
+                /**
+                 * @description `draft` — visible des seuls administrateurs. `published` — visible de tous et notifiée
+                 * @enum {string}
+                 */
+                status: "draft" | "published";
+                threshold: number | null;
+                /** @description Échéance facultative — indicative, rien ne se ferme */
+                due_at: string | null;
+                published_at: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** @description Ma progression sur une quête */
+                progress: {
+                  /** @description Œuvres de la quête que j’ai terminées */
+                  done: number;
+                  /** @description Œuvres de la quête */
+                  total: number;
+                  /** @description Combien il en faut pour l’achever — `total` sauf si un seuil est fixé */
+                  required: number;
+                  /** @description Vrai dès que `done` atteint `required` */
+                  completed: boolean;
+                  /** @description Quand je l’ai achevée, figé à ce moment-là */
+                  completed_at: string | null;
+                };
+                /** @description Un badge */
+                badge: {
+                  /** Format: uuid */
+                  id: string;
+                  /** @description Identifiant stable et lisible */
+                  slug: string;
+                  name: string;
+                  description: string | null;
+                  /** @description Un ou deux emoji */
+                  icon: string;
+                  /** @description Couleur d'identité au format #RRGGBB */
+                  color: string;
+                  /**
+                   * @description `quest` — obtenu en achevant une quête. `milestone` — obtenu par un seuil calculé
+                   * @enum {string}
+                   */
+                  kind: "quest" | "milestone";
+                  /** @description La quête qui le décerne, si c’en est une */
+                  quest_id: string | null;
+                };
+                /** @description Les œuvres, dans l’ordre voulu */
+                items: {
+                    /** @description Ordre voulu par l’administrateur */
+                    position: number;
+                    media: components["schemas"]["MediaSummary"];
+                    /** @description Vrai si **je** l’ai terminée */
+                    done: boolean;
+                  }[];
+                /** @description Où en sont les autres membres. Tout est public — les achevées d’abord */
+                standings: ({
+                    /** @description Profil public d’un membre */
+                    user: {
+                      /** Format: uuid */
+                      id: string;
+                      pseudo: string;
+                      avatar_url: string | null;
+                      /** @description Couleur d'identité au format #RRGGBB */
+                      identity_color: string;
+                      /**
+                       * @description Rôle du membre
+                       * @enum {string}
+                       */
+                      role: "user" | "admin";
+                      /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                      deactivated: boolean;
+                    };
+                    done: number;
+                    completed: boolean;
+                    completed_at: string | null;
+                  })[];
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/stats": {
+    /**
+     * Statistiques d’un membre
+     * @description Le tableau de bord d’un membre : quatre périodes **calendaires** — semaine, mois, année, total — et des palmarès sur toute son histoire. Sans `user_id`, c’est le mien. Tout est public, ici comme partout.
+     *
+     * **Chaque grandeur dit sur quoi elle porte.** Beaucoup d’œuvres n’ont ni nombre de pages ni durée : un total qui les omettrait en silence serait faux. `coverage.counted` et `coverage.missing` accompagnent donc chaque chiffre, et **les afficher tous les deux fait partie du contrat** — `1 240 pages` seul ment quand deux livres sur cinq n’en déclarent aucune.
+     *
+     * **`basis` sépare le mesuré de l’estimé.** Les pages, les durées de films, d’albums et d’épisodes sont des attributs réels de ce que vous avez consommé. Les heures de jeu sont l’estimation de complétion d’IGDB — ni une mesure, ni votre temps de jeu. Elles sont rendues à part et **ne s’additionnent à rien**.
+     *
+     * **Les heures de série somment les durées des épisodes réellement cochés**, jamais une moyenne multipliée par un nombre d’épisodes.
+     *
+     * **Une œuvre relue trois fois compte trois fois**, dans les trois périodes concernées : c’est le journal (§8) qui le permet, avec une entrée datée par lecture.
+     *
+     * **Le temps** : périodes calendaires découpées dans le fuseau de l’instance, semaine commençant le **lundi** (ISO 8601). `scope` les annonce — un épisode coché un lundi à 00 h 30 tomberait dans la semaine précédente si on comptait en UTC.
+     *
+     * `compare_with` rend un second tableau de bord dans `comparison`, exactement de la même forme.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Le membre à regarder. Absent, c’est moi. Tout est public, comme le reste */
+          user_id?: string;
+          /** @description Un second membre, rendu dans `comparison`. Refusé s’il est identique à `user_id` */
+          compare_with?: string;
+        };
+      };
+      responses: {
+        /** @description Tableau de bord, et comparaison facultative */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Le tableau de bord d’un membre */
+              dashboard: {
+                /** @description Dans quelles conditions ces chiffres ont été calculés */
+                scope: {
+                  /** @description Profil public d’un membre */
+                  user: {
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  };
+                  /** @description Fuseau employé pour découper les périodes. Réglage d’instance, pas de membre */
+                  timezone: string;
+                  /**
+                   * @description ISO 8601. Figé, et annoncé pour que le front ne recalcule pas
+                   * @enum {string}
+                   */
+                  week_starts_on: "monday";
+                  /** Format: date-time */
+                  generated_at: string;
+                };
+                /** @description Les quatre périodes, toujours présentes */
+                periods: {
+                  /** @description Le bilan d’une période */
+                  week: {
+                    /** @description Premier jour de la période, dans le fuseau annoncé. Nul pour `all` */
+                    from: string | null;
+                    /**
+                     * Format: date
+                     * @description Dernier jour pris en compte — aujourd’hui
+                     */
+                    to: string;
+                    /** @description Des décomptes, sans trou possible */
+                    counts: {
+                      /** @description Œuvres terminées. Une relecture compte pour une de plus */
+                      finished: number;
+                      /** @description Toutes les clés sont présentes, à zéro s’il le faut */
+                      finished_by_type: {
+                        book: number;
+                        comic_series: number;
+                        movie: number;
+                        tv: number;
+                        game: number;
+                        music: number;
+                      };
+                      /** @description Parmi `finished`, celles qui n’étaient pas une découverte — une entrée de journal sur une œuvre déjà lue avant */
+                      rereads: number;
+                      episodes_watched: number;
+                      volumes_read: number;
+                      /** @description Parmi `volumes_read`, ceux dont la date de lecture a été **devinée** lors de la reprise §14, depuis leur dernière écriture. Leur place dans la semaine ou le mois est approximative */
+                      volumes_with_estimated_date: number;
+                      albums_listened: number;
+                    };
+                    /** @description Des grandeurs, avec leur couverture */
+                    quantities: {
+                      /** @description Livres terminés, `page_count` de la source */
+                      pages_read: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Films terminés, durée réelle du film */
+                      movie_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Somme des durées des **épisodes réellement cochés**. Jamais une moyenne multipliée par un nombre d’épisodes */
+                      tv_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Albums écoutés, durée totale déclarée */
+                      album_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description **Estimation d’IGDB**, pas votre temps de jeu. Rendue à part et jamais additionnée au reste */
+                      game_hours: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                    };
+                  };
+                  /** @description Le bilan d’une période */
+                  month: {
+                    /** @description Premier jour de la période, dans le fuseau annoncé. Nul pour `all` */
+                    from: string | null;
+                    /**
+                     * Format: date
+                     * @description Dernier jour pris en compte — aujourd’hui
+                     */
+                    to: string;
+                    /** @description Des décomptes, sans trou possible */
+                    counts: {
+                      /** @description Œuvres terminées. Une relecture compte pour une de plus */
+                      finished: number;
+                      /** @description Toutes les clés sont présentes, à zéro s’il le faut */
+                      finished_by_type: {
+                        book: number;
+                        comic_series: number;
+                        movie: number;
+                        tv: number;
+                        game: number;
+                        music: number;
+                      };
+                      /** @description Parmi `finished`, celles qui n’étaient pas une découverte — une entrée de journal sur une œuvre déjà lue avant */
+                      rereads: number;
+                      episodes_watched: number;
+                      volumes_read: number;
+                      /** @description Parmi `volumes_read`, ceux dont la date de lecture a été **devinée** lors de la reprise §14, depuis leur dernière écriture. Leur place dans la semaine ou le mois est approximative */
+                      volumes_with_estimated_date: number;
+                      albums_listened: number;
+                    };
+                    /** @description Des grandeurs, avec leur couverture */
+                    quantities: {
+                      /** @description Livres terminés, `page_count` de la source */
+                      pages_read: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Films terminés, durée réelle du film */
+                      movie_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Somme des durées des **épisodes réellement cochés**. Jamais une moyenne multipliée par un nombre d’épisodes */
+                      tv_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Albums écoutés, durée totale déclarée */
+                      album_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description **Estimation d’IGDB**, pas votre temps de jeu. Rendue à part et jamais additionnée au reste */
+                      game_hours: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                    };
+                  };
+                  /** @description Le bilan d’une période */
+                  year: {
+                    /** @description Premier jour de la période, dans le fuseau annoncé. Nul pour `all` */
+                    from: string | null;
+                    /**
+                     * Format: date
+                     * @description Dernier jour pris en compte — aujourd’hui
+                     */
+                    to: string;
+                    /** @description Des décomptes, sans trou possible */
+                    counts: {
+                      /** @description Œuvres terminées. Une relecture compte pour une de plus */
+                      finished: number;
+                      /** @description Toutes les clés sont présentes, à zéro s’il le faut */
+                      finished_by_type: {
+                        book: number;
+                        comic_series: number;
+                        movie: number;
+                        tv: number;
+                        game: number;
+                        music: number;
+                      };
+                      /** @description Parmi `finished`, celles qui n’étaient pas une découverte — une entrée de journal sur une œuvre déjà lue avant */
+                      rereads: number;
+                      episodes_watched: number;
+                      volumes_read: number;
+                      /** @description Parmi `volumes_read`, ceux dont la date de lecture a été **devinée** lors de la reprise §14, depuis leur dernière écriture. Leur place dans la semaine ou le mois est approximative */
+                      volumes_with_estimated_date: number;
+                      albums_listened: number;
+                    };
+                    /** @description Des grandeurs, avec leur couverture */
+                    quantities: {
+                      /** @description Livres terminés, `page_count` de la source */
+                      pages_read: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Films terminés, durée réelle du film */
+                      movie_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Somme des durées des **épisodes réellement cochés**. Jamais une moyenne multipliée par un nombre d’épisodes */
+                      tv_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Albums écoutés, durée totale déclarée */
+                      album_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description **Estimation d’IGDB**, pas votre temps de jeu. Rendue à part et jamais additionnée au reste */
+                      game_hours: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                    };
+                  };
+                  /** @description Le bilan d’une période */
+                  all: {
+                    /** @description Premier jour de la période, dans le fuseau annoncé. Nul pour `all` */
+                    from: string | null;
+                    /**
+                     * Format: date
+                     * @description Dernier jour pris en compte — aujourd’hui
+                     */
+                    to: string;
+                    /** @description Des décomptes, sans trou possible */
+                    counts: {
+                      /** @description Œuvres terminées. Une relecture compte pour une de plus */
+                      finished: number;
+                      /** @description Toutes les clés sont présentes, à zéro s’il le faut */
+                      finished_by_type: {
+                        book: number;
+                        comic_series: number;
+                        movie: number;
+                        tv: number;
+                        game: number;
+                        music: number;
+                      };
+                      /** @description Parmi `finished`, celles qui n’étaient pas une découverte — une entrée de journal sur une œuvre déjà lue avant */
+                      rereads: number;
+                      episodes_watched: number;
+                      volumes_read: number;
+                      /** @description Parmi `volumes_read`, ceux dont la date de lecture a été **devinée** lors de la reprise §14, depuis leur dernière écriture. Leur place dans la semaine ou le mois est approximative */
+                      volumes_with_estimated_date: number;
+                      albums_listened: number;
+                    };
+                    /** @description Des grandeurs, avec leur couverture */
+                    quantities: {
+                      /** @description Livres terminés, `page_count` de la source */
+                      pages_read: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Films terminés, durée réelle du film */
+                      movie_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Somme des durées des **épisodes réellement cochés**. Jamais une moyenne multipliée par un nombre d’épisodes */
+                      tv_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Albums écoutés, durée totale déclarée */
+                      album_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description **Estimation d’IGDB**, pas votre temps de jeu. Rendue à part et jamais additionnée au reste */
+                      game_hours: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                    };
+                  };
+                };
+                /** @description Ce qui se dégage sur toute l’histoire du membre */
+                highlights: {
+                  /** @description Livres et mangas — `metadata.authors` */
+                  top_authors: {
+                      label: string;
+                      count: number;
+                    }[];
+                  /** @description Films — `metadata.director` */
+                  top_directors: {
+                      label: string;
+                      count: number;
+                    }[];
+                  /** @description Séries — `metadata.creators` */
+                  top_creators: {
+                      label: string;
+                      count: number;
+                    }[];
+                  /** @description Tous types confondus */
+                  top_genres: {
+                      label: string;
+                      count: number;
+                    }[];
+                  /** @description Le mois où le plus d’œuvres ont été terminées. Nul si rien n’a jamais été terminé */
+                  busiest_month: {
+                    /** @description `AAAA-MM` */
+                    month: string;
+                    count: number;
+                  } | null;
+                  /** @description Ce que le membre met comme notes */
+                  ratings: {
+                    /** @description Notes de 1 à 10, seules celles employées au moins une fois */
+                    distribution: {
+                        rating: number;
+                        count: number;
+                      }[];
+                    /** @description Moyenne des notes posées. Nulle si aucune */
+                    average: number | null;
+                    /** @description Combien d’entrées de journal portent une note */
+                    coverage: {
+                      /** @description Œuvres qui ont servi au calcul */
+                      counted: number;
+                      /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                      missing: number;
+                    };
+                  };
+                };
+              };
+              /** @description Le second membre quand `compare_with` est fourni, dans exactement la même forme. Nul sinon */
+              comparison: ({
+                /** @description Dans quelles conditions ces chiffres ont été calculés */
+                scope: {
+                  /** @description Profil public d’un membre */
+                  user: {
+                    /** Format: uuid */
+                    id: string;
+                    pseudo: string;
+                    avatar_url: string | null;
+                    /** @description Couleur d'identité au format #RRGGBB */
+                    identity_color: string;
+                    /**
+                     * @description Rôle du membre
+                     * @enum {string}
+                     */
+                    role: "user" | "admin";
+                    /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+                    deactivated: boolean;
+                  };
+                  /** @description Fuseau employé pour découper les périodes. Réglage d’instance, pas de membre */
+                  timezone: string;
+                  /**
+                   * @description ISO 8601. Figé, et annoncé pour que le front ne recalcule pas
+                   * @enum {string}
+                   */
+                  week_starts_on: "monday";
+                  /** Format: date-time */
+                  generated_at: string;
+                };
+                /** @description Les quatre périodes, toujours présentes */
+                periods: {
+                  /** @description Le bilan d’une période */
+                  week: {
+                    /** @description Premier jour de la période, dans le fuseau annoncé. Nul pour `all` */
+                    from: string | null;
+                    /**
+                     * Format: date
+                     * @description Dernier jour pris en compte — aujourd’hui
+                     */
+                    to: string;
+                    /** @description Des décomptes, sans trou possible */
+                    counts: {
+                      /** @description Œuvres terminées. Une relecture compte pour une de plus */
+                      finished: number;
+                      /** @description Toutes les clés sont présentes, à zéro s’il le faut */
+                      finished_by_type: {
+                        book: number;
+                        comic_series: number;
+                        movie: number;
+                        tv: number;
+                        game: number;
+                        music: number;
+                      };
+                      /** @description Parmi `finished`, celles qui n’étaient pas une découverte — une entrée de journal sur une œuvre déjà lue avant */
+                      rereads: number;
+                      episodes_watched: number;
+                      volumes_read: number;
+                      /** @description Parmi `volumes_read`, ceux dont la date de lecture a été **devinée** lors de la reprise §14, depuis leur dernière écriture. Leur place dans la semaine ou le mois est approximative */
+                      volumes_with_estimated_date: number;
+                      albums_listened: number;
+                    };
+                    /** @description Des grandeurs, avec leur couverture */
+                    quantities: {
+                      /** @description Livres terminés, `page_count` de la source */
+                      pages_read: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Films terminés, durée réelle du film */
+                      movie_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Somme des durées des **épisodes réellement cochés**. Jamais une moyenne multipliée par un nombre d’épisodes */
+                      tv_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Albums écoutés, durée totale déclarée */
+                      album_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description **Estimation d’IGDB**, pas votre temps de jeu. Rendue à part et jamais additionnée au reste */
+                      game_hours: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                    };
+                  };
+                  /** @description Le bilan d’une période */
+                  month: {
+                    /** @description Premier jour de la période, dans le fuseau annoncé. Nul pour `all` */
+                    from: string | null;
+                    /**
+                     * Format: date
+                     * @description Dernier jour pris en compte — aujourd’hui
+                     */
+                    to: string;
+                    /** @description Des décomptes, sans trou possible */
+                    counts: {
+                      /** @description Œuvres terminées. Une relecture compte pour une de plus */
+                      finished: number;
+                      /** @description Toutes les clés sont présentes, à zéro s’il le faut */
+                      finished_by_type: {
+                        book: number;
+                        comic_series: number;
+                        movie: number;
+                        tv: number;
+                        game: number;
+                        music: number;
+                      };
+                      /** @description Parmi `finished`, celles qui n’étaient pas une découverte — une entrée de journal sur une œuvre déjà lue avant */
+                      rereads: number;
+                      episodes_watched: number;
+                      volumes_read: number;
+                      /** @description Parmi `volumes_read`, ceux dont la date de lecture a été **devinée** lors de la reprise §14, depuis leur dernière écriture. Leur place dans la semaine ou le mois est approximative */
+                      volumes_with_estimated_date: number;
+                      albums_listened: number;
+                    };
+                    /** @description Des grandeurs, avec leur couverture */
+                    quantities: {
+                      /** @description Livres terminés, `page_count` de la source */
+                      pages_read: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Films terminés, durée réelle du film */
+                      movie_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Somme des durées des **épisodes réellement cochés**. Jamais une moyenne multipliée par un nombre d’épisodes */
+                      tv_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Albums écoutés, durée totale déclarée */
+                      album_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description **Estimation d’IGDB**, pas votre temps de jeu. Rendue à part et jamais additionnée au reste */
+                      game_hours: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                    };
+                  };
+                  /** @description Le bilan d’une période */
+                  year: {
+                    /** @description Premier jour de la période, dans le fuseau annoncé. Nul pour `all` */
+                    from: string | null;
+                    /**
+                     * Format: date
+                     * @description Dernier jour pris en compte — aujourd’hui
+                     */
+                    to: string;
+                    /** @description Des décomptes, sans trou possible */
+                    counts: {
+                      /** @description Œuvres terminées. Une relecture compte pour une de plus */
+                      finished: number;
+                      /** @description Toutes les clés sont présentes, à zéro s’il le faut */
+                      finished_by_type: {
+                        book: number;
+                        comic_series: number;
+                        movie: number;
+                        tv: number;
+                        game: number;
+                        music: number;
+                      };
+                      /** @description Parmi `finished`, celles qui n’étaient pas une découverte — une entrée de journal sur une œuvre déjà lue avant */
+                      rereads: number;
+                      episodes_watched: number;
+                      volumes_read: number;
+                      /** @description Parmi `volumes_read`, ceux dont la date de lecture a été **devinée** lors de la reprise §14, depuis leur dernière écriture. Leur place dans la semaine ou le mois est approximative */
+                      volumes_with_estimated_date: number;
+                      albums_listened: number;
+                    };
+                    /** @description Des grandeurs, avec leur couverture */
+                    quantities: {
+                      /** @description Livres terminés, `page_count` de la source */
+                      pages_read: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Films terminés, durée réelle du film */
+                      movie_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Somme des durées des **épisodes réellement cochés**. Jamais une moyenne multipliée par un nombre d’épisodes */
+                      tv_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Albums écoutés, durée totale déclarée */
+                      album_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description **Estimation d’IGDB**, pas votre temps de jeu. Rendue à part et jamais additionnée au reste */
+                      game_hours: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                    };
+                  };
+                  /** @description Le bilan d’une période */
+                  all: {
+                    /** @description Premier jour de la période, dans le fuseau annoncé. Nul pour `all` */
+                    from: string | null;
+                    /**
+                     * Format: date
+                     * @description Dernier jour pris en compte — aujourd’hui
+                     */
+                    to: string;
+                    /** @description Des décomptes, sans trou possible */
+                    counts: {
+                      /** @description Œuvres terminées. Une relecture compte pour une de plus */
+                      finished: number;
+                      /** @description Toutes les clés sont présentes, à zéro s’il le faut */
+                      finished_by_type: {
+                        book: number;
+                        comic_series: number;
+                        movie: number;
+                        tv: number;
+                        game: number;
+                        music: number;
+                      };
+                      /** @description Parmi `finished`, celles qui n’étaient pas une découverte — une entrée de journal sur une œuvre déjà lue avant */
+                      rereads: number;
+                      episodes_watched: number;
+                      volumes_read: number;
+                      /** @description Parmi `volumes_read`, ceux dont la date de lecture a été **devinée** lors de la reprise §14, depuis leur dernière écriture. Leur place dans la semaine ou le mois est approximative */
+                      volumes_with_estimated_date: number;
+                      albums_listened: number;
+                    };
+                    /** @description Des grandeurs, avec leur couverture */
+                    quantities: {
+                      /** @description Livres terminés, `page_count` de la source */
+                      pages_read: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Films terminés, durée réelle du film */
+                      movie_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Somme des durées des **épisodes réellement cochés**. Jamais une moyenne multipliée par un nombre d’épisodes */
+                      tv_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description Albums écoutés, durée totale déclarée */
+                      album_minutes: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                      /** @description **Estimation d’IGDB**, pas votre temps de jeu. Rendue à part et jamais additionnée au reste */
+                      game_hours: {
+                        value: number;
+                        /** @enum {string} */
+                        unit: "pages" | "minutes" | "hours";
+                        /**
+                         * @description `measured` — attribut réel de l’œuvre consommée. `estimated` — chiffre venu d’ailleurs, qui ne décrit pas ce que vous avez fait
+                         * @enum {string}
+                         */
+                        basis: "measured" | "estimated";
+                        /** @description Sur quoi porte le chiffre, et ce qu’il ignore */
+                        coverage: {
+                          /** @description Œuvres qui ont servi au calcul */
+                          counted: number;
+                          /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                          missing: number;
+                        };
+                        /** @description Ce qu’il faut savoir avant de lire ce chiffre. Nul quand il n’y a rien à dire */
+                        note: string | null;
+                      };
+                    };
+                  };
+                };
+                /** @description Ce qui se dégage sur toute l’histoire du membre */
+                highlights: {
+                  /** @description Livres et mangas — `metadata.authors` */
+                  top_authors: {
+                      label: string;
+                      count: number;
+                    }[];
+                  /** @description Films — `metadata.director` */
+                  top_directors: {
+                      label: string;
+                      count: number;
+                    }[];
+                  /** @description Séries — `metadata.creators` */
+                  top_creators: {
+                      label: string;
+                      count: number;
+                    }[];
+                  /** @description Tous types confondus */
+                  top_genres: {
+                      label: string;
+                      count: number;
+                    }[];
+                  /** @description Le mois où le plus d’œuvres ont été terminées. Nul si rien n’a jamais été terminé */
+                  busiest_month: {
+                    /** @description `AAAA-MM` */
+                    month: string;
+                    count: number;
+                  } | null;
+                  /** @description Ce que le membre met comme notes */
+                  ratings: {
+                    /** @description Notes de 1 à 10, seules celles employées au moins une fois */
+                    distribution: {
+                        rating: number;
+                        count: number;
+                      }[];
+                    /** @description Moyenne des notes posées. Nulle si aucune */
+                    average: number | null;
+                    /** @description Combien d’entrées de journal portent une note */
+                    coverage: {
+                      /** @description Œuvres qui ont servi au calcul */
+                      counted: number;
+                      /** @description Œuvres écartées faute de donnée. **À afficher** : c’est ce qui rend le total honnête */
+                      missing: number;
+                    };
+                  };
+                };
+              }) | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -3392,12 +6212,12 @@ export interface components {
       /** @description Vrai si réessayer plus tard a des chances d’aboutir sans rien changer */
       retryable: boolean;
     };
-    SearchResultInput: OneOf<[{
+    SearchResultInput: ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -3421,12 +6241,12 @@ export interface components {
       /** @constant */
       type: "book";
       metadata: components["schemas"]["BookMetadataInput"];
-    }, {
+    }) | ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -3450,12 +6270,12 @@ export interface components {
       /** @constant */
       type: "comic_series";
       metadata: components["schemas"]["ComicSeriesMetadataInput"];
-    }, {
+    }) | ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -3479,12 +6299,12 @@ export interface components {
       /** @constant */
       type: "game";
       metadata: components["schemas"]["GameMetadataInput"];
-    }, {
+    }) | ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -3508,12 +6328,103 @@ export interface components {
       /** @constant */
       type: "movie";
       metadata: components["schemas"]["MovieMetadataInput"];
-    }, {
+    }) | ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+      /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
+      external_id: string;
+      /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
+      title: string;
+      original_title: string | null;
+      /** @description Année de sortie ou de première diffusion, nulle si la source ne la donne pas */
+      year: number | null;
+      /** @description Jaquette en URL absolue. Celle de la source jusqu’à l’étape 6, qui la recopie chez nous */
+      cover_url: string | null;
+      /** @description Résumé court */
+      summary: string | null;
+      /**
+       * @description Complétude du bloc `metadata` : `search` = partiel (issu de la recherche), `full` = complet (issu de la fiche détaillée)
+       * @enum {string}
+       */
+      detail_level: "search" | "full";
+      /** @description Vrai si l’œuvre est déjà dans la bibliothèque commune */
+      in_library: boolean;
+      /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
+      media_id: string | null;
+      /** @constant */
+      type: "music";
+      /** @description Métadonnées propres aux albums */
+      metadata: {
+        /**
+         * @description Artiste principal, tel que la source le crédite
+         * @default null
+         */
+        artist?: string | null;
+        /**
+         * @description Tous les artistes crédités, l’artiste principal en tête
+         * @default []
+         */
+        artists?: string[];
+        /**
+         * @description Album, EP, Single, Live… tel que MusicBrainz le nomme
+         * @default null
+         */
+        primary_type?: string | null;
+        /**
+         * @description Compilation, Soundtrack, Remix…
+         * @default []
+         */
+        secondary_types?: string[];
+        /** @default null */
+        label?: string | null;
+        /** @default null */
+        track_count?: number | null;
+        /** @default null */
+        length_ms?: number | null;
+        /**
+         * @description Vide tant que la fiche détaillée n’a pas été demandée
+         * @default []
+         */
+        tracks?: ({
+            /** @description Rang sur le disque */
+            position: number;
+            title: string;
+            /** @default null */
+            length_ms?: number | null;
+            /** @default null */
+            artist?: string | null;
+          })[];
+        /** @default [] */
+        genres?: string[];
+        /**
+         * @description Identifiants chez les sources qui ont contribué à cette fiche
+         * @default {
+         *   "musicbrainz": null,
+         *   "release": null
+         * }
+         */
+        external_ids?: {
+          /**
+           * @description Identifiant du **groupe de publication** — l’œuvre, indépendamment de ses éditions
+           * @default null
+           */
+          musicbrainz?: string | null;
+          /**
+           * @description Édition retenue pour la liste des pistes et la pochette
+           * @default null
+           */
+          release?: string | null;
+        };
+      };
+    }) | ({
+      /**
+       * @description Source d'origine de la fiche
+       * @enum {string}
+       */
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -3537,8 +6448,8 @@ export interface components {
       /** @constant */
       type: "tv";
       metadata: components["schemas"]["TvMetadataInput"];
-    }]>;
-    MediaItemInput: OneOf<[{
+    });
+    MediaItemInput: ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -3548,7 +6459,7 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -3562,7 +6473,7 @@ export interface components {
       /** @constant */
       type: "book";
       metadata: components["schemas"]["BookMetadataInput"];
-    }, {
+    }) | ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -3572,7 +6483,7 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -3601,7 +6512,7 @@ export interface components {
           /** @description Ajouté à la main plutôt que par la source */
           manual: boolean;
         })[];
-    }, {
+    }) | ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -3611,7 +6522,7 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -3625,7 +6536,7 @@ export interface components {
       /** @constant */
       type: "game";
       metadata: components["schemas"]["GameMetadataInput"];
-    }, {
+    }) | ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -3635,7 +6546,7 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -3649,7 +6560,7 @@ export interface components {
       /** @constant */
       type: "movie";
       metadata: components["schemas"]["MovieMetadataInput"];
-    }, {
+    }) | ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -3659,7 +6570,93 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+      /** @description Identifiant chez la source */
+      external_id: string;
+      title: string;
+      original_title: string | null;
+      /** @description Jaquette, toujours en URL absolue et directement utilisable. Elle pointe soit sur la source, soit sur notre stockage une fois l’image recopiée : la distinction est interne et ne demande aucun traitement côté client. Elle peut changer d’hôte d’une instance à l’autre — ne pas la stocker durablement, la relire depuis la réponse. */
+      cover_url: string | null;
+      release_date: string | null;
+      summary: string | null;
+      /** @description Dernier rafraîchissement depuis la source */
+      refreshed_at: string | null;
+      /** @constant */
+      type: "music";
+      /** @description Métadonnées propres aux albums */
+      metadata: {
+        /**
+         * @description Artiste principal, tel que la source le crédite
+         * @default null
+         */
+        artist?: string | null;
+        /**
+         * @description Tous les artistes crédités, l’artiste principal en tête
+         * @default []
+         */
+        artists?: string[];
+        /**
+         * @description Album, EP, Single, Live… tel que MusicBrainz le nomme
+         * @default null
+         */
+        primary_type?: string | null;
+        /**
+         * @description Compilation, Soundtrack, Remix…
+         * @default []
+         */
+        secondary_types?: string[];
+        /** @default null */
+        label?: string | null;
+        /** @default null */
+        track_count?: number | null;
+        /** @default null */
+        length_ms?: number | null;
+        /**
+         * @description Vide tant que la fiche détaillée n’a pas été demandée
+         * @default []
+         */
+        tracks?: ({
+            /** @description Rang sur le disque */
+            position: number;
+            title: string;
+            /** @default null */
+            length_ms?: number | null;
+            /** @default null */
+            artist?: string | null;
+          })[];
+        /** @default [] */
+        genres?: string[];
+        /**
+         * @description Identifiants chez les sources qui ont contribué à cette fiche
+         * @default {
+         *   "musicbrainz": null,
+         *   "release": null
+         * }
+         */
+        external_ids?: {
+          /**
+           * @description Identifiant du **groupe de publication** — l’œuvre, indépendamment de ses éditions
+           * @default null
+           */
+          musicbrainz?: string | null;
+          /**
+           * @description Édition retenue pour la liste des pistes et la pochette
+           * @default null
+           */
+          release?: string | null;
+        };
+      };
+    }) | ({
+      /**
+       * Format: uuid
+       * @description Identifiant interne de la fiche
+       */
+      id: string;
+      /**
+       * @description Source d'origine de la fiche
+       * @enum {string}
+       */
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -3697,7 +6694,7 @@ export interface components {
               air_date: string | null;
             })[];
         })[];
-    }]>;
+    });
     MovieMetadataInput: {
       /**
        * @description Réalisateur principal
@@ -3828,12 +6825,12 @@ export interface components {
        * @description Type d'œuvre
        * @enum {string}
        */
-      type: "book" | "comic_series" | "movie" | "tv" | "game";
+      type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       cover_url: string | null;
@@ -3880,14 +6877,14 @@ export interface components {
         total: number;
       } | null;
     };
-    MediaDetailInput: OneOf<[{
+    MediaDetailInput: ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -3938,6 +6935,25 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -3959,14 +6975,14 @@ export interface components {
       /** @constant */
       type: "book";
       metadata: components["schemas"]["BookMetadataInput"];
-    }, {
+    }) | ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -4017,6 +7033,25 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -4054,14 +7089,14 @@ export interface components {
           };
         };
       };
-    }, {
+    }) | ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -4112,6 +7147,25 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -4133,14 +7187,14 @@ export interface components {
       /** @constant */
       type: "game";
       metadata: components["schemas"]["GameMetadataInput"];
-    }, {
+    }) | ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -4191,6 +7245,25 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -4278,14 +7351,14 @@ export interface components {
         /** Format: date-time */
         fetched_at: string;
       }) | null;
-    }, {
+    }) | ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -4336,6 +7409,185 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
+      next_up: (OneOf<[{
+        /** @constant */
+        kind: "episode";
+        /** Format: uuid */
+        id: string;
+        /** Format: uuid */
+        season_id: string;
+        season_number: number;
+        number: number;
+        title: string | null;
+      }, {
+        /** @constant */
+        kind: "volume";
+        /** Format: uuid */
+        id: string;
+        number: number;
+        title: string | null;
+      }]>) | null;
+      /** @constant */
+      type: "music";
+      /** @description Métadonnées propres aux albums */
+      metadata: {
+        /**
+         * @description Artiste principal, tel que la source le crédite
+         * @default null
+         */
+        artist?: string | null;
+        /**
+         * @description Tous les artistes crédités, l’artiste principal en tête
+         * @default []
+         */
+        artists?: string[];
+        /**
+         * @description Album, EP, Single, Live… tel que MusicBrainz le nomme
+         * @default null
+         */
+        primary_type?: string | null;
+        /**
+         * @description Compilation, Soundtrack, Remix…
+         * @default []
+         */
+        secondary_types?: string[];
+        /** @default null */
+        label?: string | null;
+        /** @default null */
+        track_count?: number | null;
+        /** @default null */
+        length_ms?: number | null;
+        /**
+         * @description Vide tant que la fiche détaillée n’a pas été demandée
+         * @default []
+         */
+        tracks?: ({
+            /** @description Rang sur le disque */
+            position: number;
+            title: string;
+            /** @default null */
+            length_ms?: number | null;
+            /** @default null */
+            artist?: string | null;
+          })[];
+        /** @default [] */
+        genres?: string[];
+        /**
+         * @description Identifiants chez les sources qui ont contribué à cette fiche
+         * @default {
+         *   "musicbrainz": null,
+         *   "release": null
+         * }
+         */
+        external_ids?: {
+          /**
+           * @description Identifiant du **groupe de publication** — l’œuvre, indépendamment de ses éditions
+           * @default null
+           */
+          musicbrainz?: string | null;
+          /**
+           * @description Édition retenue pour la liste des pistes et la pochette
+           * @default null
+           */
+          release?: string | null;
+        };
+      };
+    }) | ({
+      /** Format: uuid */
+      id: string;
+      /**
+       * @description Source d'origine de la fiche
+       * @enum {string}
+       */
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+      external_id: string;
+      title: string;
+      original_title: string | null;
+      cover_url: string | null;
+      release_date: string | null;
+      year: number | null;
+      summary: string | null;
+      refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
+      tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
+        me: components["schemas"]["UserTrackingInput"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTrackingInput"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
+        };
+      };
+      progress: {
+        me: {
+          /** @description Éléments cochés par l’utilisateur */
+          checked: number;
+          /** @description Éléments connus en base */
+          total: number;
+        } | null;
+      };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -4443,7 +7695,7 @@ export interface components {
             };
           };
         })[];
-    }]>;
+    });
     EpisodeDetailInput: {
       /** Format: uuid */
       id: string;
@@ -4640,12 +7892,12 @@ export interface components {
        * @description Type d'œuvre
        * @enum {string}
        */
-      type: "book" | "comic_series" | "movie" | "tv" | "game";
+      type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       title: string;
       cover_url: string | null;
       year: number | null;
@@ -4892,12 +8144,12 @@ export interface components {
       /** @description Vrai si réessayer plus tard a des chances d’aboutir sans rien changer */
       retryable: boolean;
     };
-    SearchResult: OneOf<[{
+    SearchResult: ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -4921,12 +8173,12 @@ export interface components {
       /** @constant */
       type: "book";
       metadata: components["schemas"]["BookMetadata"];
-    }, {
+    }) | ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -4950,12 +8202,12 @@ export interface components {
       /** @constant */
       type: "comic_series";
       metadata: components["schemas"]["ComicSeriesMetadata"];
-    }, {
+    }) | ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -4979,12 +8231,12 @@ export interface components {
       /** @constant */
       type: "game";
       metadata: components["schemas"]["GameMetadata"];
-    }, {
+    }) | ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -5008,12 +8260,103 @@ export interface components {
       /** @constant */
       type: "movie";
       metadata: components["schemas"]["MovieMetadata"];
-    }, {
+    }) | ({
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+      /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
+      external_id: string;
+      /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
+      title: string;
+      original_title: string | null;
+      /** @description Année de sortie ou de première diffusion, nulle si la source ne la donne pas */
+      year: number | null;
+      /** @description Jaquette en URL absolue. Celle de la source jusqu’à l’étape 6, qui la recopie chez nous */
+      cover_url: string | null;
+      /** @description Résumé court */
+      summary: string | null;
+      /**
+       * @description Complétude du bloc `metadata` : `search` = partiel (issu de la recherche), `full` = complet (issu de la fiche détaillée)
+       * @enum {string}
+       */
+      detail_level: "search" | "full";
+      /** @description Vrai si l’œuvre est déjà dans la bibliothèque commune */
+      in_library: boolean;
+      /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
+      media_id: string | null;
+      /** @constant */
+      type: "music";
+      /** @description Métadonnées propres aux albums */
+      metadata: {
+        /**
+         * @description Artiste principal, tel que la source le crédite
+         * @default null
+         */
+        artist: string | null;
+        /**
+         * @description Tous les artistes crédités, l’artiste principal en tête
+         * @default []
+         */
+        artists: string[];
+        /**
+         * @description Album, EP, Single, Live… tel que MusicBrainz le nomme
+         * @default null
+         */
+        primary_type: string | null;
+        /**
+         * @description Compilation, Soundtrack, Remix…
+         * @default []
+         */
+        secondary_types: string[];
+        /** @default null */
+        label: string | null;
+        /** @default null */
+        track_count: number | null;
+        /** @default null */
+        length_ms: number | null;
+        /**
+         * @description Vide tant que la fiche détaillée n’a pas été demandée
+         * @default []
+         */
+        tracks: ({
+            /** @description Rang sur le disque */
+            position: number;
+            title: string;
+            /** @default null */
+            length_ms: number | null;
+            /** @default null */
+            artist: string | null;
+          })[];
+        /** @default [] */
+        genres: string[];
+        /**
+         * @description Identifiants chez les sources qui ont contribué à cette fiche
+         * @default {
+         *   "musicbrainz": null,
+         *   "release": null
+         * }
+         */
+        external_ids: {
+          /**
+           * @description Identifiant du **groupe de publication** — l’œuvre, indépendamment de ses éditions
+           * @default null
+           */
+          musicbrainz: string | null;
+          /**
+           * @description Édition retenue pour la liste des pistes et la pochette
+           * @default null
+           */
+          release: string | null;
+        };
+      };
+    }) | ({
+      /**
+       * @description Source d'origine de la fiche
+       * @enum {string}
+       */
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source, stable — c’est la clé d’ajout */
       external_id: string;
       /** @description Titre dans la langue de l’utilisateur, avec repli sur le titre original */
@@ -5037,8 +8380,8 @@ export interface components {
       /** @constant */
       type: "tv";
       metadata: components["schemas"]["TvMetadata"];
-    }]>;
-    MediaItem: OneOf<[{
+    });
+    MediaItem: ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -5048,7 +8391,7 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -5062,7 +8405,7 @@ export interface components {
       /** @constant */
       type: "book";
       metadata: components["schemas"]["BookMetadata"];
-    }, {
+    }) | ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -5072,7 +8415,7 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -5101,7 +8444,7 @@ export interface components {
           /** @description Ajouté à la main plutôt que par la source */
           manual: boolean;
         })[];
-    }, {
+    }) | ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -5111,7 +8454,7 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -5125,7 +8468,7 @@ export interface components {
       /** @constant */
       type: "game";
       metadata: components["schemas"]["GameMetadata"];
-    }, {
+    }) | ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -5135,7 +8478,7 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -5149,7 +8492,7 @@ export interface components {
       /** @constant */
       type: "movie";
       metadata: components["schemas"]["MovieMetadata"];
-    }, {
+    }) | ({
       /**
        * Format: uuid
        * @description Identifiant interne de la fiche
@@ -5159,7 +8502,93 @@ export interface components {
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+      /** @description Identifiant chez la source */
+      external_id: string;
+      title: string;
+      original_title: string | null;
+      /** @description Jaquette, toujours en URL absolue et directement utilisable. Elle pointe soit sur la source, soit sur notre stockage une fois l’image recopiée : la distinction est interne et ne demande aucun traitement côté client. Elle peut changer d’hôte d’une instance à l’autre — ne pas la stocker durablement, la relire depuis la réponse. */
+      cover_url: string | null;
+      release_date: string | null;
+      summary: string | null;
+      /** @description Dernier rafraîchissement depuis la source */
+      refreshed_at: string | null;
+      /** @constant */
+      type: "music";
+      /** @description Métadonnées propres aux albums */
+      metadata: {
+        /**
+         * @description Artiste principal, tel que la source le crédite
+         * @default null
+         */
+        artist: string | null;
+        /**
+         * @description Tous les artistes crédités, l’artiste principal en tête
+         * @default []
+         */
+        artists: string[];
+        /**
+         * @description Album, EP, Single, Live… tel que MusicBrainz le nomme
+         * @default null
+         */
+        primary_type: string | null;
+        /**
+         * @description Compilation, Soundtrack, Remix…
+         * @default []
+         */
+        secondary_types: string[];
+        /** @default null */
+        label: string | null;
+        /** @default null */
+        track_count: number | null;
+        /** @default null */
+        length_ms: number | null;
+        /**
+         * @description Vide tant que la fiche détaillée n’a pas été demandée
+         * @default []
+         */
+        tracks: ({
+            /** @description Rang sur le disque */
+            position: number;
+            title: string;
+            /** @default null */
+            length_ms: number | null;
+            /** @default null */
+            artist: string | null;
+          })[];
+        /** @default [] */
+        genres: string[];
+        /**
+         * @description Identifiants chez les sources qui ont contribué à cette fiche
+         * @default {
+         *   "musicbrainz": null,
+         *   "release": null
+         * }
+         */
+        external_ids: {
+          /**
+           * @description Identifiant du **groupe de publication** — l’œuvre, indépendamment de ses éditions
+           * @default null
+           */
+          musicbrainz: string | null;
+          /**
+           * @description Édition retenue pour la liste des pistes et la pochette
+           * @default null
+           */
+          release: string | null;
+        };
+      };
+    }) | ({
+      /**
+       * Format: uuid
+       * @description Identifiant interne de la fiche
+       */
+      id: string;
+      /**
+       * @description Source d'origine de la fiche
+       * @enum {string}
+       */
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       /** @description Identifiant chez la source */
       external_id: string;
       title: string;
@@ -5197,7 +8626,7 @@ export interface components {
               air_date: string | null;
             })[];
         })[];
-    }]>;
+    });
     MovieMetadata: {
       /**
        * @description Réalisateur principal
@@ -5328,12 +8757,12 @@ export interface components {
        * @description Type d'œuvre
        * @enum {string}
        */
-      type: "book" | "comic_series" | "movie" | "tv" | "game";
+      type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       cover_url: string | null;
@@ -5380,14 +8809,14 @@ export interface components {
         total: number;
       } | null;
     };
-    MediaDetail: OneOf<[{
+    MediaDetail: ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -5438,6 +8867,25 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -5459,14 +8907,14 @@ export interface components {
       /** @constant */
       type: "book";
       metadata: components["schemas"]["BookMetadata"];
-    }, {
+    }) | ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -5517,6 +8965,25 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -5554,14 +9021,14 @@ export interface components {
           };
         };
       };
-    }, {
+    }) | ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -5612,6 +9079,25 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -5633,14 +9119,14 @@ export interface components {
       /** @constant */
       type: "game";
       metadata: components["schemas"]["GameMetadata"];
-    }, {
+    }) | ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -5691,6 +9177,25 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -5778,14 +9283,14 @@ export interface components {
         /** Format: date-time */
         fetched_at: string;
       }) | null;
-    }, {
+    }) | ({
       /** Format: uuid */
       id: string;
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       external_id: string;
       title: string;
       original_title: string | null;
@@ -5836,6 +9341,185 @@ export interface components {
           total: number;
         } | null;
       };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
+      next_up: (OneOf<[{
+        /** @constant */
+        kind: "episode";
+        /** Format: uuid */
+        id: string;
+        /** Format: uuid */
+        season_id: string;
+        season_number: number;
+        number: number;
+        title: string | null;
+      }, {
+        /** @constant */
+        kind: "volume";
+        /** Format: uuid */
+        id: string;
+        number: number;
+        title: string | null;
+      }]>) | null;
+      /** @constant */
+      type: "music";
+      /** @description Métadonnées propres aux albums */
+      metadata: {
+        /**
+         * @description Artiste principal, tel que la source le crédite
+         * @default null
+         */
+        artist: string | null;
+        /**
+         * @description Tous les artistes crédités, l’artiste principal en tête
+         * @default []
+         */
+        artists: string[];
+        /**
+         * @description Album, EP, Single, Live… tel que MusicBrainz le nomme
+         * @default null
+         */
+        primary_type: string | null;
+        /**
+         * @description Compilation, Soundtrack, Remix…
+         * @default []
+         */
+        secondary_types: string[];
+        /** @default null */
+        label: string | null;
+        /** @default null */
+        track_count: number | null;
+        /** @default null */
+        length_ms: number | null;
+        /**
+         * @description Vide tant que la fiche détaillée n’a pas été demandée
+         * @default []
+         */
+        tracks: ({
+            /** @description Rang sur le disque */
+            position: number;
+            title: string;
+            /** @default null */
+            length_ms: number | null;
+            /** @default null */
+            artist: string | null;
+          })[];
+        /** @default [] */
+        genres: string[];
+        /**
+         * @description Identifiants chez les sources qui ont contribué à cette fiche
+         * @default {
+         *   "musicbrainz": null,
+         *   "release": null
+         * }
+         */
+        external_ids: {
+          /**
+           * @description Identifiant du **groupe de publication** — l’œuvre, indépendamment de ses éditions
+           * @default null
+           */
+          musicbrainz: string | null;
+          /**
+           * @description Édition retenue pour la liste des pistes et la pochette
+           * @default null
+           */
+          release: string | null;
+        };
+      };
+    }) | ({
+      /** Format: uuid */
+      id: string;
+      /**
+       * @description Source d'origine de la fiche
+       * @enum {string}
+       */
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+      external_id: string;
+      title: string;
+      original_title: string | null;
+      cover_url: string | null;
+      release_date: string | null;
+      year: number | null;
+      summary: string | null;
+      refreshed_at: string | null;
+      /** @description Suivi d’une œuvre : le mien, celui de mes abonnements, le résumé des autres */
+      tracking: {
+        /** @description Mon suivi, nul si je ne suis pas l’œuvre */
+        me: components["schemas"]["UserTracking"] | null;
+        /** @description Les membres que je suis qui suivent aussi cette œuvre, triés par pseudo */
+        following: ({
+            /** @description Profil public d’un membre */
+            user: {
+              /** Format: uuid */
+              id: string;
+              pseudo: string;
+              avatar_url: string | null;
+              /** @description Couleur d'identité au format #RRGGBB */
+              identity_color: string;
+              /**
+               * @description Rôle du membre
+               * @enum {string}
+               */
+              role: "user" | "admin";
+              /** @description Compte désactivé : il ne peut plus se connecter et n’apparaît plus dans les fils ni les suggestions, mais tout ce qu’il a écrit reste en place et lui reste attribué */
+              deactivated: boolean;
+            };
+            tracking: components["schemas"]["UserTracking"];
+          })[];
+        /** @description Résumé des autres suiveurs */
+        others: {
+          /** @description Membres suivant l’œuvre, hors moi et hors mes abonnements */
+          count: number;
+          /** @description Moyenne de leurs notes, arrondie au dixième. Nulle si aucun n’a noté */
+          average_rating: number | null;
+          /** @description Combien d’entre eux en ont fait un coup de cœur */
+          favorites: number;
+        };
+      };
+      progress: {
+        me: {
+          /** @description Éléments cochés par l’utilisateur */
+          checked: number;
+          /** @description Éléments connus en base */
+          total: number;
+        } | null;
+      };
+      /** @description Sagas dont l’œuvre fait partie, vide si aucune */
+      sagas: ({
+          /** Format: uuid */
+          id: string;
+          title: string;
+          /**
+           * @description Source d'origine de la fiche
+           * @enum {string}
+           */
+          source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+          /** @description Parties connues de la source */
+          part_count: number;
+          /** @description Parties présentes dans la bibliothèque */
+          in_library_count: number;
+          /** @description Est-elle sous veille pour moi ? */
+          watched: boolean;
+        })[];
+      /** @description Sous veille pour moi ? */
+      watched: boolean;
       next_up: (OneOf<[{
         /** @constant */
         kind: "episode";
@@ -5943,7 +9627,7 @@ export interface components {
             };
           };
         })[];
-    }]>;
+    });
     EpisodeDetail: {
       /** Format: uuid */
       id: string;
@@ -6140,12 +9824,12 @@ export interface components {
        * @description Type d'œuvre
        * @enum {string}
        */
-      type: "book" | "comic_series" | "movie" | "tv" | "game";
+      type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
       /**
        * @description Source d'origine de la fiche
        * @enum {string}
        */
-      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb";
+      source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
       title: string;
       cover_url: string | null;
       year: number | null;

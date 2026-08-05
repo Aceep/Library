@@ -8,7 +8,8 @@ import {
 } from '../api/endpoints'
 import type { NewLogEntry } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
-import { isDerivedStatusType, timesNoun } from '../api/schema'
+import { timesNoun } from '../api/schema'
+import { useReference } from '../reference/ReferenceContext'
 import type { LogEntry, MediaType, UserTracking } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
 import styles from './MediaLog.module.css'
@@ -38,6 +39,7 @@ export default function MediaLog({
   onTracking: (tracking: UserTracking) => void
 }) {
   const queryClient = useQueryClient()
+  const { isDerivedStatusType } = useReference()
   const [adding, setAdding] = useState(false)
 
   const log = useInfiniteQuery({

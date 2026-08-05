@@ -11,6 +11,7 @@ import type {
   MediaSource,
   MediaType,
   Page,
+  ReferenceStatuses,
   RefreshResponse,
   SearchResult,
   SeriesAggregate,
@@ -697,3 +698,13 @@ export const addVolume = (mediaId: string, volume: NewVolume) =>
 /** Seuls les tomes ajoutés à la main (`manual`) sont supprimables. */
 export const deleteVolume = (volumeId: string) =>
   api.delete<{ series: SeriesAggregate }>(`/volumes/${volumeId}`)
+
+/**
+ * Les statuts par type d'œuvre, avec leurs libellés (`GET /reference/statuses`).
+ *
+ * Constante : un appel au démarrage suffit, et le résultat vaut pour toute la
+ * session. Sans authentification côté serveur — c'est du vocabulaire, pas de
+ * la médiathèque.
+ */
+export const fetchReference = (signal?: AbortSignal) =>
+  api.get<ReferenceStatuses>('/reference/statuses', undefined, signal)

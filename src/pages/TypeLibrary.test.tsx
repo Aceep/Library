@@ -62,7 +62,7 @@ describe('TypeLibrary — le rayon', () => {
 
     expect(await screen.findByRole('heading', { name: 'Musique' })).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /Kind of Blue/ })).toBeInTheDocument()
-    expect(filters()).toEqual(['Tout', 'À voir', 'Terminé'])
+    expect(filters()).toEqual(['Tout', 'À écouter', 'Écouté'])
   })
 
   it('propose les trois statuts sur les rayons ordinaires', async () => {
@@ -70,6 +70,6 @@ describe('TypeLibrary — le rayon', () => {
     renderShelf('book')
 
     expect(await screen.findByRole('heading', { name: 'Livres' })).toBeInTheDocument()
-    expect(filters()).toEqual(['Tout', 'À voir', 'En cours', 'Terminé'])
+    expect(filters()).toEqual(['Tout', 'À lire', 'En cours de lecture', 'Lu'])
   })
 })

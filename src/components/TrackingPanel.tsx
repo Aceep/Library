@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { TrackingPatch } from '../api/endpoints'
-import { allowedStatuses, isDerivedStatusType, statusLabel, timesNoun } from '../api/schema'
+import { timesNoun } from '../api/schema'
+import { useReference } from '../reference/ReferenceContext'
 import type {
   Account,
   FollowedTracking,
@@ -26,8 +27,12 @@ const RATINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
  * - `tv` et `comic_series` : **aucun sélecteur**. Leur statut est dérivé des
  *   épisodes ou des tomes cochés, et le back refuse de l'écrire.
  * - `music` : **deux segments**, sans « en cours ». Un album se consomme d'un
- *   bloc (voir `allowedStatuses`).
+ *   bloc.
  * - les autres : les trois statuts.
+ *
+ * Rien de tout cela n'est écrit ici : c'est `GET /reference/statuses` qui le
+ * dit, libellés compris, et `useReference()` qui le relaie. Un type qui
+ * changerait de régime n'aurait aucun code à modifier dans ce fichier.
  */
 export default function TrackingPanel({
   tracking,
@@ -46,6 +51,8 @@ export default function TrackingPanel({
   isSaving: boolean
   error: unknown
 }) {
+  const { statusesOf, statusLabel, isDerivedStatusType } = useReference()
+
   if (!tracking) {
     return (
       <section className={styles.panel}>
@@ -90,7 +97,7 @@ export default function TrackingPanel({
         <div className={styles.field}>
           <span className={styles.fieldLabel}>Statut</span>
           <div className={styles.segmented} role="group" aria-label="Statut">
-            {allowedStatuses(type).map((status) => (
+            {statusesOf(type).map(({ value: status, label }) => (
               <button
                 key={status}
                 type="button"
@@ -99,14 +106,14 @@ export default function TrackingPanel({
                 onClick={() => onPatch({ status })}
                 disabled={isSaving}
               >
-                {statusLabel(status)}
+                {label}
               </button>
             ))}
           </div>
         </div>
       ) : (
         <p className={styles.derived}>
-          Statut&nbsp;: <strong>{statusLabel(tracking.status)}</strong>
+          Statut&nbsp;: <strong>{statusLabel(type, tracking.status)}</strong>
           <span className={styles.derivedNote}>
             déduit de ce que tu as coché — il suit tout seul
           </span>
@@ -343,6 +350,8 @@ function ReadOnlyTracking({
   account: Account
   type: MediaType
 }) {
+  const { statusLabel, isDerivedStatusType } = useReference()
+
   return (
     <div className={styles.followedBlock}>
       <h3 className={styles.followedName}>
@@ -365,7 +374,7 @@ function ReadOnlyTracking({
           <div className={styles.readonlyRow}>
             <dt>Statut</dt>
             <dd>
-              {statusLabel(tracking.status)}
+              {statusLabel(type, tracking.status)}
               {isDerivedStatusType(type) ? <span className={styles.derivedNote}>déduit</span> : null}
             </dd>
           </div>

@@ -3,7 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchMemberLibrary } from '../api/endpoints'
 import type { MemberLibraryFilters, MemberLibrarySort } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
-import { MEDIA_TYPES, statusLabel, typeLabelPlural } from '../api/schema'
+import { MEDIA_TYPES, crossTypeStatusLabel, typeLabelPlural } from '../api/schema'
 import type { Account, MediaType, TrackingStatus } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
 import MediaCard from './MediaCard'
@@ -11,9 +11,11 @@ import styles from './MemberLibrary.module.css'
 
 const STATUS_FILTERS: Array<{ value: TrackingStatus | null; label: string }> = [
   { value: null, label: 'Tout' },
-  { value: 'todo', label: statusLabel('todo') },
-  { value: 'doing', label: statusLabel('doing') },
-  { value: 'done', label: statusLabel('done') },
+  // Sa bibliothèque entière, tous types mêlés : aucun libellé accordé n'a de
+  // sens ici, faute d'un type auquel l'accorder.
+  { value: 'todo', label: crossTypeStatusLabel('todo') },
+  { value: 'doing', label: crossTypeStatusLabel('doing') },
+  { value: 'done', label: crossTypeStatusLabel('done') },
 ]
 
 const SORTS: Array<{ value: MemberLibrarySort; label: string }> = [

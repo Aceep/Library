@@ -72,6 +72,47 @@ export interface paths {
       };
     };
   };
+  "/reference/statuses": {
+    /**
+     * Statuts par type d’œuvre
+     * @description Pour chaque type d’œuvre : les statuts qu’il accepte, dans l’ordre, avec le libellé à afficher, et si son statut est dérivé.
+     *
+     * À lire **une fois** et à garder : le contenu ne change pas d’un appel à l’autre, ni d’un compte à l’autre. Il ne bouge qu’avec une version de l’API.
+     *
+     * Deux règles ne pouvaient pas traverser le contrat autrement, faute d’être des champs de réponse : qu’un album n’a que deux états, et qu’une série voit son statut recalculé plutôt qu’écrit. Un client qui lit cette route n’a plus à les recopier.
+     */
+    get: {
+      responses: {
+        /** @description Statuts par type d’œuvre */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Un objet par type d’œuvre, tous présents */
+              types: ({
+                  /**
+                   * @description Type d'œuvre
+                   * @enum {string}
+                   */
+                  type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
+                  /** @description Les statuts acceptés, dans l’ordre. Deux seulement sur un type à deux états — un album ne peut pas être « en cours » */
+                  statuses: ({
+                      /**
+                       * @description Statut de suivi
+                       * @enum {string}
+                       */
+                      value: "todo" | "doing" | "done";
+                      /** @description Libellé rédigé, à afficher tel quel */
+                      label: string;
+                    })[];
+                  /** @description Statut recalculé par le serveur d’après les éléments cochés. Vrai : ne pas proposer d’écrire `status`, la route refuse */
+                  derived_status: boolean;
+                })[];
+            };
+          };
+        };
+      };
+    };
+  };
   "/auth/login": {
     /**
      * Ouvrir une session

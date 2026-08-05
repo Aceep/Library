@@ -130,13 +130,25 @@ const TYPE_LABELS: Record<MediaType, { singular: string; plural: string }> = {
 export const typeLabel = (type: MediaType) => TYPE_LABELS[type].singular
 export const typeLabelPlural = (type: MediaType) => TYPE_LABELS[type].plural
 
-const STATUS_LABELS: Record<TrackingStatus, string> = {
-  todo: 'À voir',
+/**
+ * Les statuts **sans type d'œuvre sous la main**.
+ *
+ * À n'employer que là où le type n'existe pas : un filtre qui porte sur une
+ * bibliothèque entière mêle des livres et des films, et aucun libellé accordé
+ * n'y a de sens. Partout ailleurs — une fiche, une carte, un rayon —, c'est
+ * `useReference().statusLabel(type, status)` qui donne le mot juste, celui que
+ * l'API rédige.
+ *
+ * Ce n'est donc pas une copie de la règle du serveur : c'est le vocabulaire
+ * d'un cas que le serveur ne modélise pas, faute de type auquel l'accorder.
+ */
+const CROSS_TYPE_STATUS_LABELS: Record<TrackingStatus, string> = {
+  todo: 'À faire',
   doing: 'En cours',
   done: 'Terminé',
 }
 
-export const statusLabel = (status: TrackingStatus) => STATUS_LABELS[status]
+export const crossTypeStatusLabel = (status: TrackingStatus) => CROSS_TYPE_STATUS_LABELS[status]
 
 /**
  * Comment se compte une fois, selon le type. `times` vaut le même entier
@@ -158,36 +170,21 @@ export const timesNoun = (type: MediaType, times: number) =>
   TIMES_NOUNS[type][times > 1 ? 1 : 0]
 
 /**
- * Les types dont le statut est **dérivé** des éléments cochés.
- * Écrire `status` dessus est refusé par le back (400 VALIDATION) : l'interface
- * ne doit même pas proposer le geste.
+ * Ce que l'API dit des statuts, par type d'œuvre — la réponse de
+ * `GET /reference/statuses`.
+ *
+ * Les deux règles qu'elle porte étaient auparavant **recopiées ici** : qu'un
+ * album n'a que deux états, et qu'une série voit son statut recalculé plutôt
+ * qu'écrit. Ni l'une ni l'autre n'était un champ de réponse, donc rien ne les
+ * imposait — et le front s'est trompé, en proposant « en cours » sur un album.
+ *
+ * Elles se lisent désormais, via `useReference()`. Un troisième régime, ou un
+ * second type à deux états, arrivera tout seul.
  */
-export const isDerivedStatusType = (type: MediaType) => type === 'tv' || type === 'comic_series'
+export type ReferenceStatuses =
+  paths['/reference/statuses']['get']['responses'][200]['content']['application/json']
 
-/**
- * Les types à **deux états** : envie de l'écouter, écouté.
- *
- * Un album se consomme d'un bloc — « en cours » n'y décrit rien qu'on puisse
- * observer, et le tolérer produirait des bibliothèques où la moitié des albums
- * traînent « en cours » depuis deux ans. Le back refuse `doing` explicitement
- * (`400 VALIDATION`) ; l'interface ne doit donc pas le **proposer**, plutôt que
- * de laisser le geste échouer.
- *
- * Troisième régime, à ne confondre ni avec le statut libre ni avec le statut
- * dérivé de `isDerivedStatusType` : ici le statut s'écrit, il a juste une
- * valeur de moins.
- *
- * ⚠ Cette règle est **recopiée** de `packages/shared/src/enums.ts` côté back
- * (`TWO_STATE_TYPES`). C'est une fonction, pas un champ de réponse : elle ne
- * traverse pas le contrat OpenAPI, et c'est la seule règle du back que
- * `types.ts` ne peut pas nous imposer. Si un deuxième type à deux états
- * apparaît, rien ici ne le signalera — à revérifier lors d'un `contract:pull`.
- */
-export const hasTwoStateStatus = (type: MediaType) => type === 'music'
-
-/** Les statuts qu'un type accepte, dans l'ordre où ils se succèdent. */
-export const allowedStatuses = (type: MediaType): readonly TrackingStatus[] =>
-  hasTwoStateStatus(type) ? (['todo', 'done'] as const) : (['todo', 'doing', 'done'] as const)
+export type StatusOption = ReferenceStatuses['types'][number]['statuses'][number]
 
 /** Pourcentage de progression, avec la garde sur `total === 0`. */
 export const progressRatio = (progress: Progress | null | undefined): number | null => {

@@ -16,7 +16,8 @@ import '../src/styles/global.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { SessionProvider } from '../src/session/SessionContext'
-import type { Session } from '../src/api/schema'
+import { ReferenceProvider } from '../src/reference/ReferenceContext'
+import type { ReferenceStatuses, Session } from '../src/api/schema'
 
 export { default as AppShell } from '../src/components/AppShell'
 export { default as Cover } from '../src/components/Cover'
@@ -65,13 +66,40 @@ const PREVIEW_CLIENT = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 })
 
+/**
+ * Le vocabulaire des statuts, que les aperçus ne peuvent pas aller chercher —
+ * aucune requête n'aboutit ici. Sans lui, `StatusBadge` et `TrackingPanel`
+ * lèveraient faute de `ReferenceProvider`.
+ *
+ * Recopié plutôt qu'importé de `src/test/` : ce fichier est compilé par le
+ * build « bibliothèque », et n'a rien à devoir aux tests.
+ */
+const PREVIEW_REFERENCE: ReferenceStatuses = {
+  types: [
+    { type: 'movie', derived_status: false, statuses: [
+      { value: 'todo', label: 'À voir' }, { value: 'doing', label: 'En cours' }, { value: 'done', label: 'Vu' }] },
+    { type: 'tv', derived_status: true, statuses: [
+      { value: 'todo', label: 'À voir' }, { value: 'doing', label: 'En cours' }, { value: 'done', label: 'Vue' }] },
+    { type: 'book', derived_status: false, statuses: [
+      { value: 'todo', label: 'À lire' }, { value: 'doing', label: 'En cours de lecture' }, { value: 'done', label: 'Lu' }] },
+    { type: 'comic_series', derived_status: true, statuses: [
+      { value: 'todo', label: 'À lire' }, { value: 'doing', label: 'En cours de lecture' }, { value: 'done', label: 'Lu' }] },
+    { type: 'game', derived_status: false, statuses: [
+      { value: 'todo', label: 'Envie d’y jouer' }, { value: 'doing', label: 'En cours' }, { value: 'done', label: 'Terminé' }] },
+    { type: 'music', derived_status: false, statuses: [
+      { value: 'todo', label: 'À écouter' }, { value: 'done', label: 'Écouté' }] },
+  ],
+}
+
 export function DesignPreviewProvider({ children }: { children: ReactNode }) {
   const client = PREVIEW_CLIENT
 
   return (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <SessionProvider session={PREVIEW_SESSION}>{children}</SessionProvider>
+        <SessionProvider session={PREVIEW_SESSION}>
+          <ReferenceProvider reference={PREVIEW_REFERENCE}>{children}</ReferenceProvider>
+        </SessionProvider>
       </MemoryRouter>
     </QueryClientProvider>
   )

@@ -96,13 +96,26 @@ main, et un contrat mis à jour sans régénération. Il ne peut pas voir que la
 copie a pris du retard sur le back — c'est `contract:pull` qui s'en charge, et
 la revue qui lit ce qu'il rapporte.
 
-### Une règle du back que le contrat ne transporte pas
+### Le vocabulaire vient de l'API, pas d'ici
 
-Les types à **deux états** (`music` : à écouter, écouté — jamais « en cours »)
-sont une *fonction* de `packages/shared` côté back, pas un champ de réponse.
-`hasTwoStateStatus` dans `src/api/schema.ts` la recopie donc, et c'est la seule
-règle que `types.ts` ne peut pas imposer. À revérifier lors d'un
-`contract:pull`.
+`GET /reference/statuses` donne, par type d'œuvre, les statuts acceptés dans
+l'ordre, **leur libellé rédigé**, et si le statut est dérivé. Chargé une fois
+au démarrage, en même temps que la session, et servi par `useReference()`.
+
+```tsx
+const { statusesOf, statusLabel, isDerivedStatusType } = useReference()
+```
+
+Deux règles étaient auparavant recopiées ici, faute d'être des champs de
+réponse : qu'un album n'a que deux états, et qu'une série voit son statut
+recalculé. Le front s'est trompé exactement comme il fallait s'y attendre — il
+proposait « en cours » sur un album, refusé en `400`. **Ne réintroduisez pas de
+table de statuts.**
+
+Seule exception, `crossTypeStatusLabel` : un filtre qui porte sur une
+bibliothèque entière mêle livres et films, et aucun libellé accordé n'y a de
+sens. Ce n'est pas une copie de la règle, c'est le vocabulaire d'un cas que
+l'API ne modélise pas — faute d'un type auquel l'accorder.
 
 ## Le modèle : tout est public, l'abonnement trie
 
@@ -166,7 +179,7 @@ erreurs, ou des affichages faux.
 | Passer une œuvre à `done` crée l'entrée de journal **toute seule** | Y compris quand le statut est dérivé — cocher le dernier épisode journalise. D'où la clé `log` préfixée par celle de la fiche : invalider `media(id)` emporte le journal. |
 | La note d'une entrée de journal remonte au suivi **si l'entrée est la plus récente** | L'inverse n'existe pas : corriger la note de l'œuvre ne réécrit pas l'histoire. Chaque écriture de journal renvoie donc le suivi recalculé, qu'on range tel quel. |
 | `favorite` s'écrit sur **les six types**, `status` non | Le coup de cœur n'a rien à voir avec ce qui est coché, ni avec la note. Affiché comme un signe distinct, jamais comme un seuil de note. |
-| Un album n'a que **deux états** | `todo` et `done`, jamais `doing` : le back refuse le troisième en `400`. L'interface ne le propose donc ni dans le panneau de suivi, ni dans les filtres d'un rayon de musique. La règle vit dans `hasTwoStateStatus` — et c'est la seule du back que le contrat OpenAPI ne transporte pas. |
+| Un album n'a que **deux états** | `todo` et `done`, jamais `doing` : le back refuse le troisième en `400`. L'interface ne le propose donc ni dans le panneau de suivi, ni dans les filtres d'un rayon de musique. Rien de tout ça n'est écrit ici : `GET /reference/statuses` le dit. |
 | `PUT /me/showcase` **remplace** la vitrine entière | Ni ajout, ni retrait : l'éditeur travaille sur un brouillon local et n'écrit qu'une fois. Les refus sont complets — rien n'est écrit à moitié. |
 | Sur `GET /users/:id/media`, `status`, `owned` et `favorite` portent sur **son** suivi à lui | Seul endroit de l'API où ces filtres changent de sujet. L'écran le rappelle en toutes lettres, sans quoi on filtre « en cours » en croyant voir le sien. |
 
@@ -180,6 +193,7 @@ src/
               par route), keys.ts (clés de cache), cache.ts (rangement des
               agrégats), colors.ts (distance perceptuelle des identités)
   session/    SessionContext.tsx — qui je suis, et `isAdmin`
+  reference/  ReferenceContext.tsx — les statuts par type, et leurs libellés
   components/ AppShell, AppFooter, Cover, MediaCard, ProgressBar, StatusBadge,
               TrackingPanel, MediaMetadata, MediaLog, Availability, SeasonList,
               VolumeGrid, Showcase, MemberLibrary, FollowButton, IdentityDot,

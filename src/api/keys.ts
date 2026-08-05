@@ -7,6 +7,8 @@
  */
 export const queryKeys = {
   session: ['session'] as const,
+  /** Données de référence : constantes, chargées une fois pour la session. */
+  reference: ['reference'] as const,
   home: ['home'] as const,
   compare: ['compare'] as const,
   compareWith: (userId: string) => ['compare', userId] as const,

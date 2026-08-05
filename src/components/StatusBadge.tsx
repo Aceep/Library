@@ -1,11 +1,18 @@
-import type { TrackingStatus } from '../api/schema'
-import { statusLabel } from '../api/schema'
+import type { MediaType, TrackingStatus } from '../api/schema'
+import { useReference } from '../reference/ReferenceContext'
 import styles from './StatusBadge.module.css'
 
-export default function StatusBadge({ status }: { status: TrackingStatus }) {
+/**
+ * Le type est exigé, pas facultatif : c'est lui qui décide du mot. « Lu » sur
+ * un livre, « Vu » sur un film, « Écouté » sur un album — l'API les rédit, on
+ * ne les invente pas ici.
+ */
+export default function StatusBadge({ status, type }: { status: TrackingStatus; type: MediaType }) {
+  const { statusLabel } = useReference()
+
   return (
     <span className={styles.badge} data-status={status}>
-      {statusLabel(status)}
+      {statusLabel(type, status)}
     </span>
   )
 }

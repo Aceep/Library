@@ -16,6 +16,7 @@ import Search from './pages/Search'
 import TypeLibrary from './pages/TypeLibrary'
 import UserProfile from './pages/UserProfile'
 import { SessionProvider, useSessionQuery } from './session/SessionContext'
+import { ReferenceProvider, useReferenceQuery } from './reference/ReferenceContext'
 import styles from './App.module.css'
 
 export default function App() {
@@ -30,9 +31,13 @@ export default function App() {
 }
 
 function GatedApp() {
-  const { data: session, isPending, error, refetch } = useSessionQuery()
+  const session = useSessionQuery()
+  // Le vocabulaire des statuts, chargé en même temps que la session et au même
+  // titre : un badge sans son mot est un trou, pas un chargement. La route est
+  // publique, donc les deux partent ensemble plutôt qu'en cascade.
+  const reference = useReferenceQuery()
 
-  if (isPending) {
+  if (session.isPending || reference.isPending) {
     return (
       <div className={styles.splash}>
         <p className={styles.splashText}>Chargement…</p>
@@ -43,20 +48,26 @@ function GatedApp() {
   // Une erreur ici n'est pas un 401 (traité comme « pas de session ») : c'est
   // l'API injoignable, ou un incident. Inutile d'afficher l'écran de connexion,
   // il échouerait de la même façon.
-  if (error) {
+  const panne = session.error ?? reference.error
+  if (panne) {
+    const reessayer = session.error ? session.refetch : reference.refetch
     return (
       <div className={styles.splash}>
         <div className={styles.splashPanel}>
-          <ErrorNotice error={error} onRetry={() => void refetch()} />
+          <ErrorNotice error={panne} onRetry={() => void reessayer()} />
         </div>
       </div>
     )
   }
 
-  if (!session) return <Login />
+  if (!session.data) return <Login />
+  // Inatteignable — ni en attente, ni en erreur — mais c'est ce qui donne au
+  // reste de l'application une référence jamais nulle.
+  if (!reference.data) return null
 
   return (
-    <SessionProvider session={session}>
+    <SessionProvider session={session.data}>
+      <ReferenceProvider reference={reference.data}>
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<Dashboard />} />
@@ -88,6 +99,7 @@ function GatedApp() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      </ReferenceProvider>
     </SessionProvider>
   )
 }

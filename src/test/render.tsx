@@ -3,7 +3,81 @@ import { MemoryRouter } from 'react-router-dom'
 import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { SessionProvider } from '../session/SessionContext'
-import type { Account, MediaSummary, Session, UserTracking } from '../api/schema'
+import { ReferenceProvider } from '../reference/ReferenceContext'
+import type {
+  Account,
+  MediaSummary,
+  ReferenceStatuses,
+  Session,
+  UserTracking,
+} from '../api/schema'
+
+/**
+ * Ce que `GET /reference/statuses` répond, tel que les écrans le reçoivent.
+ *
+ * Les libellés sont ceux de l'API — leur **rédaction** est vérifiée côté back
+ * (`apps/api/test/reference.test.ts`), pas ici : ce qui s'éprouve de ce côté-ci,
+ * c'est que les écrans affichent ce que la référence dit, et rien d'autre.
+ * D'où le libellé volontairement improbable de `book/doing` plus bas, dans le
+ * test qui s'en sert.
+ */
+export const REFERENCE: ReferenceStatuses = {
+  types: [
+    {
+      type: 'movie',
+      derived_status: false,
+      statuses: [
+        { value: 'todo', label: 'À voir' },
+        { value: 'doing', label: 'En cours' },
+        { value: 'done', label: 'Vu' },
+      ],
+    },
+    {
+      type: 'tv',
+      derived_status: true,
+      statuses: [
+        { value: 'todo', label: 'À voir' },
+        { value: 'doing', label: 'En cours' },
+        { value: 'done', label: 'Vue' },
+      ],
+    },
+    {
+      type: 'book',
+      derived_status: false,
+      statuses: [
+        { value: 'todo', label: 'À lire' },
+        { value: 'doing', label: 'En cours de lecture' },
+        { value: 'done', label: 'Lu' },
+      ],
+    },
+    {
+      type: 'comic_series',
+      derived_status: true,
+      statuses: [
+        { value: 'todo', label: 'À lire' },
+        { value: 'doing', label: 'En cours de lecture' },
+        { value: 'done', label: 'Lu' },
+      ],
+    },
+    {
+      type: 'game',
+      derived_status: false,
+      statuses: [
+        { value: 'todo', label: 'Envie d’y jouer' },
+        { value: 'doing', label: 'En cours' },
+        { value: 'done', label: 'Terminé' },
+      ],
+    },
+    {
+      type: 'music',
+      derived_status: false,
+      statuses: [
+        { value: 'todo', label: 'À écouter' },
+        { value: 'done', label: 'Écouté' },
+      ],
+    },
+  ],
+}
 
 /**
  * Le contexte minimal que réclament les écrans : cache, routeur, session.
@@ -13,7 +87,10 @@ import type { Account, MediaSummary, Session, UserTracking } from '../api/schema
  * deviendrait significatif. `retry: false` fait échouer tout de suite plutôt
  * que de faire durer un test qui échoue de toute façon.
  */
-export function renderWithProviders(ui: ReactElement, { route = '/' } = {}) {
+export function renderWithProviders(
+  ui: ReactElement,
+  { route = '/', reference = REFERENCE }: { route?: string; reference?: ReferenceStatuses } = {},
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -21,7 +98,9 @@ export function renderWithProviders(ui: ReactElement, { route = '/' } = {}) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
-        <SessionProvider session={SESSION}>{ui}</SessionProvider>
+        <SessionProvider session={SESSION}>
+          <ReferenceProvider reference={reference}>{ui}</ReferenceProvider>
+        </SessionProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   )

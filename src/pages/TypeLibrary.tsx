@@ -3,8 +3,9 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchLibrary } from '../api/endpoints'
 import type { LibraryFilters, LibrarySort } from '../api/endpoints'
-import { MEDIA_TYPES, allowedStatuses, statusLabel, typeLabelPlural } from '../api/schema'
-import type { MediaType, TrackingStatus } from '../api/schema'
+import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
+import { useReference } from '../reference/ReferenceContext'
+import type { MediaType, StatusOption, TrackingStatus } from '../api/schema'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
 import MediaCard from '../components/MediaCard'
@@ -17,9 +18,11 @@ import styles from './TypeLibrary.module.css'
  * musique, « En cours » ne ramènerait jamais rien puisque le back refuse
  * d'écrire ce statut sur un album.
  */
-const statusFilters = (type: MediaType): Array<{ value: TrackingStatus | null; label: string }> => [
+const statusFilters = (
+  statuses: StatusOption[],
+): Array<{ value: TrackingStatus | null; label: string }> => [
   { value: null, label: 'Tout' },
-  ...allowedStatuses(type).map((value) => ({ value, label: statusLabel(value) })),
+  ...statuses.map(({ value, label }) => ({ value, label })),
 ]
 
 const SORTS: Array<{ value: LibrarySort; label: string }> = [
@@ -40,6 +43,7 @@ export default function TypeLibrary() {
 
 function Library({ type }: { type: MediaType }) {
   const { user } = useSession()
+  const { statusesOf } = useReference()
   const [status, setStatus] = useState<TrackingStatus | null>(null)
   const [ownedOnly, setOwnedOnly] = useState(false)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
@@ -76,7 +80,7 @@ function Library({ type }: { type: MediaType }) {
 
       <div className={styles.filters}>
         <div className={styles.filterGroup} role="group" aria-label="Filtrer par statut">
-          {statusFilters(type).map((filter) => (
+          {statusFilters(statusesOf(type)).map((filter) => (
             <button
               key={filter.label}
               type="button"

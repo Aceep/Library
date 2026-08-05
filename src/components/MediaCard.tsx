@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { isDerivedStatusType } from '../api/schema'
+import { useReference } from '../reference/ReferenceContext'
 import type { Account, LibraryItem, MediaType, UserTracking } from '../api/schema'
 import Cover from './Cover'
 import ProgressBar from './ProgressBar'
@@ -88,6 +88,8 @@ function TrackingLine({
   pseudo: string
   type: MediaType
 }) {
+  const { isDerivedStatusType } = useReference()
+
   return (
     // La couleur du membre descend par `--identity` : elle teinte le point et
     // la note d'un seul geste, et n'est jamais écrite en CSS.
@@ -96,7 +98,7 @@ function TrackingLine({
       <span className={styles.trackingName}>{pseudo}</span>
       {tracking ? (
         <span className={styles.trackingTags}>
-          <StatusBadge status={tracking.status} />
+          <StatusBadge status={tracking.status} type={type} />
           {/* « Un chiffre, pas une pastille » : la note se lit sur 10 sans le
               répéter, comme dans une notice de catalogue. */}
           {tracking.rating !== null ? (

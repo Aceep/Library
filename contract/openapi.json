@@ -16211,6 +16211,207 @@
         }
       }
     },
+    "/reference/statuses": {
+      "get": {
+        "summary": "Statuts par type d’œuvre",
+        "tags": [
+          "système"
+        ],
+        "description": "Pour chaque type d’œuvre : les statuts qu’il accepte, dans l’ordre, avec le libellé à afficher, et si son statut est dérivé.\n\nÀ lire **une fois** et à garder : le contenu ne change pas d’un appel à l’autre, ni d’un compte à l’autre. Il ne bouge qu’avec une version de l’API.\n\nDeux règles ne pouvaient pas traverser le contrat autrement, faute d’être des champs de réponse : qu’un album n’a que deux états, et qu’une série voit son statut recalculé plutôt qu’écrit. Un client qui lit cette route n’a plus à les recopier.",
+        "responses": {
+          "200": {
+            "description": "Statuts par type d’œuvre",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "book",
+                              "comic_series",
+                              "movie",
+                              "tv",
+                              "game",
+                              "music"
+                            ],
+                            "description": "Type d'œuvre"
+                          },
+                          "statuses": {
+                            "minItems": 2,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "type": "string",
+                                  "enum": [
+                                    "todo",
+                                    "doing",
+                                    "done"
+                                  ],
+                                  "description": "Statut de suivi"
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "Libellé rédigé, à afficher tel quel"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "label"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Un statut proposable, avec le mot qui le dit"
+                            },
+                            "description": "Les statuts acceptés, dans l’ordre. Deux seulement sur un type à deux états — un album ne peut pas être « en cours »"
+                          },
+                          "derived_status": {
+                            "type": "boolean",
+                            "description": "Statut recalculé par le serveur d’après les éléments cochés. Vrai : ne pas proposer d’écrire `status`, la route refuse"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "statuses",
+                          "derived_status"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Ce qu’il faut savoir d’un type d’œuvre pour afficher son suivi"
+                      },
+                      "description": "Un objet par type d’œuvre, tous présents"
+                    }
+                  },
+                  "required": [
+                    "types"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Statuts par type d’œuvre"
+                },
+                "examples": {
+                  "Réponse type": {
+                    "value": {
+                      "types": [
+                        {
+                          "type": "book",
+                          "statuses": [
+                            {
+                              "value": "todo",
+                              "label": "À lire"
+                            },
+                            {
+                              "value": "doing",
+                              "label": "En cours de lecture"
+                            },
+                            {
+                              "value": "done",
+                              "label": "Lu"
+                            }
+                          ],
+                          "derived_status": false
+                        },
+                        {
+                          "type": "comic_series",
+                          "statuses": [
+                            {
+                              "value": "todo",
+                              "label": "À lire"
+                            },
+                            {
+                              "value": "doing",
+                              "label": "En cours de lecture"
+                            },
+                            {
+                              "value": "done",
+                              "label": "Lu"
+                            }
+                          ],
+                          "derived_status": true
+                        },
+                        {
+                          "type": "movie",
+                          "statuses": [
+                            {
+                              "value": "todo",
+                              "label": "À voir"
+                            },
+                            {
+                              "value": "doing",
+                              "label": "En cours"
+                            },
+                            {
+                              "value": "done",
+                              "label": "Vu"
+                            }
+                          ],
+                          "derived_status": false
+                        },
+                        {
+                          "type": "tv",
+                          "statuses": [
+                            {
+                              "value": "todo",
+                              "label": "À voir"
+                            },
+                            {
+                              "value": "doing",
+                              "label": "En cours"
+                            },
+                            {
+                              "value": "done",
+                              "label": "Vue"
+                            }
+                          ],
+                          "derived_status": true
+                        },
+                        {
+                          "type": "game",
+                          "statuses": [
+                            {
+                              "value": "todo",
+                              "label": "Envie d’y jouer"
+                            },
+                            {
+                              "value": "doing",
+                              "label": "En cours"
+                            },
+                            {
+                              "value": "done",
+                              "label": "Terminé"
+                            }
+                          ],
+                          "derived_status": false
+                        },
+                        {
+                          "type": "music",
+                          "statuses": [
+                            {
+                              "value": "todo",
+                              "label": "À écouter"
+                            },
+                            {
+                              "value": "done",
+                              "label": "Écouté"
+                            }
+                          ],
+                          "derived_status": false
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/login": {
       "post": {
         "summary": "Ouvrir une session",

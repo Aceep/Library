@@ -1,9 +1,17 @@
 /*
- * Le dessin suit le système tel qu'il est : rayon zéro, pas d'ombre, et
- * l'ocre réservé à ce qui porte un verbe. Une pagination ne demande rien —
- * elle dit où l'on est. La page courante est donc marquée par un **filet**,
- * pas par un aplat de couleur : c'est le même geste que l'onglet actif de la
- * barre principale, et il se relit sans dépendre de la teinte.
+ * Le dessin suit la loi de style : aucun `border-radius`, et le doré réservé à
+ * ce qui s'actionne.
+ *
+ * Une pagination *est* actionnable, on pourrait donc croire le doré permis.
+ * Il ne l'est pas ici, et pour une raison de sens : le doré dit « fais ceci »,
+ * or une pagination ne demande rien — elle dit **où l'on est**. La page
+ * courante est marquée par un **filet appuyé**, une différence de forme et non
+ * de teinte, ce qui la garde lisible dans les deux mondes sans que la couleur
+ * ait à porter l'information.
+ *
+ * Écrit avant le renommage des filets, ce fichier disait `--rule` pour le
+ * discret et `--rule-strong` pour l'appuyé. Le vocabulaire s'est inversé
+ * depuis : `--rule` est l'appuyé, `--rule-soft` le discret.
  */
 
 .nav {
@@ -13,7 +21,7 @@
   align-items: center;
   margin-top: var(--space-6);
   padding-top: var(--space-5);
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .compte {
@@ -69,7 +77,7 @@
  */
 .courante {
   color: var(--ink);
-  border-color: var(--rule-strong);
+  border-color: var(--rule);
   font-weight: 600;
 }
 
@@ -78,10 +86,13 @@
 }
 
 /* Le bord inactif reste en place — sans lui, la barre se décale d'un cran
-   entre la page 1 et la page 2, et les numéros bougent sous le curseur. */
+   entre la page 1 et la page 2, et les numéros bougent sous le curseur.
+   Une couleur d'encre et non de filet : c'est du texte. `--rule-soft` aurait
+   marché en mode jour et disparu en mode nuit, où le filet discret est plus
+   sombre que le fond du texte. */
 .inerte {
-  color: var(--rule-strong);
-  opacity: 0.6;
+  color: var(--ink-muted);
+  opacity: 0.45;
 }
 
 .trou {

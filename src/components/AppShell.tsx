@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { useSession } from '../session/SessionContext'
 import AppFooter from './AppFooter'
+import BackupAlert from './BackupAlert'
 import NotificationsLink from './NotificationsLink'
 import AccountMenu from './AccountMenu'
 import styles from './AppShell.module.css'
@@ -67,6 +68,11 @@ export default function AppShell() {
       </header>
 
       <main className={styles.main}>
+        {/* En tête du contenu et non dans le bandeau : une alerte de sauvegarde
+            se lit une fois et demande une action, elle n'accompagne pas la
+            navigation. Elle ne s'affiche qu'aux administrateurs, et qu'en cas
+            d'alerte. */}
+        <BackupAlert />
         <Outlet />
       </main>
 

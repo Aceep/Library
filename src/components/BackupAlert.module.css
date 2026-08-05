@@ -1,0 +1,42 @@
+/**
+ * Un des rares endroits où une teinte sémantique est justifiée :
+ * `--signal-danger` existe pour ça, et une alerte de sauvegarde est
+ * exactement ce qu'il désigne. Elle reste un filet et un texte — pas un fond
+ * plein, pas de rayon, pas d'ombre.
+ *
+ * Le bandeau ne s'affiche qu'aux administrateurs et qu'en cas d'alerte : il
+ * n'a donc pas à cohabiter avec le reste du décor, et peut se permettre d'être
+ * franc.
+ */
+.banner {
+  border: var(--rule-w-strong) solid var(--signal-danger);
+  padding: var(--space-4) var(--page-margin);
+  margin-bottom: var(--space-5);
+}
+
+.title {
+  font-size: var(--text-base);
+  color: var(--signal-danger);
+  margin-bottom: var(--space-2);
+}
+
+.body {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.detail {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  max-width: var(--measure);
+}
+
+.body code,
+.detail code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.95em;
+  background: var(--paper-sunken);
+  padding: 0 var(--space-1);
+}

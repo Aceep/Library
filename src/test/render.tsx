@@ -99,7 +99,13 @@ export function renderWithProviders(
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
 
-  return render(
+  // Le client est rendu à l'appelant : un test qui éprouve un échec de requête
+  // doit pouvoir **attendre que la requête ait échoué**, sans quoi le rejet se
+  // produit après la fin du test et Vitest le signale comme une promesse non
+  // traitée — un faux échec qui masquerait un vrai le jour venu.
+  return {
+    client,
+    ...render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
         <SessionProvider session={session}>
@@ -107,7 +113,8 @@ export function renderWithProviders(
         </SessionProvider>
       </MemoryRouter>
     </QueryClientProvider>,
-  )
+    ),
+  }
 }
 
 export const ACCOUNT: Account = {

@@ -23769,6 +23769,169 @@
         }
       }
     },
+    "/admin/backups": {
+      "get": {
+        "summary": "L’état des sauvegardes",
+        "tags": [
+          "administration"
+        ],
+        "description": "Depuis quand la dernière sauvegarde **réussie** — écrite, restaurée dans une base jetable, et retrouvée identique — remonte.\n\nUne sauvegarde qui n’a jamais été restaurée n’est pas une sauvegarde : `last_success_at` ne compte que les passes vérifiées.\n\n`stale` est vrai au-delà de `stale_after_hours`, **et aussi quand aucune passe n’a jamais abouti**. Ne jamais avoir sauvegardé n’est pas un état d’attente.\n\n`configured` distingue « le service ne tourne pas » de « la sauvegarde est en retard » : la première demande de regarder les conteneurs, la seconde de regarder le disque.\n\nL’API n’a aucun accès aux dumps eux-mêmes, et n’en veut aucun : ils portent les empreintes de mots de passe et les jetons d’invitation. Elle lit une table, rien d’autre.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "backups": {
+                      "type": "object",
+                      "properties": {
+                        "last_success_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Dernière passe **réussie** — écrite, restaurée, et retrouvée identique. Nulle si aucune"
+                        },
+                        "age_hours": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Âge de cette réussite, en heures. Nul quand il n’y en a jamais eu"
+                        },
+                        "stale": {
+                          "type": "boolean",
+                          "description": "Vrai au-delà de `stale_after_hours`, **et vrai aussi quand aucune sauvegarde n’a jamais abouti** : ne jamais avoir sauvegardé n’est pas un état d’attente"
+                        },
+                        "stale_after_hours": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "Le seuil retenu par l’instance"
+                        },
+                        "last_run": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "ran_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                },
+                                "succeeded": {
+                                  "type": "boolean"
+                                },
+                                "incidents": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "detail": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "ran_at",
+                                "succeeded",
+                                "incidents",
+                                "detail"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Une passe de sauvegarde"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "La dernière passe, réussie ou non — un échec récent après une réussite récente n’est pas une alerte, mais mérite d’être lisible"
+                        },
+                        "configured": {
+                          "type": "boolean",
+                          "description": "Faux quand aucune passe n’a jamais été enregistrée : le service de sauvegarde ne tourne pas, ou n’a jamais atteint la base. À distinguer d’une sauvegarde en retard"
+                        }
+                      },
+                      "required": [
+                        "last_success_at",
+                        "age_hours",
+                        "stale",
+                        "stale_after_hours",
+                        "last_run",
+                        "configured"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Où en sont les sauvegardes de cette instance"
+                    }
+                  },
+                  "required": [
+                    "backups"
+                  ],
+                  "additionalProperties": false
+                },
+                "examples": {
+                  "Réponse type": {
+                    "value": {
+                      "backups": {
+                        "last_success_at": "2026-08-05T02:00:11.000Z",
+                        "age_hours": 9.4,
+                        "stale": false,
+                        "stale_after_hours": 48,
+                        "last_run": {
+                          "ran_at": "2026-08-05T02:00:11.000Z",
+                          "succeeded": true,
+                          "incidents": 0,
+                          "detail": "sauvegarde écrite et restaurée"
+                        },
+                        "configured": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/media/{id}/trackers": {
       "get": {
         "summary": "Tous les membres qui suivent une œuvre",

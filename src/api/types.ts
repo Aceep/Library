@@ -2821,6 +2821,64 @@ export interface paths {
       };
     };
   };
+  "/admin/backups": {
+    /**
+     * L’état des sauvegardes
+     * @description Depuis quand la dernière sauvegarde **réussie** — écrite, restaurée dans une base jetable, et retrouvée identique — remonte.
+     *
+     * Une sauvegarde qui n’a jamais été restaurée n’est pas une sauvegarde : `last_success_at` ne compte que les passes vérifiées.
+     *
+     * `stale` est vrai au-delà de `stale_after_hours`, **et aussi quand aucune passe n’a jamais abouti**. Ne jamais avoir sauvegardé n’est pas un état d’attente.
+     *
+     * `configured` distingue « le service ne tourne pas » de « la sauvegarde est en retard » : la première demande de regarder les conteneurs, la seconde de regarder le disque.
+     *
+     * L’API n’a aucun accès aux dumps eux-mêmes, et n’en veut aucun : ils portent les empreintes de mots de passe et les jetons d’invitation. Elle lit une table, rien d’autre.
+     */
+    get: {
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Où en sont les sauvegardes de cette instance */
+              backups: {
+                /** @description Dernière passe **réussie** — écrite, restaurée, et retrouvée identique. Nulle si aucune */
+                last_success_at: string | null;
+                /** @description Âge de cette réussite, en heures. Nul quand il n’y en a jamais eu */
+                age_hours: number | null;
+                /** @description Vrai au-delà de `stale_after_hours`, **et vrai aussi quand aucune sauvegarde n’a jamais abouti** : ne jamais avoir sauvegardé n’est pas un état d’attente */
+                stale: boolean;
+                /** @description Le seuil retenu par l’instance */
+                stale_after_hours: number;
+                /** @description La dernière passe, réussie ou non — un échec récent après une réussite récente n’est pas une alerte, mais mérite d’être lisible */
+                last_run: ({
+                  /** Format: date-time */
+                  ran_at: string;
+                  succeeded: boolean;
+                  incidents: number;
+                  detail: string | null;
+                }) | null;
+                /** @description Faux quand aucune passe n’a jamais été enregistrée : le service de sauvegarde ne tourne pas, ou n’a jamais atteint la base. À distinguer d’une sauvegarde en retard */
+                configured: boolean;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/media/{id}/trackers": {
     /**
      * Tous les membres qui suivent une œuvre

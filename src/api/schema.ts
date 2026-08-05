@@ -327,3 +327,16 @@ export type StatHighlights = StatDashboard['highlights']
 export type StatTally = StatHighlights['top_genres'][number]
 
 export type QuestStatus = Quest['status']
+
+// --- Sauvegardes (§15) ------------------------------------------------------
+
+/**
+ * Où en sont les sauvegardes de l'instance. Réservé aux administrateurs.
+ *
+ * `stale` vaut vrai au-delà du seuil **et** quand aucune sauvegarde n'a jamais
+ * abouti : ne jamais avoir sauvegardé n'est pas un état d'attente. `configured`
+ * distingue « le service ne tourne pas » de « la sauvegarde est en retard » —
+ * la première demande de regarder les conteneurs, la seconde le disque.
+ */
+export type BackupStatus =
+  paths['/admin/backups']['get']['responses'][200]['content']['application/json']['backups']

@@ -21,6 +21,7 @@ import type { ReferenceStatuses, Session } from '../src/api/schema'
 
 export { default as AccountMenu } from '../src/components/AccountMenu'
 export { default as AppShell } from '../src/components/AppShell'
+export { default as BackupAlert } from '../src/components/BackupAlert'
 export { default as BadgeMedal } from '../src/components/BadgeMedal'
 export { default as Cover } from '../src/components/Cover'
 export { default as EmptyState } from '../src/components/EmptyState'

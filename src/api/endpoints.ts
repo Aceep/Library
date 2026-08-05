@@ -2,6 +2,7 @@ import { api, ApiError, request } from './client'
 import type {
   Account,
   Availability,
+  BackupStatus,
   CompareResponse,
   EpisodeDetail,
   HomeResponse,
@@ -858,3 +859,9 @@ export const fetchStats = (
   if (compareWith) query.compare_with = compareWith
   return api.get<StatsResponse>('/stats', Object.keys(query).length ? query : undefined, signal)
 }
+
+// --- Sauvegardes (§15) ------------------------------------------------------
+
+/** Réservé aux administrateurs : `403` pour les autres. */
+export const fetchBackupStatus = (signal?: AbortSignal) =>
+  api.get<{ backups: BackupStatus }>('/admin/backups', undefined, signal)

@@ -38,6 +38,11 @@ export const queryKeys = {
    */
   stats: (userId: string | null, compareWith: string | null = null) =>
     ['stats', userId, compareWith] as const,
+  /**
+   * L'état des sauvegardes. Interrogé une fois par heure au plus : il change au
+   * rythme d'une passe quotidienne, et un bandeau d'alerte n'a pas à sonder.
+   */
+  backups: ['backups'] as const,
   home: ['home'] as const,
   compare: ['compare'] as const,
   compareWith: (userId: string) => ['compare', userId] as const,

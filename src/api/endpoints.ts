@@ -16,6 +16,7 @@ import type {
   ReferenceStatuses,
   RefreshResponse,
   SagaResponse,
+  WatchList,
   SearchResult,
   SeriesAggregate,
   Session,
@@ -759,3 +760,24 @@ export const fetchSaga = (id: string, signal?: AbortSignal) =>
  */
 export const setSagaWatch = (id: string, watched: boolean) =>
   watched ? api.put<SagaResponse>(`/sagas/${id}/watch`) : api.delete<SagaResponse>(`/sagas/${id}/watch`)
+
+// --- Veille (§10) ----------------------------------------------------------
+
+/**
+ * Mes veilles, la plus récente d'abord. Œuvres et sagas mêlées : `target` dit
+ * laquelle des deux, l'autre champ est nul.
+ */
+export const fetchWatches = (cursor: string | null = null, signal?: AbortSignal) =>
+  api.get<WatchList>('/watches', { cursor: cursor ?? undefined }, signal)
+
+/**
+ * Veille sur une **série ou un manga** : nouveaux épisodes, nouveaux tomes.
+ *
+ * Sans rapport avec le suivi ni la possession — rien n'est écrit dans
+ * `tracking`. Reposer une veille levée pose un **nouveau** repère : ce qui est
+ * paru entre-temps ne notifiera jamais.
+ */
+export const setMediaWatch = (id: string, watched: boolean) =>
+  watched
+    ? api.put<{ watched: boolean }>(`/media/${id}/watch`)
+    : api.delete<{ watched: boolean }>(`/media/${id}/watch`)

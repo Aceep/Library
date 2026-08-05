@@ -75,6 +75,9 @@ export default function AppShell() {
                 </NavLink>
               </span>
             ) : null}
+            <NavLink to="/veille" className={styles.adminLink}>
+              Veille
+            </NavLink>
             <NotificationsLink />
             <NavLink to="/recherche" className={styles.searchLink}>
               Ajouter une œuvre

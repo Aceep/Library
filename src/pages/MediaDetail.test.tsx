@@ -104,6 +104,34 @@ describe('MediaDetail — la fiche', () => {
   })
 
   /**
+   * La veille ne concerne que ce qui peut gagner du contenu. Un film ne
+   * sortira pas une deuxième fois — c'est sa saga qu'on surveille.
+   */
+  it('n’offre pas de veille sur un film', async () => {
+    fetchMediaDetail.mockResolvedValue(FILM)
+    renderDetail()
+
+    await screen.findByRole('heading', { name: 'Matrix' })
+    expect(screen.queryByRole('heading', { name: 'Veille' })).not.toBeInTheDocument()
+  })
+
+  it('offre la veille sur une série, hors du panneau de suivi', async () => {
+    fetchMediaDetail.mockResolvedValue({
+      ...FILM,
+      type: 'tv',
+      title: 'Severance',
+      watched: false,
+      seasons: [],
+    })
+    renderDetail()
+
+    expect(await screen.findByRole('heading', { name: 'Veille' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Surveiller' })).toBeInTheDocument()
+    // La confusion la plus facile à faire, fermée en toutes lettres.
+    expect(screen.getByText(/Sans rapport avec ton suivi/)).toBeInTheDocument()
+  })
+
+  /**
    * Le cas qui compte autant que le cas passant : une fiche qui échoue doit
    * **dire** qu'elle échoue. Le message vient du serveur, on ne le réécrit pas.
    */

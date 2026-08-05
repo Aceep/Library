@@ -4,7 +4,7 @@ import { fetchSaga } from '../api/endpoints'
 import type { SagaPart } from '../api/schema'
 import { queryKeys } from '../api/keys'
 import { useReference } from '../reference/ReferenceContext'
-import { SagaWatchToggle } from '../components/SagaList'
+import WatchToggle from '../components/WatchToggle'
 import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
 import styles from './Saga.module.css'
@@ -61,7 +61,7 @@ function SagaDetail({ id }: { id: string }) {
         </div>
 
         <div className={styles.actions}>
-          <SagaWatchToggle sagaId={saga.id} watched={saga.watched} />
+          <WatchToggle target="saga" id={saga.id} watched={saga.watched} />
         </div>
       </header>
 

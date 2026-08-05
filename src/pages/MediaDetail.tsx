@@ -21,6 +21,7 @@ import MediaMetadata from '../components/MediaMetadata'
 import ProgressBar from '../components/ProgressBar'
 import Screenshots from '../components/Screenshots'
 import SagaList from '../components/SagaList'
+import WatchToggle from '../components/WatchToggle'
 import SeasonList from '../components/SeasonList'
 import TrackingPanel, { FollowedTrackings } from '../components/TrackingPanel'
 import VolumeGrid from '../components/VolumeGrid'
@@ -203,6 +204,27 @@ function Detail({ id }: { id: string }) {
           )
         }}
       />
+
+      {/* La veille ne concerne que ce qui peut **gagner** du contenu : une
+          série, un manga. Un film ne sortira pas une deuxième fois — c'est sa
+          saga qu'on surveille, et elle a son propre bouton.
+
+          Volontairement hors du panneau de suivi : surveiller n'a rien à voir
+          avec suivre. On surveille une série qu'on n'a pas commencée, et on
+          peut avoir tout lu d'un manga sans vouloir la suite. */}
+      {detail.type === 'tv' || detail.type === 'comic_series' ? (
+        <section className={styles.watchSection}>
+          <h2 className={styles.watchTitle}>Veille</h2>
+          <div className={styles.watchRow}>
+            <p className={styles.watchNote}>
+              {detail.watched
+                ? 'Tu seras prévenu quand du nouveau paraîtra. Lever la veille n’efface pas les nouveautés déjà annoncées.'
+                : 'Être prévenu quand un nouvel épisode ou un nouveau tome paraît. Sans rapport avec ton suivi.'}
+            </p>
+            <WatchToggle target="media" id={id} watched={detail.watched} />
+          </div>
+        </section>
+      ) : null}
 
       {/* Saisons, épisodes et tomes : chargés à la demande, jamais avec la
           fiche — `GET /media/:id` n'en contient qu'un résumé. */}

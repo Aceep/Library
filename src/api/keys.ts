@@ -22,6 +22,8 @@ export const queryKeys = {
    */
   saga: (id: string) => ['saga', id] as const,
   sagas: ['saga'] as const,
+  /** Mes veilles. Un basculement depuis n'importe quel écran périme la liste. */
+  watches: ['watches'] as const,
   home: ['home'] as const,
   compare: ['compare'] as const,
   compareWith: (userId: string) => ['compare', userId] as const,

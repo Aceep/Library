@@ -30,12 +30,13 @@ export { default as MediaMetadata } from '../src/components/MediaMetadata'
 export { default as NotificationsLink } from '../src/components/NotificationsLink'
 export { default as PeopleDisclosure } from '../src/components/PeopleDisclosure'
 export { default as ProgressBar } from '../src/components/ProgressBar'
-export { default as SagaList, SagaWatchToggle } from '../src/components/SagaList'
+export { default as SagaList } from '../src/components/SagaList'
 export { default as Screenshots } from '../src/components/Screenshots'
 export { default as SeasonList } from '../src/components/SeasonList'
 export { default as StatusBadge, NewContentBadge } from '../src/components/StatusBadge'
 export { default as TrackingPanel, FollowedTrackings } from '../src/components/TrackingPanel'
 export { default as VolumeGrid } from '../src/components/VolumeGrid'
+export { default as WatchToggle } from '../src/components/WatchToggle'
 
 /**
  * Le compte sous lequel les aperçus sont rendus. La couleur d'identité est

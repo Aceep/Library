@@ -31,11 +31,11 @@
     "PeopleDisclosure": "src/components/PeopleDisclosure.tsx",
     "ProgressBar": "src/components/ProgressBar.tsx",
     "SagaList": "src/components/SagaList.tsx",
-    "SagaWatchToggle": "src/components/SagaList.tsx",
     "Screenshots": "src/components/Screenshots.tsx",
     "SeasonList": "src/components/SeasonList.tsx",
     "StatusBadge": "src/components/StatusBadge.tsx",
     "TrackingPanel": "src/components/TrackingPanel.tsx",
-    "VolumeGrid": "src/components/VolumeGrid.tsx"
+    "VolumeGrid": "src/components/VolumeGrid.tsx",
+    "WatchToggle": "src/components/WatchToggle.tsx"
   }
 }

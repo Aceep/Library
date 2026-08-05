@@ -232,3 +232,15 @@ export type SagaPart = Saga['parts'][number]
 
 /** Le résumé d'une saga, tel qu'il accompagne une fiche d'œuvre. */
 export type SagaSummary = NonNullable<MediaDetail['sagas']>[number]
+
+/**
+ * Ce que je surveille — œuvres et sagas mêlées (§10).
+ *
+ * `since` est le **repère** : rien de paru avant lui n'a été annoncé.
+ * `next_check_at` dit quand la prochaine vérification est prévue, ce qui
+ * explique pourquoi une nouveauté d'aujourd'hui n'est pas encore là.
+ */
+export type WatchList =
+  paths['/watches']['get']['responses'][200]['content']['application/json']
+
+export type WatchItem = WatchList['items'][number]

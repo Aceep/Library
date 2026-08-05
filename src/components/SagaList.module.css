@@ -61,27 +61,3 @@
   font-size: var(--text-xs);
   color: var(--ink-muted);
 }
-
-/* Contrôle : 44px de cible, rayon nul, un filet qui se ferme au survol. */
-.watch {
-  flex: none;
-  min-height: 44px;
-  background: none;
-  border: var(--rule-w) solid var(--rule);
-  padding: var(--space-2) var(--space-4);
-  font: var(--caption);
-  color: var(--ink-soft);
-  cursor: pointer;
-  transition: border-color var(--dur-2) var(--ease-page);
-}
-
-.watch:hover:not(:disabled) {
-  border-color: var(--ink-muted);
-  color: var(--ink);
-}
-
-/* Sous veille : le filet se referme, sans aplat ni teinte d'état. */
-.watchOn {
-  border-color: var(--ink);
-  color: var(--ink);
-}

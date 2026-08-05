@@ -1,87 +1,143 @@
 /**
- * Jetons — spécification d'interface v3 (« Un catalogue culturel, pas un
- * tableau de bord »).
+ * Jetons — direction artistique « Veillée ».
  *
- * Le bloc ci-dessous est celui de la spécification, repris tel quel. Deux
- * règles le gouvernent et expliquent presque tout le reste :
+ * **La nuit est l'état naturel, le jour en est la variante.** Les deux ne sont
+ * pas la même image éclaircie : la nuit est un cinéma (noir bleuté froid, un
+ * faisceau de projecteur), le jour est du papier (crème chaud, une lueur
+ * chaude). Ne pas unifier leur température — c'est le sujet, pas un réglage.
  *
- *  · **Aucune couleur d'accent.** Le rouge éditorial a été retiré parce qu'il
- *    concurrençait les couleurs de membres. Ce qui distingue un état se joue
- *    en valeur, en graisse ou en filet — jamais en teinte.
- *  · **La seule chromie forte est celle des membres**, et elle arrive en
- *    runtime : on la pose sur l'élément (`style={{ '--identity': color }}`),
- *    on ne l'écrit jamais en CSS.
+ * Trois règles de température en mode nuit :
+ *  1. Le sol, les filets et les surfaces sont **froids**.
+ *  2. L'accent structurel (`--amber`) est **gris-bleu froid** : il ne reste
+ *     aucune ambiance chaude en nuit.
+ *  3. Les seules choses chaudes sont le **doré d'action** et `--voice`, le
+ *     crème réservé à **l'écriture humaine** (citations, prose en italique,
+ *     l'invite de recherche). Chaud = quelqu'un a parlé, ou tu peux agir.
+ *     Rien d'autre n'a le droit d'être chaud.
+ *
+ * Les deux règles dures qui gouvernent le reste :
+ *  · **Ambre = structure et atmosphère. Doré = action.** Un élément doré qui ne
+ *    se clique pas est un bug.
+ *  · **La chromie de membre arrive en runtime** : on la pose sur l'élément
+ *    (`style={{ '--identity': color }}`), on ne l'écrit jamais en CSS.
+ *
+ * Le mode se lit sur `data-mode`, posé sur `<html>` par le script de
+ * pré-peinture d'`index.html` **avant** la première peinture. Il vaut toujours
+ * `dark` ou `light`, jamais rien : c'est pourquoi il n'y a que deux blocs de
+ * palette ici et aucune copie sous `prefers-color-scheme`.
  */
 :root {
-  /* surfaces */
-  --surface-page:    #F2F1ED;
-  --surface-raised:  #FAFAF9;
-  --surface-sunken:  #E5E4DF;
+  color-scheme: dark;
+
+  /* sol et surfaces — froids */
+  --bg:              #070a10;
+  --bg-2:            #0c1018;
+  --surface:         #151b25;
   /**
-   * Deux filets, renommés. `--rule-soft` est le discret, `--rule` l'appuyé —
-   * l'inverse de ce que ces noms désignaient jusqu'ici, et c'est le sens que
-   * la direction artistique leur donne. Les valeurs ne bougent pas dans ce
-   * commit : seuls les noms tournent, en même temps que leurs 193 usages.
+   * `--sunken` n'est pas `--bg-2`. « Creux » veut dire *plus sombre que la
+   * page* en jour, or `--bg-2` y est plus **clair** que `--bg` : les 34 puits
+   * de l'application deviendraient des reliefs. `--bg-2` reste ce que la
+   * maquette lui donne — le fond de la bannière de quête, rien d'autre.
    */
-  --rule-soft:       #DCDAD4;
-  --rule:            #C4C1B8;
+  --sunken:          #05070c;
+
+  /* filets — `--rule` est l'appuyé, `--rule-soft` le discret */
+  --rule:            #38424f;
+  --rule-soft:       #1f2733;
 
   /* encre */
-  --ink:             #16171A;
-  --ink-soft:        #3C3D40;
-  --ink-muted:       #6A6B6E;
-  --ink-faint:       #9A9A9C;
+  --ink:             #f2f5f8;
+  --ink-2:           #c3ccd6;
+  --muted:           #8593a2;
+  /**
+   * Quatrième niveau d'encre, absent de la direction qui n'en compte que
+   * trois. Sans lui, les 151 usages de `--ink-faint` s'effondreraient sur
+   * `--muted` et l'application perdrait un palier de hiérarchie.
+   */
+  --faint:           color-mix(in oklab, var(--muted) 72%, var(--bg));
 
-  /* sémantique — texte et filets seulement */
-  --status-todo:     #6A6B6E;
-  --status-doing:    #B07D2B;
-  --status-done:     #3F6B4A;
-  --signal-new:      #8C3A3A;
-  --signal-danger:   #8C3A3A;
-  --signal-ok:       #3F6B4A;
-  --divergence:      #8E8E90;
+  /** La voix humaine, et elle seule : citations, prose en italique, invites. */
+  --voice:           #f3e7cd;
 
-  /* identité — injectée en runtime */
+  /** Structure et atmosphère — mots de section, sourcils. Jamais une action. */
+  --amber:           #9fb3c6;
+
+  /**
+   * Action, et rien d'autre.
+   *
+   * Deux jetons, pour la même raison que l'ocre en avait deux : en **jour**,
+   * `--gold` (#d9a72a) ne fait que **1,97:1** sur le crème — illisible en
+   * texte, alors qu'il est parfait en aplat sous `--gold-ink`. `--gold-text`
+   * est la variante qui compose ; `--gold` remplit.
+   */
+  --gold:            #f5c34a;
+  --gold-text:       #f5c34a;
+  --gold-ink:        #070a10;
+
+  /* faisceau de projecteur */
+  --beam-a:          rgba(196, 222, 255, 0.20);
+  --beam-b:          rgba(150, 190, 240, 0.09);
+
+  /**
+   * Gels de rayon — six teintes de gélatine de cinéma, une par rayon.
+   *
+   * **Deux emplacements, et deux seulement** : la nav des rayons du bandeau
+   * (comme couleur de lien) et les étiquettes de médium (comme aplat). Nulle
+   * part ailleurs — ni en teinte de ligne, ni en traitement d'artwork, ni en
+   * couleur de section.
+   *
+   * Deux variantes par rayon, pour la même raison que le doré : en **jour**,
+   * les gels en texte tombent entre **2,06 et 4,04:1**, tous sous le seuil AA,
+   * alors qu'en aplat sous `--gel-ink` ils passent. `--gel-*` remplit,
+   * `--gel-*-text` compose. `global.css` les distribue en `--gel` et
+   * `--type-hue` selon l'attribut `data-media-type`.
+   */
+  --gel-livres:      #2fc4d8;
+  --gel-films:       #f2564a;
+  --gel-series:      #ad84f2;
+  --gel-manga:       #f4589f;
+  --gel-jeux:        #96d84a;
+  --gel-musique:     #f5992e;
+  --gel-ink:         #0a0906;
+
+  /* En nuit les gels sont déjà lisibles en texte : les deux séries coïncident. */
+  --gel-livres-text:  var(--gel-livres);
+  --gel-films-text:   var(--gel-films);
+  --gel-series-text:  var(--gel-series);
+  --gel-manga-text:   var(--gel-manga);
+  --gel-jeux-text:    var(--gel-jeux);
+  --gel-musique-text: var(--gel-musique);
+
+  /**
+   * Teinte de rayon courante, posée par `data-media-type`. `--type-hue` sert au
+   * **texte et aux filets**, `--gel` aux **aplats** — les confondre est ce qui
+   * rendait les étiquettes illisibles en jour.
+   */
+  --type-hue:        var(--muted);
+  --gel:             var(--muted);
+
+  /* identité — injectée en runtime, jamais écrite ici */
   --identity:        currentColor;
 
   /**
-   * Accent — l'ocre veut dire « fais ceci ».
+   * Sémantique — **délibérément pas aliasée sur le doré ni sur un gel**.
    *
-   * Il ne qualifie jamais un état ni un type : il marque ce sur quoi on agit —
-   * reprendre, progresser, survoler. C'est la seule teinte de l'interface à
-   * porter un verbe, et c'est ce qui la distingue des couleurs de membres
-   * (qui disent *qui*) et des teintes de rayon (qui disent *quoi*).
+   * Un statut n'est pas une action (le doré est réservé) et n'est pas un rayon
+   * (les gels n'ont que deux emplacements). Les mapper violerait les deux
+   * règles dures d'un coup. Valeurs propres, mesurées par mode.
    *
-   * Deux valeurs, pas une : `--accent` compose du texte de 13 px et doit tenir
-   * l'AA sur le papier crème — #B07D2B n'y atteint que 3,2:1, #8A5F17 monte à
-   * 5,1:1. `--accent-mark` sert aux filets et aux barres, où le contraste de
-   * texte ne s'applique pas et où la valeur claire porte mieux.
+   * Celles-ci gagnent du contraste au passage : elles étaient calibrées contre
+   * #22242A, le sol est désormais #070a10.
    */
-  --accent:          #8A5F17;
-  --accent-mark:     #B07D2B;
+  --status-todo:     #8D8E91;
+  --status-doing:    #B8832D;
+  --status-done:     #5B9A6B;
+  --signal-new:      #C67676;
+  --signal-danger:   #C67676;
+  --signal-ok:       #5B9A6B;
+  --divergence:      #8E8E90;
 
-  /**
-   * Teintes de rayon — famille de terres, construite autour de l'ocre.
-   *
-   * Toutes à la même valeur : aucun rayon ne crie plus fort qu'un autre. Elles
-   * ne servent qu'à *nommer* — filet de section, sourcil, type sur un repli de
-   * couverture — jamais à qualifier un état ni à remplir une surface.
-   *
-   * `music` n'est pas un `MediaType` : l'API ne sert pas encore le rayon. Sa
-   * teinte existe quand même, pour que la bande de rayons soit complète le jour
-   * où il arrive sans avoir à rouvrir ce fichier.
-   */
-  --type-movie:         #8A4A32;
-  --type-tv:            #4F5F5C;
-  --type-book:          #6B5B2E;
-  --type-comic_series:  #6E4438;
-  --type-game:          #55604A;
-  --type-music:         #5E4A55;
-
-  /** Teinte de rayon courante, posée par le composant qui connaît le type. */
-  --type-hue:        var(--ink-muted);
-
-  /* type */
+  /* type — deux familles, et `--font-sans` en dette (voir plus bas) */
   --font-serif: 'Cormorant Garamond', Iowan Old Style, Palatino, Georgia, serif;
   --font-mono:  'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   /**
@@ -91,66 +147,181 @@
    * et du mono, bruyant et 15% plus large. Se rembourse écran par écran.
    */
   --font-sans:  'Inter Tight', system-ui, sans-serif;
-  --display-1: 300 104px/0.86 var(--font-serif);
-  --display-2: 300 76px/0.92 var(--font-serif);
-  --title-1:   300 52px/1 var(--font-serif);
-  --title-2:   400 34px/1 var(--font-serif);
-  --lede:      300 23px/1.5 var(--font-serif);
-  --quote:     italic 400 20px/1.5 var(--font-serif);
+
+  /**
+   * L'échelle serif monte de 2 à 4px : Cormorant Garamond est plus étroite et
+   * de hauteur d'x plus basse que Newsreader, et rendait la même valeur plus
+   * petite à l'œil.
+   */
+  --display-1: 300 108px/0.86 var(--font-serif);
+  --display-2: 300 80px/0.92 var(--font-serif);
+  --title-1:   300 56px/1 var(--font-serif);
+  --title-2:   400 37px/1 var(--font-serif);
+  --lede:      300 25px/1.5 var(--font-serif);
+  --quote:     italic 300 25px/1.4 var(--font-serif);
   --body:      400 15.5px/1.62 var(--font-sans);
   --caption:   400 12.5px/1.45 var(--font-sans);
-  --eyebrow:   600 10px/1 var(--font-sans);
+  /** Les sourcils passent au mono : c'est le rôle que la direction lui donne. */
+  --eyebrow:   600 10px/1 var(--font-mono);
   --eyebrow-tracking: .22em;
 
-  /* espace */
+  /* espace — champ de page réaccordé sur la maquette */
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px; --s-5: 24px;
   --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px; --s-10: 144px;
-  --page-margin: 72px;
+  --page-margin: 40px;
   --gutter: 32px;
-  --max-content: 1440px;
+  --max-content: 1360px;
   --measure: 68ch;
+  /**
+   * Hauteur du bandeau **et** `top:` de la colonne collante de l'accueil. Un
+   * seul nombre : deux valeurs qui dérivent font passer l'aside sous le
+   * bandeau au premier réglage.
+   */
+  --masthead-h: 96px;
 
-  /* forme */
+  /* forme — aucun rayon, nulle part */
   --radius-0: 0;
-  --radius-1: 2px;
+  --radius-1: 0;
   --radius-dot: 50%;
   --rule-w: 1px;
   --rule-w-strong: 2px;
   --bar-h: 2px;
 
-  /* élévation */
-  --elev-1: none;
-  --elev-2: 0 24px 60px -36px rgba(22, 23, 26, 0.5);
-  --scrim:  rgba(22, 23, 26, 0.28);
+  /**
+   * Deux langages d'ombre, séparés par la taille. **Jamais les deux sur un même
+   * élément.**
+   *
+   *  · `--block` — la petite chrome (boutons de rayon, champ de recherche) :
+   *    un bloc décalé net, sans flou, qui prend la teinte de l'élément au
+   *    survol avec un `translate(-2px, -2px)`.
+   *  · `--lift` — le grand contenu (fiches, tuiles, bannière) : une chute
+   *    floue, qui s'approfondit au survol dans la teinte du rayon.
+   */
+  --block:      4px 4px 0 0 var(--rule);
+  --lift:       0 10px 30px -18px rgba(0, 0, 0, 0.85);
+  --lift-deep:  0 22px 48px -20px rgba(0, 0, 0, 0.9);
+  --scrim:      rgba(0, 0, 0, 0.55);
 
-  /* mouvement */
+  /* mouvement — opacité et transformation seulement */
   --ease-page:  cubic-bezier(.2, 0, 0, 1);
   --ease-exit:  cubic-bezier(.4, 0, 1, 1);
   --ease-rule:  cubic-bezier(.65, 0, .35, 1);
+  --ease-rise:  cubic-bezier(.16, .84, .28, 1);
   --dur-1: 120ms; --dur-2: 160ms; --dur-3: 220ms; --dur-4: 320ms;
   --stagger: 40ms;
+  --dur-reveal: 700ms;
+  --stagger-reveal: 70ms;
 
-  /* focus */
-  --focus-ring: 2px solid var(--ink);
+  /* focus — la maquette n'en avait pas ; le doré reprend le langage du survol */
+  --focus-ring: 2px solid var(--gold);
   --focus-offset: 2px;
 }
 
 /**
- * Échelle dérivée.
+ * Le jour — du papier, pas la nuit éclaircie.
  *
- * Les modules existants nomment leurs tailles et leurs espaces (`--text-sm`,
- * `--space-4`) plutôt que leurs rôles. Ces alias les rattachent au système
- * ci-dessus au lieu de laisser des valeurs en dur traîner dans 27 fichiers :
- * l'échelle d'espace coïncide déjà au pixel près, les tailles sont réaccordées
- * sur la nouvelle échelle typographique.
+ * Seuls les rôles de couleur sont réassignés : le type, l'espace, la forme et
+ * le mouvement ne dépendent pas du mode.
+ */
+[data-mode='light'] {
+  color-scheme: light;
+
+  --bg:              #f6f2e6;
+  --bg-2:            #fbf8ee;
+  --surface:         #ffffff;
+  --sunken:          #ebe5d4;
+
+  --rule:            #12100b;
+  --rule-soft:       #c4b9a0;
+
+  --ink:             #12100b;
+  --ink-2:           #2e2a20;
+  --muted:           #6a6152;
+  --voice:           #2e2a20;
+
+  --amber:           #7d5f0d;
+
+  --gold:            #d9a72a;
+  --gold-text:       #8a5f17;  /* 5,1:1 sur le crème ; #d9a72a n'y fait que 1,97:1 */
+  --gold-ink:        #12100b;
+
+  --beam-a:          rgba(217, 167, 42, 0.22);
+  --beam-b:          rgba(201, 150, 47, 0.07);
+
+  /**
+   * Trois de ces aplats ne sont pas exactement ceux publiés par la direction,
+   * et c'est elle qui l'exige : sa règle d'accessibilité demande 4,5:1 pour ces
+   * étiquettes de 9px, et ses propres valeurs n'y arrivaient pas en jour —
+   * films 4,36:1, séries 4,20:1, manga 4,44:1 sous `--gel-ink`. Teinte et
+   * saturation conservées au chiffre près, seule la luminosité monte d'un
+   * point : #e03a2d→#e14134, #8a58e8→#8f5fe9, #e02f83→#e13385. L'écart ne se
+   * voit pas, le seuil est franchi (4,53 · 4,51 · 4,54).
+   */
+  --gel-livres:      #0fa6bd;
+  --gel-films:       #e14134;
+  --gel-series:      #8f5fe9;
+  --gel-manga:       #e13385;
+  --gel-jeux:        #79bd2c;
+  --gel-musique:     #e07d0c;
+  --gel-ink:         #12100b;
+
+  /* Les mêmes teintes, descendues jusqu'à l'AA en texte (5,1 à 5,9:1). Les
+     aplats ci-dessus gardent les valeurs de la direction. */
+  --gel-livres-text:  #0a6f7f;
+  --gel-films-text:   #b52418;
+  --gel-series-text:  #6636c4;
+  --gel-manga-text:   #b31461;
+  --gel-jeux-text:    #456f12;
+  --gel-musique-text: #9c5405;
+
+  /* Sémantique — les valeurs calibrées pour le papier crème. */
+  --status-todo:     #6A6B6E;
+  --status-doing:    #B07D2B;
+  --status-done:     #3F6B4A;
+  --signal-new:      #8C3A3A;
+  --signal-danger:   #8C3A3A;
+  --signal-ok:       #3F6B4A;
+  --divergence:      #8E8E90;
+
+  --lift:      0 10px 30px -18px rgba(18, 16, 11, 0.35);
+  --lift-deep: 0 22px 48px -20px rgba(18, 16, 11, 0.4);
+  --scrim:     rgba(18, 16, 11, 0.28);
+}
+
+/**
+ * Échafaudage.
  *
- * Les rayons valent tous zéro — c'est une décision de la spécification, pas un
- * oubli : « rayon 0, pas d'ombre ». Seule la pastille d'identité reste ronde.
+ * Ces noms sont ceux d'avant la refonte, et une trentaine d'écrans les nomment
+ * encore. Ils sont ici pour que ces écrans **suivent le thème** au lieu de
+ * casser — pas pour être écrits dans du code neuf.
+ *
+ * **Rien de nouveau ne doit nommer un jeton de ce bloc.** Un écran repris
+ * abandonne les anciens noms, et ce bloc rétrécit jusqu'à disparaître.
  */
 :root {
-  --paper: var(--surface-page);
-  --paper-raised: var(--surface-raised);
-  --paper-sunken: var(--surface-sunken);
+  --surface-page:   var(--bg);
+  --surface-raised: var(--surface);
+  --surface-sunken: var(--sunken);
+  --paper:          var(--bg);
+  --paper-raised:   var(--surface);
+  --paper-sunken:   var(--sunken);
+
+  --ink-soft:  var(--ink-2);
+  --ink-muted: var(--muted);
+  --ink-faint: var(--faint);
+
+  --accent:      var(--gold-text);
+  --accent-mark: var(--gold);
+
+  /* Les anciennes terres pointent sur la variante **texte** : leurs trois
+     usages (filet de couverture, nom du type, filet de vignette) composent ou
+     tracent, ils ne remplissent pas. */
+  --type-movie:         var(--gel-films-text);
+  --type-tv:            var(--gel-series-text);
+  --type-book:          var(--gel-livres-text);
+  --type-comic_series:  var(--gel-manga-text);
+  --type-game:          var(--gel-jeux-text);
+  --type-music:         var(--gel-musique-text);
 
   --text-xs: 11.5px;
   --text-sm: 13px;
@@ -170,77 +341,31 @@
   --space-8: var(--s-8);
 
   --radius-sm: var(--radius-0);
-  --radius: var(--radius-0);
+  --radius:    var(--radius-0);
   --radius-lg: var(--radius-0);
+  --radius-md: var(--radius-0);
 
-  --shadow-soft: var(--elev-1);
-  --shadow-lift: var(--elev-2);
+  --elev-1: none;
+  --elev-2: var(--lift-deep);
+  --shadow-soft: var(--lift);
+  --shadow-lift: var(--lift-deep);
 
   --danger: var(--signal-danger);
 }
 
 @media (max-width: 1279px) {
   :root {
-    --page-margin: 48px;
+    --page-margin: 32px;
     --gutter: 24px;
   }
 }
 
 @media (max-width: 767px) {
   :root {
-    --page-margin: 24px;
-    --display-1: 300 46px/0.92 var(--font-serif);
-    --display-2: 300 38px/0.96 var(--font-serif);
-    --title-1:   300 30px/1.05 var(--font-serif);
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface-page: #121316;
-    --surface-raised: #1A1B1F;
-    --surface-sunken: #22242A;
-    --rule-soft: #2C2E34;
-    --rule: #3A3C43;
-    --ink: #F1F0EE;
-    --ink-soft: #C9C8C6;
-    --ink-muted: #9B9A99;
-    --ink-faint: #6E6D6C;
-
-    /* Sur le fond sombre, la valeur claire de l'ocre passe l'AA (5,2:1) : les
-       deux jetons se rejoignent, et l'accent redevient une seule couleur. */
-    --accent: #B07D2B;
-    --accent-mark: #B07D2B;
-
-    /* Les terres remontent en valeur — les mêmes hues, éclaircies, sinon elles
-       s'effondrent sur le noir (l'olive n'y tient que 2,8:1). */
-    --type-movie:         #D08A6A;
-    --type-tv:            #9AB0AB;
-    --type-book:          #B8A163;
-    --type-comic_series:  #C08E7E;
-    --type-game:          #A3B48F;
-    --type-music:         #B295A6;
-
-    /**
-     * Les jetons sémantiques, remontés pour la même raison que les terres.
-     *
-     * Ils manquaient ici : gardés à leur valeur claire, ils tombaient sous le
-     * seuil AA dès que le fond passait au sombre — « terminé » à 2,5:1 et la
-     * nouveauté à 2,1:1, c'est-à-dire illisibles là où ils comptent le plus.
-     *
-     * Mesurés contre `--surface-sunken` (#22242A), la plus **claire** des trois
-     * surfaces sombres : ce qui tient là tient aussi sur le relevé et sur la
-     * page. Teintes conservées, seule la valeur monte.
-     */
-    --status-todo:     #8D8E91;  /* 4,7:1 */
-    --status-doing:    #B8832D;  /* 4,7:1 */
-    --status-done:     #5B9A6B;  /* 4,6:1 */
-    --signal-new:      #C67676;  /* 4,6:1 */
-    --signal-danger:   #C67676;  /* 4,6:1 — même valeur qu'en clair, où les deux
-                                    jetons coïncident déjà */
-    --signal-ok:       #5B9A6B;  /* 4,6:1 */
-    --divergence:      #8E8E90;  /* 4,7:1 — la seule qui passait déjà ; reprise
-                                    ici pour que les sept se lisent ensemble */
+    --page-margin: 20px;
+    --display-1: 300 48px/0.92 var(--font-serif);
+    --display-2: 300 40px/0.96 var(--font-serif);
+    --title-1:   300 32px/1.05 var(--font-serif);
   }
 }
 
@@ -248,5 +373,7 @@
   :root {
     --dur-1: 0ms; --dur-2: 0ms; --dur-3: 0ms; --dur-4: 0ms;
     --stagger: 0ms;
+    --dur-reveal: 0ms;
+    --stagger-reveal: 0ms;
   }
 }

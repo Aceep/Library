@@ -26,8 +26,8 @@ body {
   flex-direction: column;
 }
 
-/* Au-dessus de 30px on compose en Newsreader et on descend la graisse : les
-   titres de la spécification sont légers, jamais gras. */
+/* Au-dessus de 30px on compose en Cormorant Garamond et on descend la graisse :
+   les titres de la spécification sont légers, jamais gras. */
 h1,
 h2,
 h3,
@@ -89,15 +89,21 @@ ol {
  * `MediaCard` et la une nomment tous le même attribut, et six règles répétées
  * trois fois divergeraient au premier rayon ajouté.
  *
+ * **Deux variables, pas une**, et c'est la distinction qui compte : `--type-hue`
+ * pour ce qui **compose ou trace** (nom du type, filet de section, lien de
+ * rayon), `--gel` pour ce qui **remplit** (les étiquettes de médium, avec
+ * `color: var(--gel-ink)`). En nuit les deux coïncident ; en jour le gel brut
+ * tombe à 2:1 en texte, et les confondre rendrait l'étiquette illisible.
+ *
  * `music` y figure sans être un `MediaType` — l'API ne sert pas encore le
  * rayon, la bande d'accueil l'annonce quand même.
  */
-[data-media-type='movie'] { --type-hue: var(--type-movie); }
-[data-media-type='tv'] { --type-hue: var(--type-tv); }
-[data-media-type='book'] { --type-hue: var(--type-book); }
-[data-media-type='comic_series'] { --type-hue: var(--type-comic_series); }
-[data-media-type='game'] { --type-hue: var(--type-game); }
-[data-media-type='music'] { --type-hue: var(--type-music); }
+[data-media-type='movie'] { --type-hue: var(--gel-films-text); --gel: var(--gel-films); }
+[data-media-type='tv'] { --type-hue: var(--gel-series-text); --gel: var(--gel-series); }
+[data-media-type='book'] { --type-hue: var(--gel-livres-text); --gel: var(--gel-livres); }
+[data-media-type='comic_series'] { --type-hue: var(--gel-manga-text); --gel: var(--gel-manga); }
+[data-media-type='game'] { --type-hue: var(--gel-jeux-text); --gel: var(--gel-jeux); }
+[data-media-type='music'] { --type-hue: var(--gel-musique-text); --gel: var(--gel-musique); }
 
 /* Réservé aux lecteurs d'écran */
 .sr-only {

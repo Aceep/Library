@@ -1,0 +1,119 @@
+/*
+ * Le dessin suit le système tel qu'il est : rayon zéro, pas d'ombre, et
+ * l'ocre réservé à ce qui porte un verbe. Une pagination ne demande rien —
+ * elle dit où l'on est. La page courante est donc marquée par un **filet**,
+ * pas par un aplat de couleur : c'est le même geste que l'onglet actif de la
+ * barre principale, et il se relit sans dépendre de la teinte.
+ */
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: var(--rule-w) solid var(--rule);
+}
+
+.compte {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  color: var(--ink-muted);
+}
+
+.liste {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.page,
+.courante,
+.bord {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  justify-content: center;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  color: var(--ink-muted);
+  border: var(--rule-w) solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.page:hover,
+.bord:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+/*
+ * La page courante : filet complet plutôt qu'aplat, et l'encre pleine.
+ * `aria-current` porte l'information pour qui n'a pas la vue ; ceci la porte
+ * pour qui l'a. Aucun des deux ne suffit seul.
+ */
+.courante {
+  color: var(--ink);
+  border-color: var(--rule-strong);
+  font-weight: 600;
+}
+
+.bord {
+  padding: 0 var(--space-3);
+}
+
+/* Le bord inactif reste en place — sans lui, la barre se décale d'un cran
+   entre la page 1 et la page 2, et les numéros bougent sous le curseur. */
+.inerte {
+  color: var(--rule-strong);
+  opacity: 0.6;
+}
+
+.trou {
+  padding: 0 var(--space-1);
+  color: var(--ink-muted);
+  user-select: none;
+}
+
+.page:focus-visible,
+.courante:focus-visible,
+.bord:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* Sur un écran fin, « Précédente » et « Suivante » cèdent la place aux
+   chevrons : les numéros comptent plus que les mots, et la barre doit tenir
+   sur une ligne avant de s'enrouler. Le mot reste lisible au lecteur d'écran. */
+@media (max-width: 30rem) {
+  .motBord {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .bord {
+    padding: 0 var(--space-2);
+  }
+}

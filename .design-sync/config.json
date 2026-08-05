@@ -31,6 +31,7 @@
     "MediaMetadata": "src/components/MediaMetadata.tsx",
     "NewContentBadge": "src/components/StatusBadge.tsx",
     "NotificationsLink": "src/components/NotificationsLink.tsx",
+    "Pagination": "src/components/Pagination.tsx",
     "PeopleDisclosure": "src/components/PeopleDisclosure.tsx",
     "ProgressBar": "src/components/ProgressBar.tsx",
     "QuestProgress": "src/components/QuestProgress.tsx",

@@ -3,23 +3,24 @@ import { Route, Routes, useLocation } from 'react-router-dom'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { media, renderWithProviders, tracking } from '../test/render'
 
-const fetchLibrary = vi.fn()
+const fetchLibraryPage = vi.fn()
 
 vi.mock('../api/endpoints', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/endpoints')>()),
-  fetchLibrary: (...args: unknown[]) => fetchLibrary(...args),
+  fetchLibraryPage: (...args: unknown[]) => fetchLibraryPage(...args),
 }))
 
 const { default: TypeLibrary } = await import('./TypeLibrary')
 
 const PAR_PAGE = 3
 const TOTAL = 12
+const PAGES = Math.ceil(TOTAL / PAR_PAGE)
 
-/** Une bibliothèque paginée, avec des curseurs opaques comme ceux de l'API. */
-const page = (curseur: string | null) => {
-  const debut = curseur ? Number(curseur) : 0
+/** Ce que le back rend en pagination numérotée : `pages` plein, curseur nul. */
+const page = (numero: number) => {
+  const debut = (numero - 1) * PAR_PAGE
   return {
-    items: Array.from({ length: Math.min(PAR_PAGE, TOTAL - debut) }, (_, i) => ({
+    items: Array.from({ length: Math.max(0, Math.min(PAR_PAGE, TOTAL - debut)) }, (_, i) => ({
       // Avec jaquette : sans elle, `Cover` reprend le titre en repli
       // typographique et chaque titre apparaîtrait deux fois.
       ...media({
@@ -30,7 +31,8 @@ const page = (curseur: string | null) => {
       tracking: { me: tracking(), following: [], others: { count: 0, average_rating: null } },
       progress: null,
     })),
-    next_cursor: debut + PAR_PAGE < TOTAL ? String(debut + PAR_PAGE) : null,
+    next_cursor: null,
+    pages: { page: numero, size: PAR_PAGE, total: TOTAL, pages: PAGES },
   }
 }
 
@@ -38,7 +40,7 @@ const page = (curseur: string | null) => {
  * L'adresse du routeur, rendue pour être lisible.
  *
  * `window.location` ne bouge pas sous `MemoryRouter` : l'assertion doit porter
- * sur ce que le routeur croit, qui est justement ce dont dépend le rétablissement.
+ * sur ce que le routeur croit, qui est justement ce dont dépend le partage.
  */
 function Sonde() {
   return <span data-testid="adresse">{useLocation().search}</span>
@@ -55,61 +57,98 @@ const render = (adresse: string) =>
     { route: adresse },
   )
 
+const adresse = () => screen.getByTestId('adresse').textContent
+
 /**
- * `?pages=N` ne fait qu'une chose : rétablir ce qu'on avait déjà demandé.
- *
- * Ce n'est pas une pagination numérotée — `?pages=4` veut dire « les quatre
- * premières », jamais « la quatrième ». La distinction est le cœur de la
- * décision qu'on a prise en gardant l'accumulation, et ces tests la fixent.
+ * `?page=N` remplace le `?pages=N` de l'étape précédente, et la différence
+ * n'est pas cosmétique : l'ancien voulait dire « les N premières » et ne
+ * savait que rétablir une pile ; celui-ci désigne **une** page, que le back
+ * rend directement.
  */
-describe('Rayon — le nombre de pages dans l’adresse', () => {
+describe('Rayon — la page dans l’adresse', () => {
   beforeEach(() => {
-    fetchLibrary.mockReset()
-    fetchLibrary.mockImplementation((_f: unknown, curseur: string | null) =>
-      Promise.resolve(page(curseur)),
+    fetchLibraryPage.mockReset()
+    fetchLibraryPage.mockImplementation((_f: unknown, numero: number) =>
+      Promise.resolve(page(numero)),
     )
   })
 
-  it('ne charge qu’une page sans paramètre', async () => {
+  it('ouvre la première page sans paramètre, en un seul appel', async () => {
     render('/bibliotheque/movie')
 
-    expect(await screen.findByText('Film 0')).toBeInTheDocument()
-    expect(screen.queryByText('Film 3')).not.toBeInTheDocument()
-    expect(fetchLibrary).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText('Film 0')).toBeTruthy()
+    // Un appel, pas quatre : c'est tout l'intérêt d'aller directement à la
+    // page voulue plutôt que de rattraper une pile.
+    expect(fetchLibraryPage).toHaveBeenCalledTimes(1)
+    expect(fetchLibraryPage.mock.calls[0]?.[1]).toBe(1)
   })
 
-  it('rétablit les quatre premières pages depuis l’adresse', async () => {
-    render('/bibliotheque/movie?pages=4')
+  it('ouvre directement la page demandée par l’adresse', async () => {
+    render('/bibliotheque/movie?page=3')
 
-    // Douze œuvres : les quatre pages ont bien été redemandées, dans l'ordre —
-    // le curseur de chacune vient de la précédente.
-    expect(await screen.findByText('Film 11')).toBeInTheDocument()
-    await waitFor(() => expect(fetchLibrary).toHaveBeenCalledTimes(4))
+    expect(await screen.findByText('Film 6')).toBeTruthy()
+    expect(screen.queryByText('Film 0')).toBeNull()
+    expect(fetchLibraryPage).toHaveBeenCalledTimes(1)
+    expect(fetchLibraryPage.mock.calls[0]?.[1]).toBe(3)
   })
 
-  it('inscrit dans l’adresse ce qu’on charge à la main', async () => {
+  it('inscrit la page dans l’adresse quand on navigue', async () => {
     render('/bibliotheque/movie')
     await screen.findByText('Film 0')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Charger la suite' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Page 2' }))
 
-    expect(await screen.findByText('Film 3')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByTestId('adresse')).toHaveTextContent('pages=2'))
+    await waitFor(() => expect(adresse()).toBe('?page=2'))
+    expect(await screen.findByText('Film 3')).toBeTruthy()
   })
 
-  it('borne un paramètre déraisonnable', async () => {
-    render('/bibliotheque/movie?pages=9999')
+  it('laisse la première page sans paramètre', async () => {
+    render('/bibliotheque/movie?page=3')
+    await screen.findByText('Film 6')
 
-    // Quatre pages suffisent à épuiser la liste : la borne empêche surtout de
-    // lancer neuf mille requêtes, pas d'afficher douze films.
-    expect(await screen.findByText('Film 11')).toBeInTheDocument()
-    await waitFor(() => expect(fetchLibrary).toHaveBeenCalledTimes(4))
+    fireEvent.click(screen.getByRole('link', { name: 'Page 1' }))
+
+    // Une adresse partagée doit être la plus courte qui dise la chose.
+    await waitFor(() => expect(adresse()).toBe(''))
   })
 
-  it('ignore une valeur qui n’est pas un nombre de pages', async () => {
-    render('/bibliotheque/movie?pages=zero')
+  it('revient à la première page quand le tri change', async () => {
+    render('/bibliotheque/movie?page=3')
+    await screen.findByText('Film 6')
 
-    expect(await screen.findByText('Film 0')).toBeInTheDocument()
-    expect(screen.queryByText('Film 3')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/Trier par/), { target: { value: 'title' } })
+
+    // Rester sur la 3 en changeant de tri afficherait un écran qui n'a rien à
+    // voir avec le geste qu'on vient de faire.
+    await waitFor(() => expect(adresse()).toBe(''))
+  })
+
+  it('borne une adresse déraisonnable au lieu de laisser passer un 400', async () => {
+    render('/bibliotheque/movie?page=99999')
+
+    await waitFor(() => expect(fetchLibraryPage).toHaveBeenCalled())
+    expect(fetchLibraryPage.mock.calls[0]?.[1]).toBe(1000)
+  })
+
+  it('ignore une valeur qui n’est pas un numéro de page', async () => {
+    render('/bibliotheque/movie?page=troisieme')
+
+    await screen.findByText('Film 0')
+    expect(fetchLibraryPage.mock.calls[0]?.[1]).toBe(1)
+  })
+
+  it('propose une sortie quand la page demandée n’existe plus', async () => {
+    // Le cas d'une adresse gardée en favori après que le rayon a rétréci. Un
+    // écran vide sans issue serait un cul-de-sac.
+    fetchLibraryPage.mockResolvedValue({
+      items: [],
+      next_cursor: null,
+      pages: { page: 9, size: PAR_PAGE, total: TOTAL, pages: PAGES },
+    })
+
+    render('/bibliotheque/movie?page=9')
+
+    expect(await screen.findByText(/Cette page n’existe plus/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /dernière page/i })).toBeTruthy()
   })
 })

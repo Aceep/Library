@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { fetchLibrary } from '../api/endpoints'
+import { useQuery } from '@tanstack/react-query'
+import { fetchLibraryPage } from '../api/endpoints'
 import type { LibraryFilters, LibrarySort } from '../api/endpoints'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { useReference } from '../reference/ReferenceContext'
@@ -9,6 +9,7 @@ import type { MediaType, StatusOption, TrackingStatus } from '../api/schema'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
 import MediaCard from '../components/MediaCard'
+import Pagination from '../components/Pagination'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
 import styles from './TypeLibrary.module.css'
@@ -42,26 +43,24 @@ export default function TypeLibrary() {
 }
 
 /**
- * Combien de pages ont été chargées, **dans l'adresse**.
+ * La page demandée, **dans l'adresse**.
  *
- * Le rayon empile ses pages ; l'adresse, elle, n'en disait rien. Ouvrir une
- * fiche depuis la quatrième page puis revenir en arrière ramenait à la
- * première dès que le cache avait expiré — cinq minutes suffisent. Le nombre
- * de pages y figure donc désormais, et la seule chose qu'il rétablit est ce
- * qu'on avait déjà demandé.
+ * Remplace le `?pages=N` de l'étape précédente, qui voulait dire « les N
+ * premières » et non « la N-ième ». Il n'existait que parce que la pagination
+ * par curseur ne savait pas revenir à un endroit : il rétablissait une pile,
+ * pas une position. Le back sait maintenant rendre la page 7 directement, et
+ * la demi-mesure n'a plus de raison d'être.
  *
- * Ce n'est **pas** une pagination numérotée : `?pages=4` veut dire « les
- * quatre premières », pas « la quatrième ». La différence compte, parce que la
- * seconde demanderait de sauter directement à une position, ce que la
- * pagination par curseur ne permet pas — c'est la discussion qu'on a tranchée
- * en gardant l'accumulation.
+ * `?page=1` ne s'écrit pas dans l'adresse : la première page est l'adresse
+ * nue, et une adresse partagée doit être la plus courte qui dise la chose.
  */
-function lirePages(params: URLSearchParams): number {
-  const brut = Number(params.get('pages'))
+function lirePage(params: URLSearchParams): number {
+  const brut = Number(params.get('page'))
   if (!Number.isInteger(brut) || brut < 1) return 1
-  // Une borne haute : rien n'empêche d'écrire `?pages=9999` à la main, et on
-  // ne va pas lancer neuf mille requêtes pour l'honorer.
-  return Math.min(brut, 25)
+  // Le back plafonne à 1000 et répond 400 au-delà : on borne ici pour que
+  // `?page=99999` écrit à la main affiche la dernière page plutôt qu'une
+  // erreur, qui ne dirait rien d'utile à qui a mal recopié une adresse.
+  return Math.min(brut, 1000)
 }
 
 function Library({ type }: { type: MediaType }) {
@@ -72,7 +71,7 @@ function Library({ type }: { type: MediaType }) {
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [sort, setSort] = useState<LibrarySort>('added')
   const [params, setParams] = useSearchParams()
-  const pagesVoulues = lirePages(params)
+  const page = lirePage(params)
 
   const filters: LibraryFilters = {
     type,
@@ -82,40 +81,45 @@ function Library({ type }: { type: MediaType }) {
     sort,
   }
 
-  const { data, isPending, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery({
-      queryKey: queryKeys.libraryWith(filters),
-      queryFn: ({ pageParam, signal }) => fetchLibrary(filters, pageParam, signal),
-      initialPageParam: null as string | null,
-      // Le curseur est opaque : on le relaie sans l'interpréter. `null` marque
-      // la dernière page — c'est le seul signal d'arrêt fiable, une page peut
-      // très bien être plus courte que `limit` sans être la dernière.
-      getNextPageParam: (lastPage) => lastPage.next_cursor,
-    })
+  const { data, isPending, isFetching, error, refetch } = useQuery({
+    queryKey: queryKeys.libraryPage(filters, page),
+    queryFn: ({ signal }) => fetchLibraryPage(filters, page, signal),
+    // La page précédente reste à l'écran pendant que la suivante arrive : sans
+    // cela, chaque clic vide le rayon puis le remplit, et la page saute deux
+    // fois. C'est le seul geste qui rende une pagination agréable.
+    placeholderData: (precedente) => precedente,
+  })
 
-  const chargees = data?.pages.length ?? 0
-
-  // Rattrapage à l'ouverture : on redemande page après page jusqu'au compte
-  // annoncé par l'adresse. Une seule à la fois, et seulement quand la
-  // précédente est arrivée — le curseur de la suivante en dépend.
-  useEffect(() => {
-    if (chargees === 0 || chargees >= pagesVoulues) return
-    if (!hasNextPage || isFetchingNextPage) return
-    void fetchNextPage()
-  }, [chargees, pagesVoulues, hasNextPage, isFetchingNextPage, fetchNextPage])
-
-  // Et l'inverse : ce que l'on charge s'inscrit dans l'adresse. `replace` pour
-  // ne pas empiler dix entrées d'historique — revenir en arrière doit ramener
-  // à l'écran précédent, pas dérouler les clics un par un.
-  useEffect(() => {
-    if (chargees <= pagesVoulues) return
+  const adresseDe = (numero: number) => {
     const suite = new URLSearchParams(params)
-    if (chargees > 1) suite.set('pages', String(chargees))
-    else suite.delete('pages')
-    setParams(suite, { replace: true })
-  }, [chargees, pagesVoulues, params, setParams])
+    if (numero > 1) suite.set('page', String(numero))
+    else suite.delete('page')
+    const requete = suite.toString()
+    return requete ? `?${requete}` : location.pathname
+  }
 
-  const items = data?.pages.flatMap((page) => page.items) ?? []
+  const allerA = (numero: number) => {
+    const suite = new URLSearchParams(params)
+    if (numero > 1) suite.set('page', String(numero))
+    else suite.delete('page')
+    // Pas `replace` : changer de page est une navigation, et le retour arrière
+    // doit ramener à la page d'où l'on vient. C'est l'inverse du choix fait
+    // pour `?pages=N`, qui n'enregistrait qu'un état de chargement.
+    setParams(suite)
+  }
+
+  // Changer de filtre ou de tri remet à la première page. Rester sur la 7 en
+  // changeant de filtre afficherait une page vide sur une liste qui en a deux,
+  // et donnerait l'impression que le filtre ne ramène rien.
+  const remettreALaPremiere = () => {
+    if (page === 1) return
+    const suite = new URLSearchParams(params)
+    suite.delete('page')
+    setParams(suite, { replace: true })
+  }
+
+  const items = data?.items ?? []
+  const infoPages = data?.pages ?? null
   const filtered = status !== null || ownedOnly || favoritesOnly
 
   return (
@@ -133,7 +137,10 @@ function Library({ type }: { type: MediaType }) {
               type="button"
               className={styles.chip}
               aria-pressed={status === filter.value}
-              onClick={() => setStatus(filter.value)}
+              onClick={() => {
+                setStatus(filter.value)
+                remettreALaPremiere()
+              }}
             >
               {filter.label}
             </button>
@@ -144,7 +151,10 @@ function Library({ type }: { type: MediaType }) {
           <input
             type="checkbox"
             checked={ownedOnly}
-            onChange={(event) => setOwnedOnly(event.target.checked)}
+            onChange={(event) => {
+              setOwnedOnly(event.target.checked)
+              remettreALaPremiere()
+            }}
           />
           Possédés seulement
         </label>
@@ -153,14 +163,20 @@ function Library({ type }: { type: MediaType }) {
           <input
             type="checkbox"
             checked={favoritesOnly}
-            onChange={(event) => setFavoritesOnly(event.target.checked)}
+            onChange={(event) => {
+              setFavoritesOnly(event.target.checked)
+              remettreALaPremiere()
+            }}
           />
           Mes coups de cœur
         </label>
 
         <label className={styles.sort}>
           Trier par
-          <select value={sort} onChange={(event) => setSort(event.target.value as LibrarySort)}>
+          <select value={sort} onChange={(event) => {
+              setSort(event.target.value as LibrarySort)
+              remettreALaPremiere()
+            }}>
             {SORTS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -175,43 +191,63 @@ function Library({ type }: { type: MediaType }) {
       ) : error ? (
         <ErrorNotice error={error} onRetry={() => void refetch()} />
       ) : items.length === 0 ? (
-        <EmptyState
-          title="Aucune œuvre ici"
-          note={
-            filtered
-              ? 'Aucune œuvre de ce rayon ne correspond au filtre actif.'
-              : "Ce rayon est encore vide. Ajoute une œuvre depuis la recherche pour le remplir."
-          }
-          action={
-            <Link to="/recherche" className={styles.emptyAction}>
-              Ajouter une œuvre
-            </Link>
-          }
-        />
+        /*
+          Trois vides à ne pas confondre, et c'est le bloc `pages` qui les
+          sépare : un rayon vraiment vide, un filtre qui ne ramène rien, et une
+          page au-delà de la fin — le cas d'une adresse gardée puis rouverte
+          après que le rayon a rétréci. Le troisième doit ramener quelque part,
+          pas laisser sur un cul-de-sac.
+        */
+        infoPages !== null && infoPages.pages > 0 && page > infoPages.pages ? (
+          <EmptyState
+            title="Cette page n’existe plus"
+            note={`Ce rayon compte ${infoPages.pages} page${infoPages.pages > 1 ? 's' : ''} — la page ${page} n’en fait plus partie.`}
+            action={
+              <Link to={adresseDe(infoPages.pages)} className={styles.emptyAction}>
+                Aller à la dernière page
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="Aucune œuvre ici"
+            note={
+              filtered
+                ? 'Aucune œuvre de ce rayon ne correspond au filtre actif.'
+                : "Ce rayon est encore vide. Ajoute une œuvre depuis la recherche pour le remplir."
+            }
+            action={
+              <Link to="/recherche" className={styles.emptyAction}>
+                Ajouter une œuvre
+              </Link>
+            }
+          />
+        )
       ) : (
         <>
-          <ul className={styles.grid}>
+          {/*
+            `aria-busy` pendant qu'une page arrive : les cartes affichées sont
+            celles de la page précédente, gardées exprès pour que l'écran ne
+            saute pas, et un lecteur d'écran doit savoir qu'elles ne sont plus
+            à jour.
+          */}
+          <ul className={styles.grid} aria-busy={isFetching}>
             {items.map((item) => (
               <MediaCard key={item.id} item={item} me={user} />
             ))}
           </ul>
 
-          {/* Pas de défilement infini : on charge sur demande, pour que la
-              position dans la page reste sous le contrôle de l'utilisateur. */}
-          {hasNextPage ? (
-            <div className={styles.more}>
-              <button
-                type="button"
-                className={styles.moreButton}
-                onClick={() => void fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
-              </button>
-            </div>
+          {infoPages !== null && infoPages.pages > 1 ? (
+            <Pagination
+              info={infoPages}
+              hrefOf={adresseDe}
+              onNavigate={allerA}
+              label={`Pages du rayon ${typeLabelPlural(type).toLowerCase()}`}
+            />
           ) : (
             <p className={styles.end}>
-              {items.length} œuvre{items.length > 1 ? 's' : ''} dans ce rayon.
+              {infoPages?.total ?? items.length} œuvre
+              {(infoPages?.total ?? items.length) > 1 ? 's' : ''} dans ce rayon.
             </p>
           )}
         </>

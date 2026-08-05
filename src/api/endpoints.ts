@@ -13,6 +13,7 @@ import type {
   MediaType,
   NotificationList,
   NotificationRead,
+  NumberedPage,
   Page,
   QuestListResponse,
   QuestResponse,
@@ -90,7 +91,7 @@ export const fetchLibrary = (
   cursor: string | null,
   signal?: AbortSignal,
 ) =>
-  api.get<Page<LibraryItem>>(
+  api.get<NumberedPage<LibraryItem>>(
     '/media',
     {
       type: filters.type,
@@ -100,6 +101,32 @@ export const fetchLibrary = (
       sort: filters.sort ?? 'added',
       limit: filters.limit,
       cursor: cursor ?? undefined,
+    },
+    signal,
+  )
+
+/**
+ * La même bibliothèque, **par numéro de page**.
+ *
+ * Une fonction distincte plutôt qu'un paramètre de plus sur `fetchLibrary` :
+ * le back refuse `page` et `cursor` ensemble, et une signature qui accepte les
+ * deux invite à les passer tous les deux. Deux portes, une par mécanisme, et
+ * l'erreur devient impossible à écrire.
+ *
+ * Le mode se relit dans la réponse — `pages` renseigné — sans avoir à se
+ * souvenir de la porte empruntée.
+ */
+export const fetchLibraryPage = (filters: LibraryFilters, page: number, signal?: AbortSignal) =>
+  api.get<NumberedPage<LibraryItem>>(
+    '/media',
+    {
+      type: filters.type,
+      status: filters.status ?? undefined,
+      owned: filters.owned ?? undefined,
+      favorite: filters.favorite ? 'true' : undefined,
+      sort: filters.sort ?? 'added',
+      limit: filters.limit,
+      page,
     },
     signal,
   )

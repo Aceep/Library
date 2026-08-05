@@ -55,6 +55,15 @@ export const queryKeys = {
   library: ['library'] as const,
   libraryWith: (filters: unknown) => ['library', filters] as const,
   /**
+   * Une page numérotée du rayon.
+   *
+   * Le numéro fait partie de la clé : chaque page est une entrée de cache à
+   * part, et revenir sur la page 3 la sert instantanément. C'est la différence
+   * avec l'accumulation d'avant, où l'unique entrée grossissait — et où revenir
+   * en arrière n'avait rien à servir.
+   */
+  libraryPage: (filters: unknown, page: number) => ['library', 'page', page, filters] as const,
+  /**
    * La bibliothèque d'un membre. Sous le préfixe `library` : elle contient mon
    * suivi à moi dans chaque `tracking.me`, et redevient donc fausse dès que
    * j'écris quelque part, exactement comme un rayon.

@@ -4,10 +4,10 @@ import { screen, within } from '@testing-library/react'
 import type { LibraryItem, MediaType } from '../api/schema'
 import { renderWithProviders, tracking } from '../test/render'
 
-const fetchLibrary = vi.fn()
+const fetchLibraryPage = vi.fn()
 vi.mock('../api/endpoints', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/endpoints')>()),
-  fetchLibrary: (...args: unknown[]) => fetchLibrary(...args),
+  fetchLibraryPage: (...args: unknown[]) => fetchLibraryPage(...args),
 }))
 
 const item = (type: MediaType, title: string) =>
@@ -28,6 +28,13 @@ const item = (type: MediaType, title: string) =>
     progress: null,
   }) as unknown as LibraryItem
 
+/** Une réponse d'une seule page : `pages` renseigné, `next_cursor` nul. */
+const uneSeulePage = (items: LibraryItem[]) => ({
+  items,
+  next_cursor: null,
+  pages: { page: 1, size: 40, total: items.length, pages: items.length === 0 ? 0 : 1 },
+})
+
 const { default: TypeLibrary } = await import('./TypeLibrary')
 
 const renderShelf = (type: MediaType) =>
@@ -45,7 +52,7 @@ const filters = () =>
 
 describe('TypeLibrary — le rayon', () => {
   it('titre le rayon et liste ce que l’API renvoie', async () => {
-    fetchLibrary.mockResolvedValue({ items: [item('movie', 'Matrix')], next_cursor: null })
+    fetchLibraryPage.mockResolvedValue(uneSeulePage([item('movie', 'Matrix')]))
     renderShelf('movie')
 
     expect(await screen.findByRole('heading', { name: 'Films' })).toBeInTheDocument()
@@ -57,7 +64,7 @@ describe('TypeLibrary — le rayon', () => {
    * 11 — et ses filtres ne proposent pas un statut que le back refuse.
    */
   it('sert la musique comme un rayon ordinaire, sans filtre « en cours »', async () => {
-    fetchLibrary.mockResolvedValue({ items: [item('music', 'Kind of Blue')], next_cursor: null })
+    fetchLibraryPage.mockResolvedValue(uneSeulePage([item('music', 'Kind of Blue')]))
     renderShelf('music')
 
     expect(await screen.findByRole('heading', { name: 'Musique' })).toBeInTheDocument()
@@ -66,7 +73,7 @@ describe('TypeLibrary — le rayon', () => {
   })
 
   it('propose les trois statuts sur les rayons ordinaires', async () => {
-    fetchLibrary.mockResolvedValue({ items: [], next_cursor: null })
+    fetchLibraryPage.mockResolvedValue(uneSeulePage([]))
     renderShelf('book')
 
     expect(await screen.findByRole('heading', { name: 'Livres' })).toBeInTheDocument()

@@ -526,7 +526,11 @@ export interface paths {
      *
      * **Filtres** — `type` sur l’œuvre, `status`, `owned` et `favorite` sur *ton* suivi. Filtrer sur l’un des trois écarte donc les œuvres que tu ne suis pas.
      *
-     * **Pagination** — `limit` (défaut 40, maximum 100) et `cursor`, comme `GET /search`. Le curseur porte la clé de tri du dernier élément rendu : la page suivante reste juste même si des œuvres sont ajoutées ou retirées entre deux appels, ce qu’un décalage numérique ne garantit pas.
+     * **Pagination — deux mécanismes, et ils ne se mélangent pas.** `cursor` sert à parcourir : il porte la clé de tri du dernier élément rendu, la suite reste juste même si des œuvres sont ajoutées entre deux appels, et on s’arrête sur `next_cursor` nul. `page` sert à revenir : la réponse renseigne alors `pages` — `{ page, size, total, pages }` — de quoi dessiner « page 7 sur 12 » et rouvrir une adresse précise, ce qu’un curseur opaque ne permet pas.
+     *
+     * `page` et `cursor` ensemble valent `400`. En pagination numérotée, `next_cursor` est **toujours nul** : rendre les deux inviterait à les enchaîner. En pagination par curseur, `pages` est nul.
+     *
+     * Le numéro de page a le défaut du décalage numérique — une œuvre ajoutée pendant la lecture peut faire répéter ou sauter un élément d’une page à l’autre. C’est assumé : un rayon bouge rarement et se consulte souvent. Il coûte une requête de comptage, payée par les seuls appels qui le demandent.
      *
      * Pour la bibliothèque d’un membre plutôt que la commune, `GET /users/:id/media` rend exactement les mêmes éléments.
      */
@@ -537,6 +541,8 @@ export interface paths {
           limit?: number;
           /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
           cursor?: string;
+          /** @description Numéro de page, à partir de 1 (maximum 1000). Exclusif avec `cursor` : les deux ensemble valent 400. En son absence, la pagination est par curseur. */
+          page?: number;
           /** @description Filtre par type d’œuvre */
           type?: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
           /** @description Filtre sur **ton** statut */
@@ -550,13 +556,24 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Page de bibliothèque */
+        /** @description Page de bibliothèque — par curseur, ou numérotée si `page` a été demandé */
         200: {
           content: {
             "application/json": {
               items: components["schemas"]["LibraryItem"][];
-              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              /** @description Curseur de la page suivante, `null` si c’est la dernière — et **toujours `null`** en pagination numérotée */
               next_cursor: string | null;
+              /** @description Renseigné quand `page` a été demandé, `null` en pagination par curseur */
+              pages: {
+                /** @description Numéro de la page rendue */
+                page: number;
+                /** @description Taille de page demandée */
+                size: number;
+                /** @description Nombre total d’éléments, filtres appliqués */
+                total: number;
+                /** @description Nombre total de pages, `0` si la liste est vide */
+                pages: number;
+              } | null;
             };
           };
         };
@@ -682,7 +699,9 @@ export interface paths {
      *
      * `GET /users/me/media` fonctionne comme raccourci vers la session, comme sur `following` et `followers`.
      *
-     * **Coût** — quatre requêtes par page, quel que soit le nombre de membres de la médiathèque et quel que soit le nombre de personnes que tu suis.
+     * **Pagination** — les deux mécanismes de `GET /media`, avec les mêmes règles : `cursor` pour parcourir, `page` pour revenir, jamais les deux ensemble.
+     *
+     * **Coût** — quatre requêtes par page, quel que soit le nombre de membres de la médiathèque et quel que soit le nombre de personnes que tu suis. **Une de plus**, le comptage, sur les seuls appels qui demandent `page` : un appel par curseur coûte exactement ce qu’il coûtait.
      */
     get: {
       parameters: {
@@ -691,6 +710,8 @@ export interface paths {
           limit?: number;
           /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
           cursor?: string;
+          /** @description Numéro de page, à partir de 1 (maximum 1000). Exclusif avec `cursor` : les deux ensemble valent 400. En son absence, la pagination est par curseur. */
+          page?: number;
           /** @description Filtre par type d’œuvre */
           type?: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
           /** @description Filtre sur **son** statut à lui, pas le tien */
@@ -707,13 +728,24 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Page de bibliothèque */
+        /** @description Page de bibliothèque — par curseur, ou numérotée si `page` a été demandé */
         200: {
           content: {
             "application/json": {
               items: components["schemas"]["LibraryItem"][];
-              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              /** @description Curseur de la page suivante, `null` si c’est la dernière — et **toujours `null`** en pagination numérotée */
               next_cursor: string | null;
+              /** @description Renseigné quand `page` a été demandé, `null` en pagination par curseur */
+              pages: {
+                /** @description Numéro de la page rendue */
+                page: number;
+                /** @description Taille de page demandée */
+                size: number;
+                /** @description Nombre total d’éléments, filtres appliqués */
+                total: number;
+                /** @description Nombre total de pages, `0` si la liste est vide */
+                pages: number;
+              } | null;
             };
           };
         };

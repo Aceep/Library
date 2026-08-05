@@ -122,6 +122,28 @@ export interface Page<T> {
   next_cursor: string | null
 }
 
+/**
+ * Où l'on en est dans un ensemble **numéroté**, tel que le back le décrit.
+ *
+ * Le type vient du contrat plutôt que d'être réécrit ici : si le back renomme
+ * un champ, la compilation échoue au lieu de rendre `undefined` à l'écran.
+ */
+export type PageInfo = NonNullable<
+  paths['/media']['get']['responses'][200]['content']['application/json']['pages']
+>
+
+/**
+ * Une page de bibliothèque, dans **l'un des deux modes** du contrat.
+ *
+ * L'exclusion est réelle et vaut d'être connue du front : `pages` renseigné
+ * implique `next_cursor` nul, et réciproquement. On ne demande donc jamais « y
+ * a-t-il une suite » à `next_cursor` sans savoir dans quel mode on est —
+ * `pages !== null` est la seule question à poser.
+ */
+export interface NumberedPage<T> extends Page<T> {
+  pages: PageInfo | null
+}
+
 /** Les six types d'œuvres, dans l'ordre d'affichage retenu pour la navigation. */
 export const MEDIA_TYPES = ['movie', 'tv', 'book', 'comic_series', 'game', 'music'] as const
 

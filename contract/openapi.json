@@ -17656,7 +17656,7 @@
         "tags": [
           "bibliothèque"
         ],
-        "description": "La bibliothèque de toute la médiathèque. Chaque élément porte le **bloc de suivi collectif** — `tracking.me`, `tracking.following`, `tracking.others` — exactement dans la même forme que sur la fiche, et, pour les types à statut dérivé, la progression sur tes épisodes ou tes tomes.\n\n`tracking.me` est nul quand quelqu’un d’autre a ajouté l’œuvre sans que tu l’aies reprise : la fiche est commune, le suivi ne l’est pas.\n\n`tracking.following` ne contient que les membres **que tu suis** qui suivent aussi l’œuvre ; les autres sont réduits à `tracking.others` — un compte et une note moyenne. Rien n’est caché : `GET /media/:id/trackers` déplie la liste entière.\n\n**Filtres** — `type` sur l’œuvre, `status`, `owned` et `favorite` sur *ton* suivi. Filtrer sur l’un des trois écarte donc les œuvres que tu ne suis pas.\n\n**Pagination** — `limit` (défaut 40, maximum 100) et `cursor`, comme `GET /search`. Le curseur porte la clé de tri du dernier élément rendu : la page suivante reste juste même si des œuvres sont ajoutées ou retirées entre deux appels, ce qu’un décalage numérique ne garantit pas.\n\nPour la bibliothèque d’un membre plutôt que la commune, `GET /users/:id/media` rend exactement les mêmes éléments.",
+        "description": "La bibliothèque de toute la médiathèque. Chaque élément porte le **bloc de suivi collectif** — `tracking.me`, `tracking.following`, `tracking.others` — exactement dans la même forme que sur la fiche, et, pour les types à statut dérivé, la progression sur tes épisodes ou tes tomes.\n\n`tracking.me` est nul quand quelqu’un d’autre a ajouté l’œuvre sans que tu l’aies reprise : la fiche est commune, le suivi ne l’est pas.\n\n`tracking.following` ne contient que les membres **que tu suis** qui suivent aussi l’œuvre ; les autres sont réduits à `tracking.others` — un compte et une note moyenne. Rien n’est caché : `GET /media/:id/trackers` déplie la liste entière.\n\n**Filtres** — `type` sur l’œuvre, `status`, `owned` et `favorite` sur *ton* suivi. Filtrer sur l’un des trois écarte donc les œuvres que tu ne suis pas.\n\n**Pagination — deux mécanismes, et ils ne se mélangent pas.** `cursor` sert à parcourir : il porte la clé de tri du dernier élément rendu, la suite reste juste même si des œuvres sont ajoutées entre deux appels, et on s’arrête sur `next_cursor` nul. `page` sert à revenir : la réponse renseigne alors `pages` — `{ page, size, total, pages }` — de quoi dessiner « page 7 sur 12 » et rouvrir une adresse précise, ce qu’un curseur opaque ne permet pas.\n\n`page` et `cursor` ensemble valent `400`. En pagination numérotée, `next_cursor` est **toujours nul** : rendre les deux inviterait à les enchaîner. En pagination par curseur, `pages` est nul.\n\nLe numéro de page a le défaut du décalage numérique — une œuvre ajoutée pendant la lecture peut faire répéter ou sauter un élément d’une page à l’autre. C’est assumé : un rayon bouge rarement et se consulte souvent. Il coûte une requête de comptage, payée par les seuls appels qui le demandent.\n\nPour la bibliothèque d’un membre plutôt que la commune, `GET /users/:id/media` rend exactement les mêmes éléments.",
         "parameters": [
           {
             "schema": {
@@ -17678,6 +17678,17 @@
             "name": "cursor",
             "required": false,
             "description": "Curseur opaque renvoyé par la page précédente dans `next_cursor`"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "description": "Numéro de page, à partir de 1 (maximum 1000). Exclusif avec `cursor` : les deux ensemble valent 400. En son absence, la pagination est par curseur."
           },
           {
             "schema": {
@@ -17745,7 +17756,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Page de bibliothèque",
+            "description": "Page de bibliothèque — par curseur, ou numérotée si `page` a été demandé",
             "content": {
               "application/json": {
                 "schema": {
@@ -17766,15 +17777,61 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Curseur de la page suivante, `null` si c’est la dernière"
+                      "description": "Curseur de la page suivante, `null` si c’est la dernière — et **toujours `null`** en pagination numérotée"
+                    },
+                    "pages": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Numéro de la page rendue"
+                            },
+                            "size": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Taille de page demandée"
+                            },
+                            "total": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Nombre total d’éléments, filtres appliqués"
+                            },
+                            "pages": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Nombre total de pages, `0` si la liste est vide"
+                            }
+                          },
+                          "required": [
+                            "page",
+                            "size",
+                            "total",
+                            "pages"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Position dans un ensemble numéroté"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Renseigné quand `page` a été demandé, `null` en pagination par curseur"
                     }
                   },
                   "required": [
                     "items",
-                    "next_cursor"
+                    "next_cursor",
+                    "pages"
                   ],
                   "additionalProperties": false,
-                  "description": "Page de bibliothèque"
+                  "description": "Page de bibliothèque — par curseur, ou numérotée si `page` a été demandé"
                 },
                 "examples": {
                   "Réponse type": {
@@ -17842,7 +17899,8 @@
                           }
                         }
                       ],
-                      "next_cursor": "ZDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAxfDIwMjYtMDctMTU="
+                      "next_cursor": "ZDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAxfDIwMjYtMDctMTU=",
+                      "pages": null
                     }
                   }
                 }
@@ -17878,7 +17936,7 @@
         "tags": [
           "membres"
         ],
-        "description": "Les œuvres que **ce membre** suit — ce que `tracked_count` compte sur son profil, déplié. Consultable pour n’importe qui, désactivé compris : tout est public, l’abonnement ne fait que trier.\n\n**La réponse a exactement la forme de `GET /media`** — même schéma, même bloc de suivi collectif, même progression, même pagination. C’est délibéré : la même carte s’affiche sur la bibliothèque et sur un profil, sans écrire deux composants.\n\nTout y reste rendu **de ton point de vue** : `tracking.me` est ton suivi à toi — souvent nul sur le profil de quelqu’un d’autre, c’est normal —, `progress` ta progression sur tes épisodes ou tes tomes. Avec une exception nécessaire : **le membre dont c’est le profil est toujours détaillé dans `tracking.following`**, que tu le suives ou non, et il ne compte alors pas dans `tracking.others`. Sans elle, sa propre page cacherait ses propres notes derrière un résumé.\n\n**Filtres** — `type` sur l’œuvre, `status`, `owned` et `favorite` sur **son** suivi à lui. C’est l’inverse de `GET /media`, où ils portent sur le tien. `?favorite=true` sur un profil, c’est « ce qu’il a adoré ».\n\n**Tri** — `rating` par défaut : ses meilleures notes d’abord, ses œuvres non notées en fin de liste. `added` et `title` se comportent comme sur `GET /media`.\n\n`GET /users/me/media` fonctionne comme raccourci vers la session, comme sur `following` et `followers`.\n\n**Coût** — quatre requêtes par page, quel que soit le nombre de membres de la médiathèque et quel que soit le nombre de personnes que tu suis.",
+        "description": "Les œuvres que **ce membre** suit — ce que `tracked_count` compte sur son profil, déplié. Consultable pour n’importe qui, désactivé compris : tout est public, l’abonnement ne fait que trier.\n\n**La réponse a exactement la forme de `GET /media`** — même schéma, même bloc de suivi collectif, même progression, même pagination. C’est délibéré : la même carte s’affiche sur la bibliothèque et sur un profil, sans écrire deux composants.\n\nTout y reste rendu **de ton point de vue** : `tracking.me` est ton suivi à toi — souvent nul sur le profil de quelqu’un d’autre, c’est normal —, `progress` ta progression sur tes épisodes ou tes tomes. Avec une exception nécessaire : **le membre dont c’est le profil est toujours détaillé dans `tracking.following`**, que tu le suives ou non, et il ne compte alors pas dans `tracking.others`. Sans elle, sa propre page cacherait ses propres notes derrière un résumé.\n\n**Filtres** — `type` sur l’œuvre, `status`, `owned` et `favorite` sur **son** suivi à lui. C’est l’inverse de `GET /media`, où ils portent sur le tien. `?favorite=true` sur un profil, c’est « ce qu’il a adoré ».\n\n**Tri** — `rating` par défaut : ses meilleures notes d’abord, ses œuvres non notées en fin de liste. `added` et `title` se comportent comme sur `GET /media`.\n\n`GET /users/me/media` fonctionne comme raccourci vers la session, comme sur `following` et `followers`.\n\n**Pagination** — les deux mécanismes de `GET /media`, avec les mêmes règles : `cursor` pour parcourir, `page` pour revenir, jamais les deux ensemble.\n\n**Coût** — quatre requêtes par page, quel que soit le nombre de membres de la médiathèque et quel que soit le nombre de personnes que tu suis. **Une de plus**, le comptage, sur les seuls appels qui demandent `page` : un appel par curseur coûte exactement ce qu’il coûtait.",
         "parameters": [
           {
             "schema": {
@@ -17900,6 +17958,17 @@
             "name": "cursor",
             "required": false,
             "description": "Curseur opaque renvoyé par la page précédente dans `next_cursor`"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "description": "Numéro de page, à partir de 1 (maximum 1000). Exclusif avec `cursor` : les deux ensemble valent 400. En son absence, la pagination est par curseur."
           },
           {
             "schema": {
@@ -17988,7 +18057,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Page de bibliothèque",
+            "description": "Page de bibliothèque — par curseur, ou numérotée si `page` a été demandé",
             "content": {
               "application/json": {
                 "schema": {
@@ -18009,15 +18078,61 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Curseur de la page suivante, `null` si c’est la dernière"
+                      "description": "Curseur de la page suivante, `null` si c’est la dernière — et **toujours `null`** en pagination numérotée"
+                    },
+                    "pages": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Numéro de la page rendue"
+                            },
+                            "size": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Taille de page demandée"
+                            },
+                            "total": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Nombre total d’éléments, filtres appliqués"
+                            },
+                            "pages": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "Nombre total de pages, `0` si la liste est vide"
+                            }
+                          },
+                          "required": [
+                            "page",
+                            "size",
+                            "total",
+                            "pages"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Position dans un ensemble numéroté"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Renseigné quand `page` a été demandé, `null` en pagination par curseur"
                     }
                   },
                   "required": [
                     "items",
-                    "next_cursor"
+                    "next_cursor",
+                    "pages"
                   ],
                   "additionalProperties": false,
-                  "description": "Page de bibliothèque"
+                  "description": "Page de bibliothèque — par curseur, ou numérotée si `page` a été demandé"
                 },
                 "examples": {
                   "Réponse type": {
@@ -18072,7 +18187,13 @@
                           }
                         }
                       ],
-                      "next_cursor": null
+                      "next_cursor": null,
+                      "pages": {
+                        "page": 1,
+                        "size": 40,
+                        "total": 62,
+                        "pages": 2
+                      }
                     }
                   }
                 }

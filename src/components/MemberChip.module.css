@@ -1,0 +1,23 @@
+/**
+ * Bordée, jamais remplie. C'est la contrepartie exacte de l'étiquette de
+ * rayon, qui elle est un aplat — la paire ne tient que par cette différence.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--identity, var(--ink-2));
+  border: 1.5px solid var(--identity, var(--rule));
+  padding: 3px 7px;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* Dans une ligne de trace, la pastille ne doit pas peser plus que l'heure. */
+.sm {
+  font-size: 9.5px;
+  padding: 2px 5px;
+  border-width: 1px;
+}

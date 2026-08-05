@@ -1,0 +1,47 @@
+/**
+ * L'entrée d'une section, et l'échelonnement de ses enfants.
+ *
+ * Douze règles statiques plutôt qu'une boucle qui écrirait
+ * `style.transitionDelay` sur chaque nœud : rien à muter, rien à nettoyer, et
+ * surtout le résultat **survit à un rendu de React**, qui réécrit `style`.
+ *
+ * Au-delà du douzième enfant tout le monde partage le dernier délai : une liste
+ * longue ne doit pas mettre trois secondes à finir d'apparaître.
+ */
+.reveal > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity var(--dur-reveal) var(--ease-rise),
+    transform var(--dur-reveal) var(--ease-rise);
+}
+
+.reveal[data-revealed] > * {
+  opacity: 1;
+  transform: none;
+}
+
+.reveal[data-revealed] > *:nth-child(2) { transition-delay: calc(1 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(3) { transition-delay: calc(2 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(4) { transition-delay: calc(3 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(5) { transition-delay: calc(4 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(6) { transition-delay: calc(5 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(7) { transition-delay: calc(6 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(8) { transition-delay: calc(7 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(9) { transition-delay: calc(8 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(10) { transition-delay: calc(9 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(11) { transition-delay: calc(10 * var(--stagger-reveal)); }
+.reveal[data-revealed] > *:nth-child(n + 12) { transition-delay: calc(11 * var(--stagger-reveal)); }
+
+/**
+ * Mouvement réduit : rien ne bouge, et surtout **rien ne reste caché**. Une
+ * transition neutralisée depuis `opacity: 0` laisserait la page blanche —
+ * c'est l'état masqué qu'il faut lever, pas seulement la durée.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .reveal > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

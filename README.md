@@ -12,11 +12,58 @@ sert aux tests et réclame `^22.22.2 || ^24.15.0 || >=26.0.0` : sous Node 20 il
 plante au chargement et aucun test ne démarre. `npm ci --engine-strict` le
 refuse à l'installation plutôt que de laisser la casse arriver à l'exécution.
 
+Deux façons de tenir cette version : la déléguer au conteneur, ou la poser soi-même.
+
+### En conteneur
+
+La version de Node cesse d'être une question, et suit `.nvmrc` à mesure qu'il
+bouge. Une seule préparation, propre à chaque poste — `.env` porte ton uid/gid,
+sans quoi les fichiers écrits depuis le conteneur (`dist/`, `node_modules`)
+reviennent en root et ne s'effacent plus sans `sudo` :
+
+```bash
+printf 'UID=%s\nGID=%s\n' "$(id -u)" "$(id -g)" > .env
+docker compose up        # http://localhost:5173
+```
+
+Le code est monté en direct, le rechargement à chaud fonctionne. `npm ci` tourne
+au démarrage ; son cache vit dans un volume, donc les lancements suivants
+prennent quelques secondes.
+
+Les vérifications passent par là, où Node est à la bonne version :
+
+```bash
+docker compose exec front npm run lint
+docker compose exec front npm test
+```
+
+Ici `VITE_API_TARGET` est une variable du conteneur : elle se pose dans `.env`,
+que `docker compose` lit — **pas** dans `.env.local`, qui ne vaut qu'au
+lancement direct. Son défaut vise `host.docker.internal`, l'équivalent en
+conteneur du `localhost` de `vite.config.ts`, où `localhost` désignerait le
+conteneur lui-même. `FRONT_PORT=5174 docker compose up` si le port est déjà pris.
+
+`Dockerfile.dev` et `docker-compose.yml` ne servent qu'au développement. Le
+`Dockerfile` de la racine est celui de production : il compile, sert le résultat
+par nginx, et n'embarque aucun outil de dev.
+
+### Directement
+
 ```bash
 nvm use            # ou : export PATH=$HOME/.nvm/versions/node/v24.15.0/bin:$PATH
+node -v            # v24.x — la vérification qui évite les deux pièges ci-dessous
 npm install
 npm run dev        # http://localhost:5173
 ```
+
+Sur un Node antérieur à 20, `npm run dev` s'arrête sur un `SyntaxError:
+Unexpected reserved word` venu de `vite.js` : c'est son `await` de haut niveau
+que le vieux Node ne sait pas lire, et le message ne nomme jamais Node. Une
+version installée de longue date sur le poste suffit à tomber dessus.
+
+Si Vite annonce un port autre que 5173, un serveur de dev traîne déjà et Vite a
+glissé sur le suivant — l'onglet resté sur `:5173` sert alors du code qui n'est
+plus le tien. `ss -lptn | grep 517` donne le coupable.
 
 Comptes de développement : `alice` / `alice-dev-password` (rôle `admin`),
 `bob` / `bob-dev-password`. L'instance de démo compte aussi `camille`, `dan` et

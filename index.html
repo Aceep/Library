@@ -3,8 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <meta name="color-scheme" content="light" />
+  <!-- La nuit d'abord : c'est l'état naturel de l'interface, et cet ordre peint
+       le canvas du navigateur avant que la CSS n'arrive. -->
+  <meta name="color-scheme" content="dark light" />
   <title>Médiathèque partagée</title>
+  <script>
+    /**
+     * Le mode, avant la première peinture.
+     *
+     * Sans ce script, la page s'affiche une fraction de seconde en nuit avant
+     * de passer en jour — un clignotement que rien ne rattrape, parce que React
+     * n'a la main qu'après la peinture.
+     *
+     * `data-mode` vaut donc toujours `dark` ou `light`, jamais rien : c'est ce
+     * qui autorise `tokens.css` à n'avoir que deux blocs de palette et aucune
+     * copie sous `prefers-color-scheme`.
+     *
+     * Le `try/catch` n'est pas décoratif : `localStorage` **lève** en navigation
+     * privée Safari et sous certains blocages tiers, et l'exception laisserait
+     * la page sans `data-mode` du tout.
+     */
+    ;(function () {
+      var mode = null
+      try {
+        mode = localStorage.getItem('mediatheque:mode')
+      } catch (e) {
+        /* stockage refusé — on retombe sur la préférence système */
+      }
+      if (mode !== 'light' && mode !== 'dark') {
+        mode =
+          window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+            ? 'light'
+            : 'dark'
+      }
+      document.documentElement.setAttribute('data-mode', mode)
+    })()
+  </script>
 </head>
 <body>
   <div id="root"></div>

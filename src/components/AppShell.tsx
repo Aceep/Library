@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { useSession } from '../session/SessionContext'
+import { useThemeMode } from '../theme/useThemeMode'
 import AppFooter from './AppFooter'
 import BackupAlert from './BackupAlert'
 import NotificationsLink from './NotificationsLink'
@@ -9,6 +10,31 @@ import styles from './AppShell.module.css'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
+
+/**
+ * L'interrupteur Jour / Nuit.
+ *
+ * Le libellé annonce **où l'on va**, pas où l'on est : en nuit il dit « Jour ».
+ * C'est la convention de la maquette, et celle des interrupteurs en général.
+ *
+ * Pas d'`aria-pressed` : ce n'est pas un état activé ou non, c'est une bascule
+ * entre deux valeurs nommées — `aria-label` porte la phrase entière.
+ */
+export function ThemeToggle() {
+  const { mode, toggle } = useThemeMode()
+  const cible = mode === 'dark' ? 'jour' : 'nuit'
+
+  return (
+    <button
+      type="button"
+      className={styles.themeToggle}
+      onClick={toggle}
+      aria-label={`Passer en mode ${cible}`}
+    >
+      {mode === 'dark' ? 'Jour' : 'Nuit'}
+    </button>
+  )
+}
 
 export default function AppShell() {
   const { isAdmin } = useSession()
@@ -62,6 +88,7 @@ export default function AppShell() {
             <NavLink to="/recherche" className={styles.searchLink}>
               Ajouter une œuvre
             </NavLink>
+            <ThemeToggle />
             <AccountMenu />
           </div>
         </div>

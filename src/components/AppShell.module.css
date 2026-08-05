@@ -129,3 +129,23 @@
   display: inline-flex;
   gap: var(--s-2);
 }
+
+/* Jour / Nuit — sourd au repos, doré au survol comme tout ce qui s'actionne. */
+.themeToggle {
+  background: none;
+  border: var(--rule-w) solid var(--rule);
+  color: var(--muted);
+  font: var(--eyebrow);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: var(--s-2) var(--s-3);
+  white-space: nowrap;
+  transition:
+    color var(--dur-2) var(--ease-page),
+    border-color var(--dur-2) var(--ease-page);
+}
+
+.themeToggle:hover {
+  color: var(--gold-text);
+  border-color: var(--gold);
+}

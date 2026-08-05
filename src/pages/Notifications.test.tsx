@@ -97,11 +97,8 @@ describe('Notifications', () => {
     expect(screen.getByRole('button', { name: 'Tout marquer comme lu' })).toBeDisabled()
   })
 
-  /**
-   * Les quêtes n'ont pas encore d'écran : leur notification s'affiche, mais
-   * sans lien. Un lien vers « bientôt disponible » serait pire que rien.
-   */
-  it('lie vers l’œuvre quand il y en a une, pas vers une quête', async () => {
+  /** Chaque notification mène à son sujet : une fiche, ou la quête. */
+  it('lie vers l’œuvre, ou vers la quête', async () => {
     fetchNotifications.mockResolvedValue(
       page(
         [
@@ -111,6 +108,7 @@ describe('Notifications', () => {
             kind: 'quest_published',
             label: 'Nouvelle quête : Trois films pour commencer',
             media: null,
+            quest: { id: '00000000-0000-4000-8000-0000000000e1', title: 'Trois films' },
           }),
         ],
         2,
@@ -123,6 +121,9 @@ describe('Notifications', () => {
       'href',
       '/media/00000000-0000-4000-8000-0000000000aa',
     )
-    expect(within(lignes[1]).queryByRole('link')).toBeNull()
+    expect(within(lignes[1]).getByRole('link')).toHaveAttribute(
+      'href',
+      '/quetes/00000000-0000-4000-8000-0000000000e1',
+    )
   })
 })

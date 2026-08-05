@@ -29,14 +29,17 @@ const KIND_LABELS: Record<NotificationKind, string> = {
 }
 
 /**
- * Où mène une notification.
+ * Où mène une notification : la fiche de l'œuvre, ou la quête concernée.
  *
- * Les quêtes n'ont pas encore d'écran : leur notification s'affiche, mais sans
- * lien — mieux vaut une ligne qu'on lit qu'un lien qui mène à « bientôt
- * disponible ». Elle en recevra un à l'étape des quêtes.
+ * Les deux ne coexistent jamais — une notification de quête n'a pas de `media`,
+ * et l'inverse. L'ordre n'a donc pas d'importance, mais l'explicite reste
+ * préférable à un `??` qui masquerait un troisième cas le jour venu.
  */
-const subjectLink = (notification: NotificationItem): string | null =>
-  notification.media ? `/media/${notification.media.id}` : null
+const subjectLink = (notification: NotificationItem): string | null => {
+  if (notification.media) return `/media/${notification.media.id}`
+  if (notification.quest) return `/quetes/${notification.quest.id}`
+  return null
+}
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })

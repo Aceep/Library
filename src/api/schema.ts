@@ -244,3 +244,36 @@ export type WatchList =
   paths['/watches']['get']['responses'][200]['content']['application/json']
 
 export type WatchItem = WatchList['items'][number]
+
+// ---------------------------------------------------------------------------
+// Les quêtes (§12)
+// ---------------------------------------------------------------------------
+
+/**
+ * Une quête : une liste d'œuvres **choisies à la main** par un administrateur,
+ * avec un titre et une raison. Le thème n'est pas un critère calculé — c'est
+ * pourquoi ces œuvres-là ont été réunies.
+ *
+ * La progression se lit dans le suivi existant, donc **rétroactivement** : une
+ * quête publiée aujourd'hui peut être achevée d'emblée par qui a déjà tout
+ * terminé. Une œuvre compte quand elle est terminée.
+ */
+export type QuestListResponse =
+  paths['/quests']['get']['responses'][200]['content']['application/json']
+
+export type QuestSummary = QuestListResponse['items'][number]
+
+export type QuestResponse =
+  paths['/quests/{id}']['get']['responses'][200]['content']['application/json']
+
+export type Quest = QuestResponse['quest']
+
+export type QuestItem = Quest['items'][number]
+
+/** Où en sont les autres. Tout est public — les achevées d'abord. */
+export type QuestStanding = Quest['standings'][number]
+
+/** Le badge que la quête décerne. Jamais repris une fois obtenu. */
+export type Badge = Quest['badge']
+
+export type QuestStatus = Quest['status']

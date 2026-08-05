@@ -167,6 +167,10 @@ erreurs, ou des affichages faux.
 | Les `503` ne concernent que la recherche externe | Dégradation sur place dans l'onglet, jamais de page d'erreur globale. |
 | `POST /media` → `created: false` n'est pas une erreur | L'ajout est idempotent : on ouvre la fiche dans les deux cas, sans message de doublon. |
 | `cover_url` ment souvent | Nulle, ou pointant vers une image absente. `Cover` réagit aussi à l'échec de chargement. |
+| La progression d'une quête est **rétroactive** | Elle se lit dans le suivi qui existait déjà : une quête publiée aujourd'hui peut être achevée d'emblée. Rien à cocher côté quête. |
+| `required` et `total` ne sont pas la même chose | `total` = les œuvres de la quête, `required` = combien il en faut. Égaux sauf si un seuil est fixé. Afficher « 3/7 » sur une quête de dix sans le dire se lit comme un bug. |
+| Publier une quête **notifie et ne se défait pas** | Une quête publiée ne redevient jamais brouillon, et une quête vide ne se publie pas. L'écran le dit **avant** le clic. |
+| Un badge n'est **jamais repris** | C'est un fait daté, pas un état courant. |
 | La veille est **sans rapport** avec le suivi et la possession | On surveille une série qu'on n'a pas commencée ; on peut avoir tout lu d'un manga sans vouloir la suite. Rien n'est écrit dans `tracking`. Le bouton vit donc hors du panneau de suivi, et les écrans le disent. |
 | Lever une veille ne réécrit pas le passé | Les notifications reçues restent — une nouveauté qu'on a lue a bien eu lieu. Et la reposer pose un **nouveau** repère : ce qui est paru entre-temps ne notifiera jamais. |
 | Une saga contient des œuvres **absentes** de la médiathèque | `in_library: false`, `media: null`. Ce n'est pas un trou dans la donnée, c'est le sujet : c'est cette ligne-là que la veille surveille. Elles **comptent au dénominateur** de `progress` — « 1 sur 3 » reste vrai quand deux parties n'ont pas de fiche, et l'écran doit le dire, sans quoi on lit « il m'en reste deux à voir ». |
@@ -201,10 +205,11 @@ src/
               TrackingPanel, MediaMetadata, MediaLog, Availability, SeasonList,
               VolumeGrid, Showcase, MemberLibrary, FollowButton, IdentityDot,
               ErrorNotice, ErrorBoundary, EmptyState, NotificationsLink, SagaList,
-              WatchToggle
+              WatchToggle, QuestProgress
   pages/      Login, Dashboard, TypeLibrary, MediaDetail, Search, Compare,
               Members, UserProfile, MyAccount, About, Invitation,
-              AdminInvitations, AdminUsers, ComingSoon
+              AdminInvitations, AdminUsers, Notifications, Saga, Watches,
+              Quests, Quest
   styles/     tokens.css, global.css
   test/       setup.ts, render.tsx — providers et échantillons des tests
 ```
@@ -226,6 +231,7 @@ par un lien reçu, sans compte.
 | `/bibliotheque/:type` | Un rayon, filtrable, paginé au curseur. Six types, `music` compris — sur un rayon de musique, le filtre « en cours » ne s'affiche pas |
 | `/media/:id` | Fiche : métadonnées, mon suivi, ceux des abonnements, saisons ou tomes, mon journal daté, et — films et séries — où regarder |
 | `/recherche` | Chercher chez les sources externes et ajouter |
+| `/quetes` · `/quetes/:id` | Les quêtes, ma progression sur chacune, et où en sont les autres. Un administrateur y crée, règle le seuil et l'échéance, ajoute des œuvres **même absentes de la médiathèque**, et publie |
 | `/veille` | Ce que je surveille — œuvres et sagas mêlées, avec le repère (`since`) et la prochaine vérification |
 | `/sagas/:id` | Une saga : ses parties dans l'ordre de sortie, ma progression, la veille. **Les parties absentes de la médiathèque y figurent** et comptent au dénominateur |
 | `/notifications` | Les nouveautés : épisodes et tomes parus, œuvres ajoutées à une saga, quêtes. Filtrable sur les non lues, marquage à l'unité ou en bloc |

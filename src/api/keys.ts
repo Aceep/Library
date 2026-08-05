@@ -24,6 +24,13 @@ export const queryKeys = {
   sagas: ['saga'] as const,
   /** Mes veilles. Un basculement depuis n'importe quel écran périme la liste. */
   watches: ['watches'] as const,
+  /**
+   * Les quêtes. Préfixe commun : terminer une œuvre change la progression de
+   * toutes celles qui la contiennent, et l'écriture d'un administrateur périme
+   * la liste autant que la fiche.
+   */
+  quests: ['quests'] as const,
+  quest: (id: string) => ['quests', id] as const,
   home: ['home'] as const,
   compare: ['compare'] as const,
   compareWith: (userId: string) => ['compare', userId] as const,

@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from './components/AppShell'
 import ErrorNotice from './components/ErrorNotice'
 import About from './pages/About'
-import ComingSoon from './pages/ComingSoon'
 import Compare from './pages/Compare'
 import AdminInvitations from './pages/AdminInvitations'
 import AdminUsers from './pages/AdminUsers'
@@ -11,6 +10,8 @@ import Invitation from './pages/Invitation'
 import Login from './pages/Login'
 import Members from './pages/Members'
 import Notifications from './pages/Notifications'
+import Quest from './pages/Quest'
+import Quests from './pages/Quests'
 import Saga from './pages/Saga'
 import Watches from './pages/Watches'
 import MediaDetail from './pages/MediaDetail'
@@ -93,15 +94,8 @@ function GatedApp() {
               adresse survit en redirection : elle a été en navigation, elle est
               peut-être dans un signet. */}
           <Route path="musique" element={<Navigate to="/bibliotheque/music" replace />} />
-          <Route
-            path="quetes"
-            element={
-              <ComingSoon
-                title="Quêtes"
-                note="Les quêtes sont en cours de développement côté API. Les jeux vidéo, eux, ont déjà leur rayon à part entière."
-              />
-            }
-          />
+          <Route path="quetes" element={<Quests />} />
+          <Route path="quetes/:id" element={<Quest />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

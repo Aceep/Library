@@ -89,7 +89,11 @@ export const REFERENCE: ReferenceStatuses = {
  */
 export function renderWithProviders(
   ui: ReactElement,
-  { route = '/', reference = REFERENCE }: { route?: string; reference?: ReferenceStatuses } = {},
+  {
+    route = '/',
+    reference = REFERENCE,
+    session = SESSION,
+  }: { route?: string; reference?: ReferenceStatuses; session?: Session } = {},
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -98,7 +102,7 @@ export function renderWithProviders(
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
-        <SessionProvider session={SESSION}>
+        <SessionProvider session={session}>
           <ReferenceProvider reference={reference}>{ui}</ReferenceProvider>
         </SessionProvider>
       </MemoryRouter>
@@ -116,6 +120,9 @@ export const ACCOUNT: Account = {
 }
 
 export const SESSION: Session = { user: ACCOUNT }
+
+/** Le même compte, en administrateur — pour les écrans qui en ouvrent plus. */
+export const ADMIN_SESSION: Session = { user: { ...ACCOUNT, role: 'admin' } }
 
 /** Un suivi complet — tous les champs du contrat sont requis, aucun n'est optionnel. */
 export const tracking = (over: Partial<UserTracking> = {}): UserTracking => ({

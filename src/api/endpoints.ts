@@ -13,6 +13,9 @@ import type {
   NotificationList,
   NotificationRead,
   Page,
+  QuestListResponse,
+  QuestResponse,
+  QuestStatus,
   ReferenceStatuses,
   RefreshResponse,
   SagaResponse,
@@ -781,3 +784,52 @@ export const setMediaWatch = (id: string, watched: boolean) =>
   watched
     ? api.put<{ watched: boolean }>(`/media/${id}/watch`)
     : api.delete<{ watched: boolean }>(`/media/${id}/watch`)
+
+// --- Quêtes (§12) ----------------------------------------------------------
+
+/**
+ * Les quêtes visibles, avec **ma** progression sur chacune. Les brouillons
+ * n'apparaissent que pour un administrateur.
+ */
+export const fetchQuests = (signal?: AbortSignal) =>
+  api.get<QuestListResponse>('/quests', undefined, signal)
+
+export const fetchQuest = (id: string, signal?: AbortSignal) =>
+  api.get<QuestResponse>(`/quests/${id}`, undefined, signal)
+
+export interface QuestBody {
+  title?: string
+  description?: string | null
+  /** « Sept sur dix ». Nul = il faut tout terminer. */
+  threshold?: number | null
+  due_at?: string | null
+  /** Publier rend la quête visible de tous **et notifie**. Sans retour. */
+  status?: QuestStatus
+}
+
+export const createQuest = (body: QuestBody) => api.post<QuestResponse>('/quests', body)
+
+export const updateQuest = (id: string, body: QuestBody) =>
+  api.patch<QuestResponse>(`/quests/${id}`, body)
+
+export const deleteQuest = (id: string) => api.delete<void>(`/quests/${id}`)
+
+/**
+ * Ajouter une œuvre à une quête, de deux façons — et **la seconde est le cœur
+ * de l'étape** :
+ *
+ * - `{ media_id }` quand l'œuvre est déjà dans la bibliothèque commune ;
+ * - `{ source, external_id, type }` sinon. L'œuvre est alors cherchée chez la
+ *   source et **entre dans la bibliothèque** au passage. Sans cette forme, un
+ *   administrateur ne pourrait proposer que ce que quelqu'un a déjà ajouté, et
+ *   une quête ne serait qu'un résumé du passé.
+ */
+export type QuestItemBody =
+  | { media_id: string }
+  | { source: MediaSource; external_id: string; type: MediaType }
+
+export const addQuestItem = (id: string, body: QuestItemBody) =>
+  api.post<QuestResponse & { media_created?: boolean }>(`/quests/${id}/items`, body)
+
+export const removeQuestItem = (id: string, mediaId: string) =>
+  api.delete<QuestResponse>(`/quests/${id}/items/${mediaId}`)

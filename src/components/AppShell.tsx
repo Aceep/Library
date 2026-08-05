@@ -6,19 +6,6 @@ import NotificationsLink from './NotificationsLink'
 import IdentityDot from './IdentityDot'
 import styles from './AppShell.module.css'
 
-/**
- * Sections annoncées mais pas encore câblées ici.
- *
- * La musique n'y est plus : elle a son rayon depuis l'étape 11, servi par
- * `MEDIA_TYPES` juste au-dessus, et la laisser produisait deux entrées
- * « Musique » dans la même barre.
- *
- * Libellés en français comme le reste : l'application n'a pas d'i18n, et une
- * entrée en anglais au milieu de « Livres » et « Séries » se lit comme un autre
- * produit.
- */
-const PENDING_SECTIONS = [{ to: '/quetes', label: 'Quêtes' }]
-
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
 
@@ -49,19 +36,9 @@ export default function AppShell() {
               Comparer
             </NavLink>
             <span className={styles.navSeparator} aria-hidden="true" />
-            {PENDING_SECTIONS.map((section) => (
-              <NavLink
-                key={section.to}
-                to={section.to}
-                className={({ isActive }) =>
-                  isActive
-                    ? `${styles.navLink} ${styles.navLinkPending} ${styles.navLinkActive}`
-                    : `${styles.navLink} ${styles.navLinkPending}`
-                }
-              >
-                {section.label}
-              </NavLink>
-            ))}
+            <NavLink to="/quetes" className={navClass}>
+              Quêtes
+            </NavLink>
           </nav>
 
           <div className={styles.account}>

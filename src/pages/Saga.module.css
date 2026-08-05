@@ -36,7 +36,7 @@
 .progress {
   margin-top: var(--space-5);
   padding-left: var(--space-4);
-  border-left: var(--rule-w-strong) solid var(--rule-strong);
+  border-left: var(--rule-w-strong) solid var(--rule);
 }
 
 .progressLine {
@@ -59,7 +59,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .part {
@@ -67,7 +67,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
 }
 
 /* La partie absente s'efface sans disparaître : elle compte au dénominateur,

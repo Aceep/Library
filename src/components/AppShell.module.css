@@ -7,105 +7,198 @@
 /**
  * Le bandeau est un filet, pas une barre : fond de page, une règle en bas, et
  * rien qui flotte. L'élévation est réservée à ce qui flotte réellement.
+ *
+ * `isolation: isolate` le sort du contexte d'empilement du faisceau de
+ * l'accueil, qui est en `position: absolute` sous tout le contenu.
  */
 .header {
-  border-bottom: var(--rule-w) solid var(--ink);
-  background: var(--surface-page);
+  border-bottom: var(--rule-w) solid var(--rule);
+  background: var(--bg);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 50;
+  isolation: isolate;
 }
 
 .headerInner {
   max-width: var(--max-content);
   margin: 0 auto;
-  padding: var(--s-4) var(--page-margin);
-  display: flex;
+  padding: 0 var(--page-margin);
+  height: var(--masthead-h);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--s-5);
-  flex-wrap: wrap;
+  gap: var(--s-6);
 }
 
 .brand {
   font-family: var(--font-serif);
-  font-size: 22px;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-size: 31px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* La moitié italique est de l'ambre : c'est de la structure, pas une action. */
+.brandItalic {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--amber);
+}
+
+/* ---- Les rayons ---- */
+
+/**
+ * Six rayons composés à l'identique, plus « Tous ». Ils filtrent un fonds
+ * unique — ce ne sont pas six destinations à l'identité propre —, et seule
+ * leur teinte les distingue : le gel arrive par `data-media-type`.
+ *
+ * 10,5px et non les 12 de la maquette, et c'est arithmétique : elle nomme ses
+ * rayons « Manga » et « Jeux », le dépôt les nomme « Mangas & BD » et « Jeux
+ * vidéo » — ce sont les noms justes de ces rayons, et on ne les abrège pas
+ * pour tenir dans une maquette. Sept pastilles à 12px demanderaient ~700px là
+ * où la rangée en a ~510 (`--max-content` plafonne à 1360 : il n'existe pas de
+ * cas plus large à dessiner).
+ */
+.rayons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* La vue sans filtre. Dorée parce qu'elle est le geste par défaut. */
+.rayonAll {
+  color: var(--gold-ink);
+  background: var(--gold);
+  font-weight: 600;
+  padding: 8px 10px;
+  border: var(--rule-w) solid var(--gold);
+  box-shadow: var(--block);
   flex: none;
 }
 
-.nav {
-  display: flex;
-  align-items: center;
-  gap: var(--s-5);
-  flex-wrap: wrap;
-  flex: 1;
+/**
+ * L'ombre en bloc — décalée, sans flou — est le langage de la petite chrome.
+ * Le grand contenu prend `--lift`, qui est flou. Jamais les deux ensemble.
+ */
+.rayon {
+  color: var(--type-hue);
+  padding: 8px 10px;
+  border: var(--rule-w) solid var(--rule);
+  box-shadow: 0 0 0 0 var(--rule);
+  flex: none;
+  transition:
+    box-shadow var(--dur-3) var(--ease-rise),
+    transform var(--dur-3) var(--ease-rise),
+    border-color var(--dur-2) var(--ease-page),
+    background var(--dur-2) var(--ease-page);
 }
 
-/* Navigation en sourcils : petites capitales, filet actif de 2px. */
-.navLink {
-  font: var(--eyebrow);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-  padding-bottom: 4px;
-  border-bottom: var(--rule-w-strong) solid transparent;
-  white-space: nowrap;
-  transition: color var(--dur-2) var(--ease-page);
+.rayon:hover,
+.rayonActive {
+  border-color: var(--type-hue);
+  background: color-mix(in oklab, var(--gel) 14%, transparent);
+  box-shadow: 4px 4px 0 0 var(--type-hue);
+  transform: translate(-2px, -2px);
 }
 
-.navLink:hover {
-  color: var(--ink);
-}
-
-.navLinkActive {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-
-.navLinkPending {
-  color: var(--ink-faint);
-}
-
-.navSeparator {
-  width: var(--rule-w);
-  height: 12px;
-  background: var(--rule-strong);
-}
+/* ---- Le groupe de droite ---- */
 
 .account {
   display: flex;
   align-items: center;
   gap: var(--s-4);
   flex: none;
+  justify-self: end;
 }
 
-/* Contrôle standard : 44px de cible, rayon nul, un filet qui se ferme. */
-.searchLink,
-.adminLink {
-  display: inline-flex;
+/* Le champ de recherche : petite chrome, donc ombre en bloc et survol doré. */
+.search {
+  display: flex;
   align-items: center;
-  min-height: 44px;
-  font: var(--eyebrow);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
+  gap: var(--s-3);
   border: var(--rule-w) solid var(--rule);
-  padding: 0 var(--s-4);
-  white-space: nowrap;
-  transition: border-color var(--dur-2) var(--ease-page);
+  background: var(--surface);
+  padding: var(--s-2) var(--s-3);
+  flex: 0 1 210px;
+  min-width: 108px;
+  box-shadow: var(--block);
+  transition:
+    border-color var(--dur-3) var(--ease-page),
+    box-shadow var(--dur-3) var(--ease-page);
 }
 
-.searchLink:hover,
-.adminLink:hover {
-  border-color: var(--ink);
+.search:focus-within,
+.search:hover {
+  border-color: var(--gold);
+  box-shadow: 4px 4px 0 0 var(--gold);
+}
+
+.searchLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-text);
+  flex: none;
+}
+
+/* L'invite est de la voix humaine : italique, et dans le crème réservé. */
+.searchInput {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 16px;
   color: var(--ink);
+  background: none;
+  border: none;
+  padding: 0;
+  min-width: 0;
+  flex: 1;
 }
 
-/**
- * Le champ de la page : marges et largeur maximale viennent des jetons, donc
- * les quatre paliers se règlent dans `tokens.css` et nulle part ailleurs.
- */
+.searchInput::placeholder {
+  color: var(--voice);
+  opacity: 0.75;
+}
+
+.searchInput:focus {
+  outline: none;
+}
+
+/* Jour / Nuit — sourd au repos, doré au survol comme tout ce qui s'actionne. */
+.themeToggle {
+  background: none;
+  border: var(--rule-w) solid var(--rule);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: var(--s-2) var(--s-3);
+  white-space: nowrap;
+  flex: none;
+  transition:
+    color var(--dur-2) var(--ease-page),
+    border-color var(--dur-2) var(--ease-page);
+}
+
+.themeToggle:hover {
+  color: var(--gold-text);
+  border-color: var(--gold);
+}
+
+/* ---- Le contenu ---- */
+
 .main {
   flex: 1;
   max-width: var(--max-content);
@@ -114,18 +207,58 @@
   padding: var(--s-8) var(--page-margin) var(--s-10);
 }
 
+/**
+ * L'accueil, et lui seul, va d'un bord à l'autre : sa bannière porte son propre
+ * fond et son ticker traverse l'écran. La contrainte de largeur descend alors
+ * dans chaque section de la page — elle ne disparaît pas.
+ */
+.main[data-bleed] {
+  max-width: none;
+  padding: 0;
+}
+
+/* L'alerte garde sa gouttière même quand la page est à pleine largeur. */
+.main[data-bleed] .alertSlot:not(:empty) {
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: var(--s-5) var(--page-margin) 0;
+}
+
+/**
+ * Paliers — repris de la maquette. Sous 1180px la nav des rayons disparaît : la
+ * bibliothèque reste accessible par l'accueil, et six pastilles compressées ne
+ * se lisent plus.
+ */
+@media (max-width: 1180px) {
+  .rayons {
+    display: none;
+  }
+}
+
 @media (max-width: 767px) {
+  /* Deux colonnes seulement — la nav est déjà repliée, et la colonne du milieu
+     laissée vide poussait la marque sous le groupe de droite. */
   .headerInner {
+    grid-template-columns: auto auto;
+    justify-content: space-between;
     gap: var(--s-3);
+    height: auto;
     padding: var(--s-3) var(--page-margin);
+  }
+
+  .brand {
+    font-size: 22px;
+  }
+
+  .account {
+    gap: var(--s-3);
+  }
+
+  .search {
+    display: none;
   }
 
   .main {
     padding: var(--s-6) var(--page-margin) var(--s-8);
   }
-}
-
-.adminGroup {
-  display: inline-flex;
-  gap: var(--s-2);
 }

@@ -38,20 +38,35 @@ via inline styles or your own stylesheet:
 
 | Family | Tokens |
 |---|---|
-| Paper | `--paper` `--paper-raised` `--paper-sunken` |
-| Ink | `--ink` `--ink-soft` `--ink-muted` `--ink-faint` |
-| Rules | `--rule` `--rule-strong` |
+| Ground | `--bg` `--bg-2` `--surface` `--sunken` |
+| Ink | `--ink` `--ink-2` `--muted` `--faint`, plus `--voice` for human writing |
+| Rules | `--rule` (strong) `--rule-soft` (quiet) |
+| Structure | `--amber` — section words, eyebrows. Never an action. |
+| Action | `--gold` to fill (with `--gold-ink`), `--gold-text` to set type |
+| Medium gels | `--gel-livres` `--gel-films` `--gel-series` `--gel-manga` `--gel-jeux` `--gel-musique`, text on them is `--gel-ink`; `--gel-*-text` to set type |
 | Status | `--status-todo` `--status-doing` `--status-done` |
 | Signals | `--signal-new` `--danger` |
-| Type | `--font-serif` `--font-sans`, sizes `--text-xs` → `--text-3xl` |
+| Type | `--font-serif` (Cormorant Garamond) `--font-mono` (IBM Plex Mono), sizes `--text-xs` → `--text-3xl` |
 | Spacing | `--space-1` → `--space-8` |
-| Shape | `--radius-sm` `--radius` `--radius-lg`, `--shadow-soft` `--shadow-lift` |
+| Shape | every radius is `0`; `--block` (offset, no blur) for small chrome, `--lift` (blurred drop) for content |
 | Measure | `--measure` (68ch reading width) |
 
-**The colour rule that defines this system: chromatic is reserved for identity and
-tracking status. Everything else lives in warm greys on warm paper.** Headings are serif
-(`--font-serif`), body is system sans. Do not add accent colours for decoration — colour
-here means "who did this" or "what state is this in".
+**Two worlds, not one theme and its inverse.** Night is the natural state, day the
+variant; night is a cinema (cold blue-black), day is paper (warm cream). The mode lives on
+`data-mode` on `<html>`, set before first paint. Never hardcode a hex, and never name a
+mode in a component — name a role.
+
+**The colour rules that define this system.** `--amber` is structure and atmosphere;
+`--gold` is action, and **a gold element that is not actionable is a bug**. The six medium
+gels appear in exactly two places — the masthead rayon nav and medium labels — and nowhere
+else. A rayon is a **filled** box with near-black text; a member is a **bordered** chip in
+their own ink. That difference is shape, not hue, and it is what keeps the two colour
+systems readable side by side; never invert it.
+
+Older token names (`--paper*`, `--surface-page`, `--ink-soft`, `--ink-faint`, `--accent`,
+`--type-movie`…) still resolve, but only as a **compatibility scaffold** for screens not
+yet reworked. Do not reach for them in new work. `--rule-strong` is gone: `--rule` is now
+the strong hairline and `--rule-soft` the quiet one.
 
 ## Identity colour is a prop, not a theme
 

@@ -6,7 +6,7 @@
  */
 .empty {
   padding: var(--space-5) 0 var(--space-7);
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .title {

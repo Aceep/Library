@@ -31,7 +31,7 @@
 .buttonSm[data-following='true'] {
   background: transparent;
   color: var(--ink-muted);
-  border-color: var(--rule-strong);
+  border-color: var(--rule);
 }
 
 .button[data-following='true']:hover:not(:disabled),

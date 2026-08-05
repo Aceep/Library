@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--rule-soft);
   padding-top: var(--space-5);
 }
 
@@ -18,7 +18,7 @@
 .seasons {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius-lg);
 }
 
@@ -35,7 +35,7 @@
 }
 
 .season + .season {
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--rule-soft);
 }
 
 .seasonHeader {
@@ -108,7 +108,7 @@
   font-size: var(--text-xs);
   background: transparent;
   color: var(--ink-muted);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-3);
   cursor: pointer;
@@ -155,7 +155,7 @@
 }
 
 .episode + .episode {
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--rule-soft);
 }
 
 .episodeCheck {
@@ -222,7 +222,7 @@
   font-size: var(--text-sm);
   background: transparent;
   color: var(--ink-soft);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-4);
   cursor: pointer;

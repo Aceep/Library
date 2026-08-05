@@ -65,6 +65,22 @@ Si Vite annonce un port autre que 5173, un serveur de dev traîne déjà et Vite
 glissé sur le suivant — l'onglet resté sur `:5173` sert alors du code qui n'est
 plus le tien. `ss -lptn | grep 517` donne le coupable.
 
+### Pourquoi `allowScripts` refuse le script d'esbuild
+
+npm 11 ne lance plus les scripts d'installation sans autorisation, et signale à
+chaque `npm ci` que celui d'`esbuild` attend la sienne. `package.json` la lui
+**refuse** explicitement, ce qui fait taire l'avertissement sans rien accorder.
+
+Ce n'est pas un contournement : le binaire d'esbuild arrive tout compilé dans le
+paquet de plateforme (`@esbuild/linux-x64`), et son `postinstall` n'est qu'un
+repli. Vérifié — installation neuve, script refusé, `npm run build` et
+`npm test` passent. L'autoriser (`npm approve-scripts esbuild`) accorderait un
+droit d'exécution dont rien ici n'a besoin.
+
+Si un jour le build échoue sur un `esbuild` introuvable, c'est que le paquet de
+plateforme manque pour l'architecture du poste — c'est là qu'il faut regarder,
+pas du côté de cette autorisation.
+
 Comptes de développement : `alice` / `alice-dev-password` (rôle `admin`),
 `bob` / `bob-dev-password`. L'instance de démo compte aussi `camille`, `dan` et
 `elior`.

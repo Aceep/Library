@@ -60,6 +60,25 @@
   display: none;
 }
 
+/**
+ * Le panneau porte maintenant tout ce que le bandeau ne montre plus : il se
+ * lit donc en groupes titrés, sinon onze entrées à la file ne se parcourent
+ * plus. Le filet sépare les groupes ; le titre les nomme.
+ */
+.group + .group {
+  border-top: var(--rule-w) solid var(--rule);
+}
+
+.groupTitle {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+  padding: var(--s-3) var(--s-4) var(--s-2);
+}
+
 .list {
   list-style: none;
   margin: 0;
@@ -68,6 +87,11 @@
 
 .list li + li .item {
   border-top: var(--rule-w) solid var(--rule-soft);
+}
+
+/* La déconnexion est un groupe à elle seule : elle se détache du reste. */
+.group + .list {
+  border-top: var(--rule-w) solid var(--rule);
 }
 
 .item {

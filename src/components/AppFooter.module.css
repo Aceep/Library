@@ -1,21 +1,37 @@
 .footer {
-  border-top: 1px solid var(--rule-soft);
-  margin-top: var(--space-8);
-  padding: var(--space-4) var(--page-margin, var(--space-5));
+  border-top: var(--rule-w) solid var(--rule);
+  max-width: var(--max-content);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--s-5) var(--page-margin) var(--s-8);
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .link {
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--muted);
+  border-bottom: var(--rule-w) solid transparent;
+  padding-bottom: 3px;
+  transition:
+    color var(--dur-2) var(--ease-page),
+    border-color var(--dur-2) var(--ease-page);
 }
 
 .link:hover {
-  color: var(--ink-muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: var(--gold-text);
+  border-bottom-color: var(--gold);
+}
+
+@media (max-width: 767px) {
+  .footer {
+    justify-content: flex-start;
+    gap: var(--s-3);
+  }
 }

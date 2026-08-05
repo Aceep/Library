@@ -1,5 +1,5 @@
 .footer {
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--rule-soft);
   margin-top: var(--space-8);
   padding: var(--space-4) var(--page-margin, var(--space-5));
   display: flex;

@@ -202,7 +202,7 @@
   font-weight: 300;
   font-size: 44px;
   line-height: 1;
-  color: var(--rule-strong);
+  color: var(--rule);
 }
 
 .sectionKicker {
@@ -363,7 +363,7 @@
   break-inside: avoid;
   padding-bottom: var(--s-5);
   margin-bottom: var(--s-5);
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
 }
 
 .activityLink {
@@ -472,7 +472,7 @@
 
 .ghostCard {
   aspect-ratio: 2 / 3;
-  border: var(--rule-w) dashed var(--rule-strong);
+  border: var(--rule-w) dashed var(--rule);
   opacity: 0.7;
 }
 

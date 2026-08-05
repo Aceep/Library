@@ -48,12 +48,12 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .row {
   padding: var(--space-4) 0;
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
 }
 
 .rowLink {
@@ -69,7 +69,7 @@
 .drafts {
   margin-top: var(--space-6);
   padding-top: var(--space-4);
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
   font-size: var(--text-sm);
   color: var(--ink-muted);
 }

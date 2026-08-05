@@ -50,7 +50,7 @@
   right: 0;
   min-width: 13rem;
   background: var(--paper-raised);
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);
 }
@@ -67,7 +67,7 @@
 }
 
 .list li + li .item {
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .item {

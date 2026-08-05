@@ -17,8 +17,14 @@
   --surface-page:    #F2F1ED;
   --surface-raised:  #FAFAF9;
   --surface-sunken:  #E5E4DF;
-  --rule:            #DCDAD4;
-  --rule-strong:     #C4C1B8;
+  /**
+   * Deux filets, renommés. `--rule-soft` est le discret, `--rule` l'appuyé —
+   * l'inverse de ce que ces noms désignaient jusqu'ici, et c'est le sens que
+   * la direction artistique leur donne. Les valeurs ne bougent pas dans ce
+   * commit : seuls les noms tournent, en même temps que leurs 193 usages.
+   */
+  --rule-soft:       #DCDAD4;
+  --rule:            #C4C1B8;
 
   /* encre */
   --ink:             #16171A;
@@ -194,8 +200,8 @@
     --surface-page: #121316;
     --surface-raised: #1A1B1F;
     --surface-sunken: #22242A;
-    --rule: #2C2E34;
-    --rule-strong: #3A3C43;
+    --rule-soft: #2C2E34;
+    --rule: #3A3C43;
     --ink: #F1F0EE;
     --ink-soft: #C9C8C6;
     --ink-muted: #9B9A99;

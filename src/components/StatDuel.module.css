@@ -6,7 +6,7 @@
  */
 .duel {
   padding-bottom: var(--space-4);
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
 }
 
 .duel + .duel {

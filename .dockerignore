@@ -4,3 +4,14 @@ dist
 .git
 .gitignore
 npm-debug.log
+
+# `docker compose` lit `.env` pour y prendre l'uid/gid du poste. Sans ces deux
+# lignes, le `COPY . .` du Dockerfile de production l'embarquerait dans l'image
+# publiée — avec tout ce qu'un poste peut y avoir mis d'autre.
+.env
+.env.*
+
+# Outillage de dev : hors de l'image de production, et une modification ici n'a
+# aucune raison d'en invalider le cache de build.
+Dockerfile.dev
+docker-compose.yml

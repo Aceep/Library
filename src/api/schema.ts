@@ -285,4 +285,45 @@ export type QuestStanding = Quest['standings'][number]
 /** Le badge que la quête décerne. Jamais repris une fois obtenu. */
 export type Badge = Quest['badge']
 
+// --- Statistiques (§14) ----------------------------------------------------
+
+/**
+ * Le tableau de bord d'un membre. Tout est public, comme le reste.
+ *
+ * La forme de ces types porte une règle, et c'est la seule chose à retenir
+ * d'eux : **aucune grandeur ne se rend sans sa couverture**. `StatQuantity`
+ * n'est jamais décomposé pour n'en garder que `value` — les composants prennent
+ * l'objet entier, et `StatFigure` exige `coverage` sans valeur par défaut. Un
+ * total amputé en silence n'est pas approximatif, il est faux.
+ */
+export type StatsResponse = paths['/stats']['get']['responses'][200]['content']['application/json']
+
+export type StatDashboard = StatsResponse['dashboard']
+
+export type StatPeriod = keyof StatDashboard['periods']
+
+export type StatTotals = StatDashboard['periods'][StatPeriod]
+
+export type StatCounts = StatTotals['counts']
+
+export type StatQuantities = StatTotals['quantities']
+
+/** Un chiffre calculé, et de quoi savoir ce qu'il vaut. Indissociables. */
+export type StatQuantity = StatQuantities[keyof StatQuantities]
+
+/** Sur combien d'œuvres il porte, et combien ont été écartées faute de donnée. */
+export type StatCoverage = StatQuantity['coverage']
+
+/**
+ * `measured` — attribut réel de l'œuvre consommée. `estimated` — chiffre venu
+ * d'ailleurs, qui ne décrit pas ce que le membre a fait. Les deux ne se
+ * composent pas de la même façon, et ne s'additionnent jamais.
+ */
+export type StatBasis = StatQuantity['basis']
+
+export type StatHighlights = StatDashboard['highlights']
+
+/** Une valeur et son décompte — une ligne de palmarès. */
+export type StatTally = StatHighlights['top_genres'][number]
+
 export type QuestStatus = Quest['status']

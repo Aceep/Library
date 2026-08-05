@@ -18,6 +18,7 @@ import Watches from './pages/Watches'
 import MediaDetail from './pages/MediaDetail'
 import MyAccount from './pages/MyAccount'
 import Search from './pages/Search'
+import Statistics from './pages/Statistics'
 import TypeLibrary from './pages/TypeLibrary'
 import UserProfile from './pages/UserProfile'
 import { SessionProvider, useSessionQuery } from './session/SessionContext'
@@ -96,6 +97,7 @@ function GatedApp() {
               peut-être dans un signet. */}
           <Route path="musique" element={<Navigate to="/bibliotheque/music" replace />} />
           <Route path="badges" element={<Badges />} />
+          <Route path="statistiques" element={<Statistics />} />
           <Route path="quetes" element={<Quests />} />
           <Route path="quetes/:id" element={<Quest />} />
           <Route path="*" element={<Navigate to="/" replace />} />

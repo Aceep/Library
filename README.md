@@ -239,6 +239,8 @@ par un lien reçu, sans compte.
 | `/notifications` | Les nouveautés : épisodes et tomes parus, œuvres ajoutées à une saga, quêtes. Filtrable sur les non lues, marquage à l'unité ou en bloc |
 | `/comparer` | Comparaison avec un compte suivi, au choix |
 | `/membres` · `/membres/:id` | L'annuaire, les profils, s'abonner ; sur un profil : sa vitrine, la répartition de sa bibliothèque, et sa bibliothèque dépliée |
+| `/badges` | Mes badges : les obtenus, datés, et ceux qui restent — rangés par proximité. Les brouillons n'y promettent rien |
+| `/statistiques` | Le tableau de bord : décomptes, grandeurs **avec leur couverture**, palmarès. `?membre=<id>` lit celui d'un autre |
 | `/mon-compte` | Couleur d'identité, avatar, mot de passe |
 | `/a-propos` | D'où viennent les fiches — **les attributions de sources y sont obligatoires**, TMDB comprise |
 | `/administration/invitations` | Fabriquer et révoquer des liens d'invitation (admin) |
@@ -246,20 +248,27 @@ par un lien reçu, sans compte.
 
 ## Sections en attente
 
-Les **quêtes** affichent un écran « bientôt disponible ». Le domaine existe
-désormais côté API et le front ne l'a pas encore câblé — c'est du travail à
-faire, pas une absence côté back. **Aucune donnée fictive** n'est affichée en
-attendant.
+**Plus aucune.** Tout ce que l'API sert a son écran, et `ComingSoon` a été
+supprimé. La dernière à tomber est la comparaison de deux tableaux de bord
+(`compare_with` sur `/stats`), qui est **reportée** et non oubliée : elle
+double la surface de l'écran — deux séries, des écarts — et `/comparer` couvre
+déjà la comparaison des bibliothèques.
 
-Restent non câblés, tous servis par l'API : les badges et les statistiques.
+## Ce que les statistiques ne font pas
 
-Les **notifications** ne sont plus dans cette liste : `/notifications` les sert
-depuis l'étape 2, avec le compteur de non lues dans la coquille. Celles qui
-portent sur une quête s'affichent sans lien — l'écran des quêtes n'existe pas
-encore, et un lien vers « bientôt disponible » serait pire que rien.
+Elles ne calculent rien. Aucun total dérivé, même quand il serait tentant :
+additionner les minutes de films, de séries et d'albums donnerait un chiffre
+qui échapperait à la couverture garantie par le contrat. Mettre 3 150 minutes
+en « 52 h 30 » n'est pas un calcul, c'est une mise en forme.
 
-La **musique** n'est plus dans cette liste : elle a son rayon comme les cinq
-autres types depuis l'étape 11. `/musique` redirige vers `/bibliotheque/music`.
+Elles n'emploient **aucune bibliothèque de graphiques**. Le contrat ne porte
+aucune série temporelle — quatre périodes, des distributions, des
+classements —, c'est-à-dire des listes. Une bibliothèque apporterait ses coins
+arrondis, ses ombres et sa palette catégorielle, qu'il faudrait combattre.
+
+Et elles ne dessinent pas de classement quand il n'y en a pas : un palmarès
+vide, à une entrée, ou dont tout est à égalité se présente sans rang ni barre.
+Les trois cas se produisent sur l'instance de démonstration.
 
 ## Vérifications
 

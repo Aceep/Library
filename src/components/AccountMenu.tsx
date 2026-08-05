@@ -16,6 +16,7 @@ import styles from './AccountMenu.module.css'
  */
 const ENTRIES: { to: string; label: string }[] = [
   { to: '/badges', label: 'Mes badges' },
+  { to: '/statistiques', label: 'Mes statistiques' },
   { to: '/mon-compte', label: 'Mon compte' },
 ]
 

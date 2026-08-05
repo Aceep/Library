@@ -93,6 +93,13 @@ function Profile({ id }: { id: string }) {
 
       <BadgeShelf badges={data.badges} isMe={isMe} pseudo={user.pseudo} />
 
+      {/* Les statistiques sont publiques comme le reste du profil. */}
+      <p className={styles.compareLink}>
+        <Link to={isMe ? '/statistiques' : `/statistiques?membre=${id}`}>
+          {isMe ? 'Mes statistiques' : `Les statistiques de ${user.pseudo}`}
+        </Link>
+      </p>
+
       {isMe ? (
         <p className={styles.compareLink}>
           <Link to="/mon-compte">Modifier ma couleur, mon avatar ou mon mot de passe</Link>

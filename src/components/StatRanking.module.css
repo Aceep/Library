@@ -1,0 +1,94 @@
+/**
+ * Deux présentations pour une même donnée : à filets et numérotée quand
+ * quelque chose se détache, en simple liste sinon. Rien ne distingue les cas
+ * par la couleur — c'est la présence ou l'absence du rang et de la barre qui
+ * dit s'il y a un classement.
+ */
+.quiet {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  max-width: var(--measure);
+}
+
+.single {
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+
+.singleCount {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.flat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.flatRow {
+  font-size: var(--text-base);
+  color: var(--ink);
+  padding: var(--space-1) 0;
+}
+
+/* ---- Le vrai classement ---- */
+
+.ranked {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: var(--rule-w) solid var(--rule);
+}
+
+.rankedRow {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(6rem, 12rem) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: var(--rule-w) solid var(--rule);
+}
+
+.rank {
+  font: var(--eyebrow);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-size: var(--text-sm);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track {
+  display: block;
+  min-width: 0;
+  height: 10px;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-soft);
+}
+
+.count {
+  font-size: var(--text-sm);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 3ch;
+}
+
+@media (max-width: 767px) {
+  .rankedRow {
+    grid-template-columns: 1.25rem minmax(5rem, 8rem) 1fr auto;
+    gap: var(--space-2);
+  }
+}

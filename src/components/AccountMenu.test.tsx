@@ -59,28 +59,33 @@ describe('AccountMenu — le repli du compte', () => {
     expect(screen.getByRole('button', { name: 'Déconnexion' })).toHaveFocus()
   })
 
-  it('descend, remonte, et boucle aux deux bouts', () => {
+  /**
+   * Écrit sans nommer les entrées du milieu : le menu est fait pour en gagner
+   * — badges, puis statistiques —, et un test qui les énumérerait casserait à
+   * chaque ajout sans rien dire de plus sur le comportement.
+   */
+  it('descend d’un cran à la fois, et boucle aux deux bouts', () => {
     renderWithProviders(<AccountMenu />)
     const trigger = ouvrir()
     const premier = screen.getByRole('link', { name: 'Mes badges' })
-    const milieu = screen.getByRole('link', { name: 'Mon compte' })
     const dernier = screen.getByRole('button', { name: 'Déconnexion' })
 
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     expect(premier).toHaveFocus()
 
+    // Un cran, pas un saut : descendre puis remonter ramène au point de départ.
     fireEvent.keyDown(premier, { key: 'ArrowDown' })
-    expect(milieu).toHaveFocus()
-
-    fireEvent.keyDown(milieu, { key: 'ArrowDown' })
-    expect(dernier).toHaveFocus()
-
-    // Boucle : après la dernière on revient à la première, et inversement.
-    fireEvent.keyDown(dernier, { key: 'ArrowDown' })
+    expect(premier).not.toHaveFocus()
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowUp' })
     expect(premier).toHaveFocus()
 
+    // Boucle : avant la première on va à la dernière, et après la dernière on
+    // revient à la première.
     fireEvent.keyDown(premier, { key: 'ArrowUp' })
     expect(dernier).toHaveFocus()
+
+    fireEvent.keyDown(dernier, { key: 'ArrowDown' })
+    expect(premier).toHaveFocus()
   })
 
   it('va au premier et au dernier avec Origine et Fin', () => {

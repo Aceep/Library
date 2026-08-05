@@ -24,6 +24,7 @@ import type {
   SeriesAggregate,
   Session,
   Showcase,
+  StatsResponse,
   TrackingStatus,
   UserDetail,
   UserRole,
@@ -833,3 +834,13 @@ export const addQuestItem = (id: string, body: QuestItemBody) =>
 
 export const removeQuestItem = (id: string, mediaId: string) =>
   api.delete<QuestResponse>(`/quests/${id}/items/${mediaId}`)
+
+// --- Statistiques (§14) ----------------------------------------------------
+
+/**
+ * Le tableau de bord d'un membre — le mien quand `userId` est absent.
+ *
+ * `compare_with` existe aussi côté API ; l'écran ne s'en sert pas encore.
+ */
+export const fetchStats = (userId?: string, signal?: AbortSignal) =>
+  api.get<StatsResponse>('/stats', userId ? { user_id: userId } : undefined, signal)

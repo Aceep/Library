@@ -164,7 +164,7 @@ export const fetchMemberLibrary = (
   cursor: string | null,
   signal?: AbortSignal,
 ) =>
-  api.get<Page<LibraryItem>>(
+  api.get<NumberedPage<LibraryItem>>(
     `/users/${userId}/media`,
     {
       type: filters.type,
@@ -172,6 +172,25 @@ export const fetchMemberLibrary = (
       favorite: filters.favorite ? 'true' : undefined,
       sort: filters.sort ?? 'rating',
       cursor: cursor ?? undefined,
+    },
+    signal,
+  )
+
+/** La même, **par numéro de page** — deux portes, une par mécanisme. */
+export const fetchMemberLibraryPage = (
+  userId: string,
+  filters: MemberLibraryFilters,
+  page: number,
+  signal?: AbortSignal,
+) =>
+  api.get<NumberedPage<LibraryItem>>(
+    `/users/${userId}/media`,
+    {
+      type: filters.type,
+      status: filters.status ?? undefined,
+      favorite: filters.favorite ? 'true' : undefined,
+      sort: filters.sort ?? 'rating',
+      page,
     },
     signal,
   )

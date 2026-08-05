@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchLibraryPage } from '../api/endpoints'
 import type { LibraryFilters, LibrarySort } from '../api/endpoints'
@@ -10,6 +10,7 @@ import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
 import MediaCard from '../components/MediaCard'
 import Pagination from '../components/Pagination'
+import { usePageInUrl } from '../components/usePageInUrl'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
 import styles from './TypeLibrary.module.css'
@@ -42,27 +43,6 @@ export default function TypeLibrary() {
   return <Library key={type} type={type} />
 }
 
-/**
- * La page demandée, **dans l'adresse**.
- *
- * Remplace le `?pages=N` de l'étape précédente, qui voulait dire « les N
- * premières » et non « la N-ième ». Il n'existait que parce que la pagination
- * par curseur ne savait pas revenir à un endroit : il rétablissait une pile,
- * pas une position. Le back sait maintenant rendre la page 7 directement, et
- * la demi-mesure n'a plus de raison d'être.
- *
- * `?page=1` ne s'écrit pas dans l'adresse : la première page est l'adresse
- * nue, et une adresse partagée doit être la plus courte qui dise la chose.
- */
-function lirePage(params: URLSearchParams): number {
-  const brut = Number(params.get('page'))
-  if (!Number.isInteger(brut) || brut < 1) return 1
-  // Le back plafonne à 1000 et répond 400 au-delà : on borne ici pour que
-  // `?page=99999` écrit à la main affiche la dernière page plutôt qu'une
-  // erreur, qui ne dirait rien d'utile à qui a mal recopié une adresse.
-  return Math.min(brut, 1000)
-}
-
 function Library({ type }: { type: MediaType }) {
   const { user } = useSession()
   const { statusesOf } = useReference()
@@ -70,8 +50,10 @@ function Library({ type }: { type: MediaType }) {
   const [ownedOnly, setOwnedOnly] = useState(false)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [sort, setSort] = useState<LibrarySort>('added')
-  const [params, setParams] = useSearchParams()
-  const page = lirePage(params)
+  // Le comportement de l'adresse est partagé avec la bibliothèque d'un membre :
+  // deux listes qui se ressemblent doivent se comporter pareil, et c'est plus
+  // solide de le faire exécuter le même code que de le relire.
+  const { page, adresseDe, allerA, remettreALaPremiere } = usePageInUrl()
 
   const filters: LibraryFilters = {
     type,
@@ -89,34 +71,6 @@ function Library({ type }: { type: MediaType }) {
     // fois. C'est le seul geste qui rende une pagination agréable.
     placeholderData: (precedente) => precedente,
   })
-
-  const adresseDe = (numero: number) => {
-    const suite = new URLSearchParams(params)
-    if (numero > 1) suite.set('page', String(numero))
-    else suite.delete('page')
-    const requete = suite.toString()
-    return requete ? `?${requete}` : location.pathname
-  }
-
-  const allerA = (numero: number) => {
-    const suite = new URLSearchParams(params)
-    if (numero > 1) suite.set('page', String(numero))
-    else suite.delete('page')
-    // Pas `replace` : changer de page est une navigation, et le retour arrière
-    // doit ramener à la page d'où l'on vient. C'est l'inverse du choix fait
-    // pour `?pages=N`, qui n'enregistrait qu'un état de chargement.
-    setParams(suite)
-  }
-
-  // Changer de filtre ou de tri remet à la première page. Rester sur la 7 en
-  // changeant de filtre afficherait une page vide sur une liste qui en a deux,
-  // et donnerait l'impression que le filtre ne ramène rien.
-  const remettreALaPremiere = () => {
-    if (page === 1) return
-    const suite = new URLSearchParams(params)
-    suite.delete('page')
-    setParams(suite, { replace: true })
-  }
 
   const items = data?.items ?? []
   const infoPages = data?.pages ?? null

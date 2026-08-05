@@ -70,6 +70,9 @@ export const queryKeys = {
    */
   memberLibrary: (userId: string, filters: unknown) =>
     ['library', 'member', userId, filters] as const,
+  /** Une page numérotée de sa bibliothèque — même raison que `libraryPage`. */
+  memberLibraryPage: (userId: string, filters: unknown, page: number) =>
+    ['library', 'member', userId, 'page', page, filters] as const,
   media: (id: string) => ['media', id] as const,
   /** Le préfixe de toutes les fiches — pour ce qui les périme toutes à la fois. */
   mediaAll: ['media'] as const,

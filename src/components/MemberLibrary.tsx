@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { fetchMemberLibrary } from '../api/endpoints'
+import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { fetchMemberLibraryPage } from '../api/endpoints'
 import type { MemberLibraryFilters, MemberLibrarySort } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import { MEDIA_TYPES, crossTypeStatusLabel, typeLabelPlural } from '../api/schema'
 import type { Account, MediaType, TrackingStatus } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
 import MediaCard from './MediaCard'
+import Pagination from './Pagination'
+import { usePageInUrl } from './usePageInUrl'
 import styles from './MemberLibrary.module.css'
 
 const STATUS_FILTERS: Array<{ value: TrackingStatus | null; label: string }> = [
@@ -51,6 +54,9 @@ export default function MemberLibrary({
   // Le défaut est celui de l'API, et il n'est pas le même qu'en rayon : on
   // vient ici voir ce qu'il a préféré, pas ce qu'il vient d'ajouter.
   const [sort, setSort] = useState<MemberLibrarySort>('rating')
+  // Le même hook que le rayon d'un type : deux listes qui se ressemblent
+  // doivent se comporter pareil, et le partage vaut mieux que la relecture.
+  const { page, adresseDe, allerA, remettreALaPremiere } = usePageInUrl()
 
   const filters: MemberLibraryFilters = {
     type: type ?? undefined,
@@ -59,14 +65,16 @@ export default function MemberLibrary({
     sort,
   }
 
-  const list = useInfiniteQuery({
-    queryKey: queryKeys.memberLibrary(userId, filters),
-    queryFn: ({ pageParam, signal }) => fetchMemberLibrary(userId, filters, pageParam, signal),
-    initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) => lastPage.next_cursor,
+  const list = useQuery({
+    queryKey: queryKeys.memberLibraryPage(userId, filters, page),
+    queryFn: ({ signal }) => fetchMemberLibraryPage(userId, filters, page, signal),
+    // La page précédente reste affichée pendant que la suivante arrive, sans
+    // quoi chaque clic vide puis remplit la grille et l'écran saute deux fois.
+    placeholderData: (precedente) => precedente,
   })
 
-  const items = list.data?.pages.flatMap((page) => page.items) ?? []
+  const items = list.data?.items ?? []
+  const infoPages = list.data?.pages ?? null
   const filtered = type !== null || status !== null || favoriteOnly
 
   if (trackedCount === 0) {
@@ -92,7 +100,10 @@ export default function MemberLibrary({
             type="button"
             className={styles.chip}
             aria-pressed={type === null}
-            onClick={() => setType(null)}
+            onClick={() => {
+              setType(null)
+              remettreALaPremiere()
+            }}
           >
             Tout
           </button>
@@ -102,7 +113,10 @@ export default function MemberLibrary({
               type="button"
               className={styles.chip}
               aria-pressed={type === value}
-              onClick={() => setType(value)}
+              onClick={() => {
+                setType(value)
+                remettreALaPremiere()
+              }}
             >
               {typeLabelPlural(value)}
             </button>
@@ -120,7 +134,10 @@ export default function MemberLibrary({
               type="button"
               className={styles.chip}
               aria-pressed={status === filter.value}
-              onClick={() => setStatus(filter.value)}
+              onClick={() => {
+                setStatus(filter.value)
+                remettreALaPremiere()
+              }}
             >
               {filter.label}
             </button>
@@ -131,7 +148,10 @@ export default function MemberLibrary({
           <input
             type="checkbox"
             checked={favoriteOnly}
-            onChange={(event) => setFavoriteOnly(event.target.checked)}
+            onChange={(event) => {
+              setFavoriteOnly(event.target.checked)
+              remettreALaPremiere()
+            }}
           />
           {isMe ? 'Mes coups de cœur' : 'Ses coups de cœur'}
         </label>
@@ -140,7 +160,10 @@ export default function MemberLibrary({
           Trier par
           <select
             value={sort}
-            onChange={(event) => setSort(event.target.value as MemberLibrarySort)}
+            onChange={(event) => {
+              setSort(event.target.value as MemberLibrarySort)
+              remettreALaPremiere()
+            }}
           >
             {SORTS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -164,30 +187,37 @@ export default function MemberLibrary({
       ) : list.error ? (
         <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />
       ) : items.length === 0 ? (
-        <p className={styles.quiet}>
-          {filtered
-            ? 'Aucune œuvre ne correspond au filtre actif.'
-            : 'Rien à afficher ici.'}
-        </p>
+        /* Le même partage à trois que sur un rayon : vide, filtré, ou au-delà
+           de la fin. Le troisième doit ramener quelque part. */
+        infoPages !== null && infoPages.pages > 0 && page > infoPages.pages ? (
+          <p className={styles.quiet}>
+            Cette bibliothèque compte {infoPages.pages} page
+            {infoPages.pages > 1 ? 's' : ''} — la page {page} n’en fait plus partie.{' '}
+            <Link to={adresseDe(infoPages.pages)}>Aller à la dernière page</Link>
+          </p>
+        ) : (
+          <p className={styles.quiet}>
+            {filtered ? 'Aucune œuvre ne correspond au filtre actif.' : 'Rien à afficher ici.'}
+          </p>
+        )
       ) : (
         <>
-          <ul className={styles.grid}>
+          <ul className={styles.grid} aria-busy={list.isFetching}>
             {items.map((item) => (
               <MediaCard key={item.id} item={item} me={me} />
             ))}
           </ul>
 
-          {list.hasNextPage ? (
-            <div className={styles.more}>
-              <button
-                type="button"
-                className={styles.moreButton}
-                onClick={() => void list.fetchNextPage()}
-                disabled={list.isFetchingNextPage}
-              >
-                {list.isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
-              </button>
-            </div>
+          {infoPages !== null && infoPages.pages > 1 ? (
+            <Pagination
+              info={infoPages}
+              hrefOf={adresseDe}
+              onNavigate={allerA}
+              // Nommée par ce qu'elle pagine : sur un profil, « Pages du rayon »
+              // ne dirait pas de quoi il s'agit, et la page en contient déjà une
+              // autre navigation.
+              label={isMe ? 'Pages de ma bibliothèque' : `Pages de la bibliothèque de ${pseudo}`}
+            />
           ) : null}
         </>
       )}

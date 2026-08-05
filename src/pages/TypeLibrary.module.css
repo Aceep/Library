@@ -92,9 +92,21 @@
 
 /* ---- Grille ---- */
 
+/**
+ * La colonne se règle sur la jaquette, pas l'inverse.
+ *
+ * Trois colonnes fixes donnaient 411px de large sur un grand écran, pour une
+ * vignette dont l'artwork en occupait 200 : la moitié de chaque case restait
+ * vide à droite de l'image. Maintenant que la jaquette suit sa cellule, trois
+ * colonnes lui feraient 616px de haut et on ne verrait plus qu'une rangée.
+ *
+ * `auto-fill` sur un minimum de 200px rend la même jaquette qu'avant — cinq
+ * colonnes vers 1440px, quatre vers 1024 — et surtout des cases égales à
+ * toutes les largeurs, sans palier à écrire.
+ */
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--s-8) var(--gutter);
 }
 
@@ -153,8 +165,10 @@
 }
 
 /**
- * Paliers — la grille du rayon tient à trois colonnes jusqu'à la tablette,
- * puis tombe à deux sur téléphone, où la pile de suivi se réduit.
+ * Paliers — la grille se compte toute seule au-dessus de la tablette. Sur
+ * téléphone on impose deux colonnes : `auto-fill` sur un minimum de 200px
+ * n'en tiendrait qu'une, et un rayon qui se parcourt une œuvre à la fois
+ * n'est plus un rayon.
  */
 @media (max-width: 767px) {
   .grid {

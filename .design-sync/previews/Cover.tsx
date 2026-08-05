@@ -59,8 +59,11 @@ export const AvecImage = () => (
 )
 
 /**
- * Les trois tailles : `sm` pour le fil d'activité, `base` pour les rayons (elle
- * suit sa cellule — ici 132 px), `lg` pour l'en-tête d'une fiche.
+ * Les trois tailles. `sm` est la seule à fixer une largeur — 46px, la vignette
+ * du fil d'activité. `base` et `lg` suivent toutes deux leur cellule (ici 132
+ * puis 200px) et ne diffèrent que par la taille du titre de repli : `lg` est
+ * celle d'un rayon, où la jaquette manque le plus souvent et où c'est le titre
+ * composé qui tient la case.
  */
 export const Tailles = () => (
   <div style={row}>
@@ -68,7 +71,9 @@ export const Tailles = () => (
     <div style={{ width: 132 }}>
       <Cover url={null} title="Dune" type="book" />
     </div>
-    <Cover url={null} title="Dune" type="book" size="lg" />
+    <div style={{ width: 200 }}>
+      <Cover url={null} title="Dune" type="book" size="lg" />
+    </div>
   </div>
 )
 

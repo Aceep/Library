@@ -2,9 +2,26 @@
  * Une œuvre dans un rayon : une couverture posée sur la pierre, un titre
  * composé, puis la pile de suivi lue comme des annotations de catalogue.
  * Aucun cadre, aucune ombre — c'est le filet de la pile qui structure.
+ *
+ * **Toutes les vignettes font la même hauteur.** Rien ici ne la laisse suivre
+ * le contenu : la jaquette tient son ratio, le titre occupe deux lignes qu'il
+ * les remplisse ou non, l'année et la progression gardent leur fente même
+ * absentes, et la pile de suivi réserve ses quatre lignes. Une carte qui
+ * grandit avec sa charge utile fait un rayon en dents de scie où l'œil ne
+ * retrouve plus le filet d'une case à l'autre.
+ *
+ * Chaque `min-height` ci-dessous est donc porteuse : les retirer ne desserre
+ * pas la mise en page, elle la casse.
+ */
+/**
+ * `min-width: 0` n'est pas décoratif ici. Une case de grille prend pour
+ * minimum le contenu de son élément : sans lui, une pile de suivi bien
+ * garnie — pseudo long, statut, note, coup de cœur — impose sa largeur à la
+ * colonne, et deux `1fr` censées être égales ne le sont plus.
  */
 .card {
   display: flex;
+  min-width: 0;
 }
 
 .cardLink {
@@ -24,8 +41,13 @@
   flex-direction: column;
   gap: var(--s-2);
   min-width: 0;
+  /* Absorbe la hauteur que la grille donne en plus, pour que la pile de suivi
+     puisse se caler en bas plutôt que de flotter sous le titre. */
+  flex: 1;
 }
 
+/* Deux lignes, toujours : un titre court réserve la place d'un titre long, un
+   titre long s'arrête là plutôt que de pousser la pile vers le bas. */
 .cardTitle {
   font-family: var(--font-serif);
   font-weight: 400;
@@ -33,6 +55,28 @@
   line-height: 1.12;
   letter-spacing: -0.015em;
   transition: color var(--dur-2) var(--ease-page);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(2 * 1.12em);
+}
+
+/**
+ * La fente de l'année et de la progression.
+ *
+ * `year` est nul sur beaucoup d'œuvres et `ProgressBar` ne rend rien sur les
+ * types sans éléments à cocher : les deux manquent souvent, séparément. La
+ * fente vaut la hauteur des deux lignes et de leur interligne, et ne bouge
+ * pas selon ce qu'elle contient.
+ */
+.cardMeta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s-2);
+  min-width: 0;
+  min-height: calc(2 * 1.45 * 12.5px + var(--s-2));
 }
 
 .cardYear {
@@ -42,12 +86,31 @@
 
 /* ---- La pile de suivi ---- */
 
+/**
+ * Quatre lignes réservées — moi, deux abonnements, le reste en compte. C'est
+ * `MAX_FOLLOWED_LINES` dans `MediaCard.tsx` qui tient l'autre bout : les deux
+ * nombres se lisent ensemble, et l'un sans l'autre rend les vignettes
+ * inégales à nouveau.
+ *
+ * `margin-top: auto` colle la pile en bas de la vignette : le filet de teinte
+ * tombe alors à la même hauteur sur toute la ligne du rayon, et c'est lui
+ * qu'on suit du regard.
+ */
 .trackings {
+  /* Mesurée, pas choisie : c'est la hauteur d'une ligne portant une note. */
+  --pile-row: 22px;
+  --pile-rows: 4;
+
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
   border-top: var(--rule-w-strong) solid var(--type-hue);
   padding-top: var(--s-3);
+  margin-top: auto;
+  min-height: calc(
+    var(--pile-rows) * var(--pile-row) + (var(--pile-rows) - 1) * var(--s-2) + var(--s-3) +
+      var(--rule-w-strong)
+  );
 }
 
 .trackingLine {
@@ -56,6 +119,14 @@
   gap: var(--s-2);
   font-size: 13px;
   min-width: 0;
+  /**
+   * Hauteur d'interligne en **longueur**, pas en facteur : elle descend telle
+   * quelle jusqu'à la note, qui se compose en 17px sur une ligne de 13. Un
+   * facteur lui donnerait sa propre hauteur, et une ligne notée dépasserait
+   * les autres de 6px — de quoi faire déborder la pile de sa réserve.
+   */
+  line-height: var(--pile-row);
+  min-height: var(--pile-row);
 }
 
 /* Le point est le seul cercle de l'interface. */
@@ -72,12 +143,40 @@
   flex: none;
 }
 
+/**
+ * Une seule ligne, jamais deux. Statut, note, coup de cœur, possession, « du
+ * neuf » : cinq marques se posent ici, et les laisser passer à la ligne
+ * doublait la hauteur d'un suivi — donc celle de la vignette.
+ *
+ * Ce qui ne tient pas est rogné, dans cet ordre : la possession part avant le
+ * coup de cœur, qui part avant la note, qui part avant le statut. La fiche
+ * reste à un clic pour le détail.
+ */
 .trackingTags {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   gap: var(--s-2);
   min-width: 0;
+  overflow: hidden;
+}
+
+/**
+ * Chaque marque tient sur sa ligne. Empêcher la pile de passer à la ligne ne
+ * suffit pas : « Coup de cœur » et « ne suit pas » se coupaient en deux à
+ * l'intérieur de leur propre boîte, et une seule d'entre elles suffisait à
+ * faire dépasser la vignette de 15px.
+ *
+ * Nos marques seulement, nommées une à une. `StatusBadge` tient déjà la
+ * sienne dans sa propre feuille — un `.trackingTags > *` l'attraperait au
+ * passage, et c'est précisément le geste qu'on ne fait pas ici.
+ */
+.trackingName,
+.rating,
+.favorite,
+.owned,
+.notTracked {
+  white-space: nowrap;
 }
 
 /* « Un chiffre, pas une pastille » — composé, dans la couleur du membre. */
@@ -99,11 +198,22 @@
   color: var(--ink-faint);
 }
 
-/* Les suiveurs hors abonnements : un nombre, jamais des noms. */
+/**
+ * Les suiveurs hors abonnements : un nombre, jamais des noms.
+ *
+ * Une seule ligne, comme les suivis nommés au-dessus : sur une colonne
+ * étroite, « +1 abonnement · +12 autres · 8,1/10 en moyenne » passait à la
+ * ligne et la pile dépassait sa réserve. La moyenne est écrite en dernier
+ * pour être ce qui se coupe en premier.
+ */
 .othersLine {
   font-size: 12.5px;
+  line-height: var(--pile-row);
   color: var(--ink-muted);
   padding-left: calc(7px + var(--s-2));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Le coup de cœur : composé comme la possession, mais dans la couleur du

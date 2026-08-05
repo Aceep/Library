@@ -63,8 +63,10 @@ apart — pass it through: `<ProgressBar color={user.identity_color} />`,
 
 - `progress` is `{checked, total}`. When `total` is `0`, `ProgressBar` **renders nothing**
   by design — never a `NaN%`. Leave room for it to be absent.
-- `Cover` at `size="base"` is `width: 100%` — it fills its cell, so give it a constrained
-  container. `sm` is 46px, `lg` is 200px.
+- `Cover` fills its cell at every size but `sm` — `base` and `lg` are both `width: 100%`,
+  so give them a constrained container. `lg` differs only in the type it sets the fallback
+  title in, which is the size that actually matters when `cover_url` is null. `sm` is the
+  one fixed width, 46px, for a thumbnail in a row of text.
 - `cover_url` and `avatar_url` are usually null, and often point at images that fail.
   `Cover` and `IdentityDot` fall back on their own; that fallback is the common case.
 - `MediaMetadata` takes the whole `detail` object, a union discriminated on `type`

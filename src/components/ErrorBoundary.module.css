@@ -1,0 +1,62 @@
+/**
+ * Même règle que `ErrorNotice` : « la zone dangereuse n'est jamais un aplat
+ * rouge, un filet gauche de 2px et un mot ». L'écran entier ne change rien à
+ * la règle — il donne juste plus de place au mot.
+ */
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+.panel {
+  width: 100%;
+  max-width: var(--measure);
+  border-left: var(--rule-w-strong) solid var(--signal-danger);
+  padding-left: var(--space-5);
+}
+
+.eyebrow {
+  font: var(--eyebrow);
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--signal-danger);
+  margin-bottom: var(--space-3);
+}
+
+.title {
+  font: var(--title-2);
+  color: var(--ink);
+  margin-bottom: var(--space-4);
+}
+
+.message {
+  font-size: var(--text-base);
+  color: var(--ink-soft);
+  margin-bottom: var(--space-4);
+}
+
+/* Le détail technique se lit s'il est cherché, sans peser sur le reste. */
+.detail {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  margin-bottom: var(--space-5);
+}
+
+.reload {
+  min-height: 44px;
+  background: none;
+  border: var(--rule-w) solid var(--rule);
+  padding: var(--space-3) var(--space-4);
+  font: var(--caption);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color var(--dur-2) var(--ease-page);
+}
+
+.reload:hover {
+  border-color: var(--ink-muted);
+  color: var(--ink);
+}

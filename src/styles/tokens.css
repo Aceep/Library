@@ -207,6 +207,27 @@
     --type-comic_series:  #C08E7E;
     --type-game:          #A3B48F;
     --type-music:         #B295A6;
+
+    /**
+     * Les jetons sémantiques, remontés pour la même raison que les terres.
+     *
+     * Ils manquaient ici : gardés à leur valeur claire, ils tombaient sous le
+     * seuil AA dès que le fond passait au sombre — « terminé » à 2,5:1 et la
+     * nouveauté à 2,1:1, c'est-à-dire illisibles là où ils comptent le plus.
+     *
+     * Mesurés contre `--surface-sunken` (#22242A), la plus **claire** des trois
+     * surfaces sombres : ce qui tient là tient aussi sur le relevé et sur la
+     * page. Teintes conservées, seule la valeur monte.
+     */
+    --status-todo:     #8D8E91;  /* 4,7:1 */
+    --status-doing:    #B8832D;  /* 4,7:1 */
+    --status-done:     #5B9A6B;  /* 4,6:1 */
+    --signal-new:      #C67676;  /* 4,6:1 */
+    --signal-danger:   #C67676;  /* 4,6:1 — même valeur qu'en clair, où les deux
+                                    jetons coïncident déjà */
+    --signal-ok:       #5B9A6B;  /* 4,6:1 */
+    --divergence:      #8E8E90;  /* 4,7:1 — la seule qui passait déjà ; reprise
+                                    ici pour que les sept se lisent ensemble */
   }
 }
 

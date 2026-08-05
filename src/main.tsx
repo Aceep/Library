@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import { ApiError } from './api/client'
 import { SESSION_QUERY_KEY } from './session/SessionContext'
 import './styles/global.css'
@@ -35,10 +36,14 @@ const queryClient = new QueryClient({
 const root = createRoot(document.getElementById('root')!)
 root.render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </QueryClientProvider>
+    {/* Au-dessus des fournisseurs, pour attraper aussi ce qui casserait à leur
+        montage. Le repli est statique et n'a donc besoin d'aucun contexte. */}
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 )

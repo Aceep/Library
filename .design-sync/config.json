@@ -20,6 +20,7 @@
     "AppShell": "src/components/AppShell.tsx",
     "Cover": "src/components/Cover.tsx",
     "EmptyState": "src/components/EmptyState.tsx",
+    "ErrorBoundary": "src/components/ErrorBoundary.tsx",
     "ErrorNotice": "src/components/ErrorNotice.tsx",
     "FollowButton": "src/components/FollowButton.tsx",
     "FollowedTrackings": "src/components/TrackingPanel.tsx",

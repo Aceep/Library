@@ -197,7 +197,7 @@ src/
   components/ AppShell, AppFooter, Cover, MediaCard, ProgressBar, StatusBadge,
               TrackingPanel, MediaMetadata, MediaLog, Availability, SeasonList,
               VolumeGrid, Showcase, MemberLibrary, FollowButton, IdentityDot,
-              ErrorNotice, ErrorBoundary, EmptyState
+              ErrorNotice, ErrorBoundary, EmptyState, NotificationsLink
   pages/      Login, Dashboard, TypeLibrary, MediaDetail, Search, Compare,
               Members, UserProfile, MyAccount, About, Invitation,
               AdminInvitations, AdminUsers, ComingSoon
@@ -222,6 +222,7 @@ par un lien reçu, sans compte.
 | `/bibliotheque/:type` | Un rayon, filtrable, paginé au curseur. Six types, `music` compris — sur un rayon de musique, le filtre « en cours » ne s'affiche pas |
 | `/media/:id` | Fiche : métadonnées, mon suivi, ceux des abonnements, saisons ou tomes, mon journal daté, et — films et séries — où regarder |
 | `/recherche` | Chercher chez les sources externes et ajouter |
+| `/notifications` | Les nouveautés : épisodes et tomes parus, œuvres ajoutées à une saga, quêtes. Filtrable sur les non lues, marquage à l'unité ou en bloc |
 | `/comparer` | Comparaison avec un compte suivi, au choix |
 | `/membres` · `/membres/:id` | L'annuaire, les profils, s'abonner ; sur un profil : sa vitrine, la répartition de sa bibliothèque, et sa bibliothèque dépliée |
 | `/mon-compte` | Couleur d'identité, avatar, mot de passe |
@@ -236,8 +237,13 @@ désormais côté API et le front ne l'a pas encore câblé — c'est du travail
 faire, pas une absence côté back. **Aucune donnée fictive** n'est affichée en
 attendant.
 
-Restent également non câblés, tous servis par l'API : les notifications, les
-sagas, la veille, les badges et les statistiques.
+Restent non câblés, tous servis par l'API : les sagas, la veille, les badges et
+les statistiques.
+
+Les **notifications** ne sont plus dans cette liste : `/notifications` les sert
+depuis l'étape 2, avec le compteur de non lues dans la coquille. Celles qui
+portent sur une quête s'affichent sans lien — l'écran des quêtes n'existe pas
+encore, et un lien vers « bientôt disponible » serait pire que rien.
 
 La **musique** n'est plus dans cette liste : elle a son rayon comme les cinq
 autres types depuis l'étape 11. `/musique` redirige vers `/bibliotheque/music`.

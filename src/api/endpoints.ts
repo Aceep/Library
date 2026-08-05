@@ -10,6 +10,8 @@ import type {
   MediaDetail,
   MediaSource,
   MediaType,
+  NotificationList,
+  NotificationRead,
   Page,
   ReferenceStatuses,
   RefreshResponse,
@@ -708,3 +710,37 @@ export const deleteVolume = (volumeId: string) =>
  */
 export const fetchReference = (signal?: AbortSignal) =>
   api.get<ReferenceStatuses>('/reference/statuses', undefined, signal)
+
+// --- Notifications (§10) ---------------------------------------------------
+
+export interface NotificationFilters {
+  /** Ne remonter que les non lues. Absent : tout, lues comprises. */
+  unread?: boolean
+  limit?: number
+}
+
+/**
+ * Mes nouveautés. `unread_count` accompagne **chaque** page et vaut pour
+ * l'ensemble, pas pour la page : c'est lui qui alimente la pastille, jamais la
+ * longueur de `items`.
+ */
+export const fetchNotifications = (
+  filters: NotificationFilters = {},
+  cursor: string | null = null,
+  signal?: AbortSignal,
+) =>
+  api.get<NotificationList>(
+    '/notifications',
+    {
+      unread: filters.unread ? 'true' : undefined,
+      limit: filters.limit,
+      cursor: cursor ?? undefined,
+    },
+    signal,
+  )
+
+/** Marquer une notification comme lue. Idempotent : relire une lue ne fait rien. */
+export const markNotificationRead = (id: string) =>
+  api.post<NotificationRead>(`/notifications/${id}/read`)
+
+export const markAllNotificationsRead = () => api.post<NotificationRead>('/notifications/read-all')

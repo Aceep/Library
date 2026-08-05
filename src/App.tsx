@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 import Invitation from './pages/Invitation'
 import Login from './pages/Login'
 import Members from './pages/Members'
+import Notifications from './pages/Notifications'
 import MediaDetail from './pages/MediaDetail'
 import MyAccount from './pages/MyAccount'
 import Search from './pages/Search'
@@ -74,6 +75,7 @@ function GatedApp() {
           <Route path="bibliotheque/:type" element={<TypeLibrary />} />
           <Route path="media/:id" element={<MediaDetail />} />
           <Route path="recherche" element={<Search />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="mon-compte" element={<MyAccount />} />
           <Route path="membres" element={<Members />} />
           <Route path="membres/:id" element={<UserProfile />} />

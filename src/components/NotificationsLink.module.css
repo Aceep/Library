@@ -1,0 +1,35 @@
+/**
+ * Reprend exactement la forme des liens d'administration de la coquille — même
+ * taille, même couleur, même graisse. La seule chose qui distingue cette entrée
+ * est le nombre à côté, et seulement quand il y a quelque chose à lire.
+ *
+ * Pas de pastille pleine : « la zone dangereuse n'est jamais un aplat », et une
+ * nouveauté l'est encore moins. Un chiffre dans la couleur du neuf suffit —
+ * c'est déjà comme ça que les notes se lisent sur les cartes.
+ */
+.link {
+  font: var(--caption);
+  color: var(--ink-muted);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.link:hover {
+  color: var(--ink);
+}
+
+.linkActive {
+  color: var(--ink);
+}
+
+.count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--signal-new);
+  /* Le filet dessous plutôt qu'un cercle autour : rayon zéro tient aussi ici. */
+  border-bottom: var(--rule-w-strong) solid var(--signal-new);
+  line-height: 1.1;
+}

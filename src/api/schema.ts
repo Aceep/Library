@@ -191,3 +191,22 @@ export const progressRatio = (progress: Progress | null | undefined): number | n
   if (!progress || progress.total <= 0) return null
   return progress.checked / progress.total
 }
+
+/**
+ * Une nouveauté qui me concerne (§10) : un épisode paru, un tome sorti, une
+ * œuvre ajoutée à une saga que je suis, une quête publiée ou achevée.
+ *
+ * `label` est **rédigé par le serveur** et s'affiche tel quel, comme les
+ * messages d'erreur. Le sujet, lui, arrive dans le champ correspondant au
+ * `kind` — les autres sont nuls.
+ */
+export type NotificationList =
+  paths['/notifications']['get']['responses'][200]['content']['application/json']
+
+export type NotificationItem = NotificationList['items'][number]
+
+export type NotificationKind = NotificationItem['kind']
+
+/** Ce que répondent les deux routes de lecture : combien, et combien il en reste. */
+export type NotificationRead =
+  paths['/notifications/read-all']['post']['responses'][200]['content']['application/json']

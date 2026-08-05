@@ -2,20 +2,22 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { useSession } from '../session/SessionContext'
 import AppFooter from './AppFooter'
+import NotificationsLink from './NotificationsLink'
 import IdentityDot from './IdentityDot'
 import styles from './AppShell.module.css'
 
 /**
- * Sections annoncées mais pas encore servies par l'API.
+ * Sections annoncées mais pas encore câblées ici.
  *
- * Libellés en français comme le reste : l'application n'a pas d'i18n, et deux
- * entrées en anglais au milieu de « Livres » et « Séries » se lisaient comme un
- * autre produit.
+ * La musique n'y est plus : elle a son rayon depuis l'étape 11, servi par
+ * `MEDIA_TYPES` juste au-dessus, et la laisser produisait deux entrées
+ * « Musique » dans la même barre.
+ *
+ * Libellés en français comme le reste : l'application n'a pas d'i18n, et une
+ * entrée en anglais au milieu de « Livres » et « Séries » se lit comme un autre
+ * produit.
  */
-const PENDING_SECTIONS = [
-  { to: '/musique', label: 'Musique' },
-  { to: '/quetes', label: 'Quêtes' },
-]
+const PENDING_SECTIONS = [{ to: '/quetes', label: 'Quêtes' }]
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
@@ -73,6 +75,7 @@ export default function AppShell() {
                 </NavLink>
               </span>
             ) : null}
+            <NotificationsLink />
             <NavLink to="/recherche" className={styles.searchLink}>
               Ajouter une œuvre
             </NavLink>

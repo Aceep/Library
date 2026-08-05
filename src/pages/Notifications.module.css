@@ -1,0 +1,191 @@
+/**
+ * Rien de neuf dans le vocabulaire : les filets, les pastilles de filtre et le
+ * bouton « Charger la suite » sont ceux des rayons. La seule marque propre à
+ * cet écran est le filet gauche des non lues, en `--signal-new` — le jeton qui
+ * veut déjà dire « du neuf » ailleurs dans l'application.
+ */
+.page {
+  max-width: var(--max-content);
+}
+
+.intro {
+  margin-bottom: var(--space-7);
+}
+
+.eyebrow {
+  font: var(--eyebrow);
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+.title {
+  font: var(--title-1);
+  color: var(--ink);
+  max-width: var(--measure);
+}
+
+.lede {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: var(--rule-w) solid var(--rule);
+  margin-bottom: var(--space-5);
+}
+
+.filterGroup {
+  display: flex;
+  border: var(--rule-w) solid var(--rule-strong);
+  width: fit-content;
+  overflow: hidden;
+}
+
+.chip {
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.chip + .chip {
+  border-left: var(--rule-w) solid var(--rule);
+}
+
+.chip:hover:not(:disabled) {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.readAll,
+.moreButton,
+.markRead {
+  min-height: 44px;
+  background: none;
+  border: var(--rule-w) solid var(--rule);
+  padding: var(--space-3) var(--space-4);
+  font: var(--caption);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color var(--dur-2) var(--ease-page);
+}
+
+.readAll:hover:not(:disabled),
+.moreButton:hover:not(:disabled),
+.markRead:hover:not(:disabled) {
+  border-color: var(--ink-muted);
+  color: var(--ink);
+}
+
+.readAll:disabled,
+.markRead:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-4) 0 var(--space-4) var(--space-4);
+  border-bottom: var(--rule-w) solid var(--rule);
+  /* Le filet gauche est toujours réservé : sans ça, marquer une notification
+     comme lue décalerait toute la ligne de deux pixels. */
+  border-left: var(--rule-w-strong) solid transparent;
+}
+
+.rowUnread {
+  border-left-color: var(--signal-new);
+}
+
+.rowBody {
+  min-width: 0;
+}
+
+.rowLink {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.rowLink:hover .rowLabel {
+  color: var(--accent);
+}
+
+.rowKind {
+  font: var(--eyebrow);
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: var(--space-2);
+}
+
+.rowLabel {
+  font-size: var(--text-base);
+  color: var(--ink);
+  max-width: var(--measure);
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.rowUnread .rowLabel {
+  font-weight: 600;
+}
+
+.rowDate {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.readTag {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  padding-top: var(--space-3);
+}
+
+.markRead {
+  flex: none;
+}
+
+.loading {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.more {
+  margin-top: var(--space-5);
+}
+
+/* Le titre de l'œuvre porte la ligne ; le sujet — « Tome 21 » — la complète. */
+.rowWork {
+  font-weight: 600;
+}
+
+.rowSeparator {
+  color: var(--ink-faint);
+}

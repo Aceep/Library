@@ -9,6 +9,12 @@ export const queryKeys = {
   session: ['session'] as const,
   /** Données de référence : constantes, chargées une fois pour la session. */
   reference: ['reference'] as const,
+  /**
+   * Mes notifications. Préfixe commun : marquer une notification comme lue
+   * périme la liste *et* le compteur de la coquille, qui en est une lecture.
+   */
+  notifications: ['notifications'] as const,
+  notificationsWith: (filters: unknown) => ['notifications', filters] as const,
   home: ['home'] as const,
   compare: ['compare'] as const,
   compareWith: (userId: string) => ['compare', userId] as const,

@@ -27,6 +27,7 @@
     "IdentityDot": "src/components/IdentityDot.tsx",
     "MediaMetadata": "src/components/MediaMetadata.tsx",
     "NewContentBadge": "src/components/StatusBadge.tsx",
+    "NotificationsLink": "src/components/NotificationsLink.tsx",
     "PeopleDisclosure": "src/components/PeopleDisclosure.tsx",
     "ProgressBar": "src/components/ProgressBar.tsx",
     "Screenshots": "src/components/Screenshots.tsx",

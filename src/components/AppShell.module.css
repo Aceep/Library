@@ -236,14 +236,22 @@
 }
 
 @media (max-width: 767px) {
+  /* Deux colonnes seulement — la nav est déjà repliée, et la colonne du milieu
+     laissée vide poussait la marque sous le groupe de droite. */
   .headerInner {
+    grid-template-columns: auto auto;
+    justify-content: space-between;
     gap: var(--s-3);
     height: auto;
     padding: var(--s-3) var(--page-margin);
   }
 
   .brand {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  .account {
+    gap: var(--s-3);
   }
 
   .search {

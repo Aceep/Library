@@ -76,7 +76,14 @@
   --type-hue:        var(--ink-muted);
 
   /* type */
-  --font-serif: 'Newsreader', Iowan Old Style, Palatino, Georgia, serif;
+  --font-serif: 'Cormorant Garamond', Iowan Old Style, Palatino, Georgia, serif;
+  --font-mono:  'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /**
+   * Dette datée de la refonte de l'accueil : la direction n'admet que deux
+   * familles, mais les écrans denses pas encore repris composent leur corps de
+   * texte ici. Cormorant à 15,5px y serait illisible (hauteur d'x très basse)
+   * et du mono, bruyant et 15% plus large. Se rembourse écran par écran.
+   */
   --font-sans:  'Inter Tight', system-ui, sans-serif;
   --display-1: 300 104px/0.86 var(--font-serif);
   --display-2: 300 76px/0.92 var(--font-serif);

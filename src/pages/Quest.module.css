@@ -64,54 +64,9 @@
   max-width: var(--measure);
 }
 
-/* Badge — la pastille prend la couleur du badge, seul endroit de la page où
-   une teinte arbitraire est admise : elle vient de la donnée, comme les
-   couleurs de membres. */
+/* Le badge lui-même vit dans `BadgeMedal` ; la page ne décide que de sa place. */
 .badge {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
   margin-top: var(--space-5);
-  padding-left: var(--space-4);
-  border-left: var(--rule-w-strong) solid var(--rule);
-}
-
-.badgeWon {
-  border-left-color: var(--ink);
-}
-
-.badgeIcon {
-  flex: none;
-  width: 2rem;
-  height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-dot);
-  font-size: var(--text-base);
-}
-
-.badgeName {
-  display: block;
-  font-size: var(--text-base);
-  color: var(--ink);
-}
-
-.badgeState {
-  display: block;
-  font: var(--eyebrow);
-  letter-spacing: var(--eyebrow-tracking);
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-top: var(--space-1);
-}
-
-.badgeNote {
-  display: block;
-  font-size: var(--text-xs);
-  color: var(--ink-muted);
-  margin-top: var(--space-2);
-  max-width: var(--measure);
 }
 
 .section {

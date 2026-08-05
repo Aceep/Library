@@ -25,6 +25,7 @@ describe('AccountMenu — le repli du compte', () => {
     )
     // Introuvable **par son rôle** : caché de l'arbre d'accessibilité et de la
     // tabulation, pas seulement masqué à l'œil.
+    expect(screen.queryByRole('link', { name: 'Mes badges' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Mon compte' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Déconnexion' })).not.toBeInTheDocument()
   })
@@ -35,6 +36,7 @@ describe('AccountMenu — le repli du compte', () => {
 
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
     expect(trigger).toHaveAttribute('aria-controls', expect.stringMatching(/.+/))
+    expect(screen.getByRole('link', { name: 'Mes badges' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Mon compte' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Déconnexion' })).toBeInTheDocument()
   })
@@ -46,7 +48,7 @@ describe('AccountMenu — le repli du compte', () => {
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
 
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('link', { name: 'Mon compte' })).toHaveFocus()
+    expect(screen.getByRole('link', { name: 'Mes badges' })).toHaveFocus()
   })
 
   it('s’ouvre à la flèche haute en posant le focus sur la dernière', () => {
@@ -60,13 +62,17 @@ describe('AccountMenu — le repli du compte', () => {
   it('descend, remonte, et boucle aux deux bouts', () => {
     renderWithProviders(<AccountMenu />)
     const trigger = ouvrir()
-    const premier = screen.getByRole('link', { name: 'Mon compte' })
+    const premier = screen.getByRole('link', { name: 'Mes badges' })
+    const milieu = screen.getByRole('link', { name: 'Mon compte' })
     const dernier = screen.getByRole('button', { name: 'Déconnexion' })
 
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     expect(premier).toHaveFocus()
 
     fireEvent.keyDown(premier, { key: 'ArrowDown' })
+    expect(milieu).toHaveFocus()
+
+    fireEvent.keyDown(milieu, { key: 'ArrowDown' })
     expect(dernier).toHaveFocus()
 
     // Boucle : après la dernière on revient à la première, et inversement.
@@ -85,7 +91,7 @@ describe('AccountMenu — le repli du compte', () => {
     expect(screen.getByRole('button', { name: 'Déconnexion' })).toHaveFocus()
 
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Home' })
-    expect(screen.getByRole('link', { name: 'Mon compte' })).toHaveFocus()
+    expect(screen.getByRole('link', { name: 'Mes badges' })).toHaveFocus()
   })
 
   /**

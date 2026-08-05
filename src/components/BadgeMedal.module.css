@@ -1,0 +1,90 @@
+/**
+ * Reprise exacte du bloc qui vivait dans la fiche de quête : filet fort à
+ * gauche, pastille ronde — la seule chose ronde de l'application avec la
+ * marque d'identité —, sourcil d'état. Rien de nouveau n'est dessiné ici.
+ */
+.medal {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-left: var(--space-4);
+  border-left: var(--rule-w-strong) solid var(--rule);
+}
+
+/* Obtenu : le filet passe à l'encre. La couleur du badge, elle, appartient au
+   badge et ne dit rien de son obtention. */
+.won {
+  border-left-color: var(--ink);
+}
+
+.icon {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-dot);
+  font-size: var(--text-base);
+  /* À obtenir : en valeur, pas en teinte. */
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.won .icon {
+  filter: none;
+  opacity: 1;
+}
+
+.body {
+  min-width: 0;
+}
+
+.name {
+  display: block;
+  font-size: var(--text-base);
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.state {
+  display: block;
+  font: var(--eyebrow);
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: var(--space-1);
+}
+
+.note {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  margin-top: var(--space-1);
+  max-width: var(--measure);
+}
+
+.description {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  margin-top: var(--space-2);
+  max-width: var(--measure);
+}
+
+/* ---- Petit calibre : les rangées de profil, où le nom suffit ---- */
+
+.medalSm {
+  gap: var(--space-2);
+  padding-left: var(--space-3);
+}
+
+.medalSm .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: var(--text-sm);
+}
+
+.medalSm .name {
+  font-size: var(--text-sm);
+}

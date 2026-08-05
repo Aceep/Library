@@ -6,6 +6,7 @@ import type { UserSummary } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import type { UserDetail } from '../api/schema'
+import BadgeMedal from '../components/BadgeMedal'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
 import MemberLibrary from '../components/MemberLibrary'
@@ -90,6 +91,8 @@ function Profile({ id }: { id: string }) {
         isMe={isMe}
       />
 
+      <BadgeShelf badges={data.badges} isMe={isMe} pseudo={user.pseudo} />
+
       {isMe ? (
         <p className={styles.compareLink}>
           <Link to="/mon-compte">Modifier ma couleur, mon avatar ou mon mot de passe</Link>
@@ -136,6 +139,52 @@ function Profile({ id }: { id: string }) {
         trackedCount={data.tracked_count}
       />
     </div>
+  )
+}
+
+/**
+ * Les badges obtenus, le plus récent d'abord — l'ordre vient de l'API.
+ *
+ * Publics comme le reste du profil : c'est là qu'ils se voient, et c'est ce qui
+ * leur donne leur sens. Rien ne s'affiche quand il n'y en a pas — sur le profil
+ * d'un autre, une section vide raconterait qu'il n'a rien gagné, ce qui n'est
+ * pas une information à mettre en avant. Pour moi, l'écran des badges dit ce
+ * qu'il reste à faire ; le profil se contente de montrer.
+ */
+function BadgeShelf({
+  badges,
+  isMe,
+  pseudo,
+}: {
+  badges: UserDetail['badges']
+  isMe: boolean
+  pseudo: string
+}) {
+  if (badges.length === 0) return null
+
+  return (
+    <section className={styles.badges}>
+      <h2 className={styles.badgesTitle}>
+        {isMe ? 'Mes badges' : `Les badges de ${pseudo}`}
+      </h2>
+      <ul className={styles.badgeList}>
+        {badges.map((badge) => (
+          <li key={badge.id}>
+            <BadgeMedal
+              badge={badge}
+              obtenu
+              size="sm"
+              note={`Obtenu le ${formatDate(badge.awarded_at)}`}
+            />
+          </li>
+        ))}
+      </ul>
+      {isMe ? (
+        <p className={styles.badgesMore}>
+          <Link to="/badges">Voir ce qu’il reste à obtenir</Link>
+        </p>
+      ) : null}
+    </section>
   )
 }
 

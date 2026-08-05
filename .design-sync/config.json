@@ -19,6 +19,7 @@
   "componentSrcMap": {
     "AccountMenu": "src/components/AccountMenu.tsx",
     "AppShell": "src/components/AppShell.tsx",
+    "BadgeMedal": "src/components/BadgeMedal.tsx",
     "Cover": "src/components/Cover.tsx",
     "EmptyState": "src/components/EmptyState.tsx",
     "ErrorBoundary": "src/components/ErrorBoundary.tsx",

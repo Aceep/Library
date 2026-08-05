@@ -48,6 +48,15 @@ export type UserDetail =
 export type Showcase = UserDetail['showcase']
 
 /**
+ * Un badge **obtenu** : le badge, plus le jour où il a été mérité.
+ *
+ * `awarded_at` porte la date de l'achèvement et non celle de l'écriture — une
+ * quête publiée aujourd'hui et achevée d'emblée décerne un badge daté d'hier.
+ * Ils sont publics, et ne se retirent jamais.
+ */
+export type AwardedBadge = UserDetail['badges'][number]
+
+/**
  * Où regarder un film ou une série. **Films et séries seulement** — la route
  * répond `400` sur un livre, un manga ou un jeu, et le champ n'existe pas sur
  * leur fiche.

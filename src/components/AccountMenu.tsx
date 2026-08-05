@@ -14,7 +14,10 @@ import styles from './AccountMenu.module.css'
  * déconnexion les rejoignent — ils étaient déjà les deux dernières entrées de
  * la barre, et personne ne s'y rend par curiosité.
  */
-const ENTRIES: { to: string; label: string }[] = [{ to: '/mon-compte', label: 'Mon compte' }]
+const ENTRIES: { to: string; label: string }[] = [
+  { to: '/badges', label: 'Mes badges' },
+  { to: '/mon-compte', label: 'Mon compte' },
+]
 
 /**
  * Le menu de compte : le premier repli de l'application.

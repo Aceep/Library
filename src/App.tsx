@@ -5,6 +5,7 @@ import About from './pages/About'
 import Compare from './pages/Compare'
 import AdminInvitations from './pages/AdminInvitations'
 import AdminUsers from './pages/AdminUsers'
+import Badges from './pages/Badges'
 import Dashboard from './pages/Dashboard'
 import Invitation from './pages/Invitation'
 import Login from './pages/Login'
@@ -94,6 +95,7 @@ function GatedApp() {
               adresse survit en redirection : elle a été en navigation, elle est
               peut-être dans un signet. */}
           <Route path="musique" element={<Navigate to="/bibliotheque/music" replace />} />
+          <Route path="badges" element={<Badges />} />
           <Route path="quetes" element={<Quests />} />
           <Route path="quetes/:id" element={<Quest />} />
           <Route path="*" element={<Navigate to="/" replace />} />

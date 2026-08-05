@@ -14,6 +14,7 @@ import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { queryKeys } from '../api/keys'
 import { useSession } from '../session/SessionContext'
 import Cover from '../components/Cover'
+import BadgeMedal from '../components/BadgeMedal'
 import ErrorNotice from '../components/ErrorNotice'
 import IdentityDot from '../components/IdentityDot'
 import QuestProgress from '../components/QuestProgress'
@@ -65,7 +66,13 @@ function QuestDetail({ id }: { id: string }) {
           </p>
         ) : null}
 
-        <Badge badge={quest.badge} obtenu={quest.progress.completed} />
+        {/* Montré avant l'achèvement aussi : savoir ce qu'on gagne fait partie
+            de la proposition. */}
+        <BadgeMedal
+          badge={quest.badge}
+          obtenu={quest.progress.completed}
+          className={styles.badge}
+        />
       </header>
 
       {isAdmin ? <PanneauAdmin quest={quest} /> : null}
@@ -95,30 +102,6 @@ function QuestDetail({ id }: { id: string }) {
         </section>
       ) : null}
     </div>
-  )
-}
-
-/**
- * Le badge que la quête décerne — et qui n'est **jamais repris** : c'est un
- * fait daté, pas un état courant. Montré avant l'achèvement aussi, parce que
- * savoir ce qu'on gagne fait partie de la proposition.
- */
-function Badge({ badge, obtenu }: { badge: QuestShape['badge']; obtenu: boolean }) {
-  if (!badge) return null
-
-  return (
-    <p className={obtenu ? `${styles.badge} ${styles.badgeWon}` : styles.badge}>
-      <span className={styles.badgeIcon} style={{ background: badge.color }} aria-hidden="true">
-        {badge.icon}
-      </span>
-      <span>
-        <strong className={styles.badgeName}>{badge.name}</strong>
-        <span className={styles.badgeState}>{obtenu ? 'obtenu' : 'à obtenir'}</span>
-        {badge.description ? (
-          <span className={styles.badgeNote}>{badge.description}</span>
-        ) : null}
-      </span>
-    </p>
   )
 }
 

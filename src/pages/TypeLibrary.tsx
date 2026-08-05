@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchLibrary } from '../api/endpoints'
 import type { LibraryFilters, LibrarySort } from '../api/endpoints'
@@ -41,6 +41,29 @@ export default function TypeLibrary() {
   return <Library key={type} type={type} />
 }
 
+/**
+ * Combien de pages ont été chargées, **dans l'adresse**.
+ *
+ * Le rayon empile ses pages ; l'adresse, elle, n'en disait rien. Ouvrir une
+ * fiche depuis la quatrième page puis revenir en arrière ramenait à la
+ * première dès que le cache avait expiré — cinq minutes suffisent. Le nombre
+ * de pages y figure donc désormais, et la seule chose qu'il rétablit est ce
+ * qu'on avait déjà demandé.
+ *
+ * Ce n'est **pas** une pagination numérotée : `?pages=4` veut dire « les
+ * quatre premières », pas « la quatrième ». La différence compte, parce que la
+ * seconde demanderait de sauter directement à une position, ce que la
+ * pagination par curseur ne permet pas — c'est la discussion qu'on a tranchée
+ * en gardant l'accumulation.
+ */
+function lirePages(params: URLSearchParams): number {
+  const brut = Number(params.get('pages'))
+  if (!Number.isInteger(brut) || brut < 1) return 1
+  // Une borne haute : rien n'empêche d'écrire `?pages=9999` à la main, et on
+  // ne va pas lancer neuf mille requêtes pour l'honorer.
+  return Math.min(brut, 25)
+}
+
 function Library({ type }: { type: MediaType }) {
   const { user } = useSession()
   const { statusesOf } = useReference()
@@ -48,6 +71,8 @@ function Library({ type }: { type: MediaType }) {
   const [ownedOnly, setOwnedOnly] = useState(false)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [sort, setSort] = useState<LibrarySort>('added')
+  const [params, setParams] = useSearchParams()
+  const pagesVoulues = lirePages(params)
 
   const filters: LibraryFilters = {
     type,
@@ -67,6 +92,28 @@ function Library({ type }: { type: MediaType }) {
       // très bien être plus courte que `limit` sans être la dernière.
       getNextPageParam: (lastPage) => lastPage.next_cursor,
     })
+
+  const chargees = data?.pages.length ?? 0
+
+  // Rattrapage à l'ouverture : on redemande page après page jusqu'au compte
+  // annoncé par l'adresse. Une seule à la fois, et seulement quand la
+  // précédente est arrivée — le curseur de la suivante en dépend.
+  useEffect(() => {
+    if (chargees === 0 || chargees >= pagesVoulues) return
+    if (!hasNextPage || isFetchingNextPage) return
+    void fetchNextPage()
+  }, [chargees, pagesVoulues, hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  // Et l'inverse : ce que l'on charge s'inscrit dans l'adresse. `replace` pour
+  // ne pas empiler dix entrées d'historique — revenir en arrière doit ramener
+  // à l'écran précédent, pas dérouler les clics un par un.
+  useEffect(() => {
+    if (chargees <= pagesVoulues) return
+    const suite = new URLSearchParams(params)
+    if (chargees > 1) suite.set('pages', String(chargees))
+    else suite.delete('pages')
+    setParams(suite, { replace: true })
+  }, [chargees, pagesVoulues, params, setParams])
 
   const items = data?.pages.flatMap((page) => page.items) ?? []
   const filtered = status !== null || ownedOnly || favoritesOnly

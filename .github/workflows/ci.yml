@@ -15,11 +15,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      # Node 20 exigé par `engines` et `.nvmrc` : Vite 5 et openapi-typescript
-      # ne tournent pas en deçà.
-      - uses: actions/setup-node@v4
+      # La version vient de `.nvmrc`, qui fait autorité — et elle est dictée par
+      # jsdom, la dépendance la plus exigeante : `^22.22.2 || ^24.15.0 ||
+      # >=26.0.0`. Sous Node 20, son undici plante au chargement et **aucun**
+      # test ne démarre. `engines` dans `package.json` recopie cette contrainte.
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -27,8 +29,12 @@ jobs:
       # `npm ci` plutôt que `npm install` : il installe exactement le lockfile
       # et échoue s'il diverge de package.json, au lieu de le réécrire en
       # silence.
+      #
+      # `--engine-strict` ferme la brèche qui a rendu `main` rouge : sans lui,
+      # un Node trop ancien ne produit qu'un avertissement à l'installation, et
+      # la casse n'arrive qu'à l'exécution, loin de sa cause.
       - name: Installer les dépendances
-        run: npm ci
+        run: npm ci --engine-strict
 
       # Le garde-fou du contrat.
       #

@@ -16,7 +16,7 @@ Trois raisons, chacune suffisante :
    `production`, supprimées en même temps que l'ancien front.
 2. **Railway est abandonné.** Les trois passent par `railway up`, et
    l'hébergement doit changer.
-3. **Node 18 y est codé en dur**, alors que le projet exige Node 20
+3. **Node 18 y est codé en dur**, alors que le projet exige Node 24
    (`engines`, `.nvmrc`).
 
 ## Ce que chacun faisait
@@ -36,8 +36,9 @@ seul sur une branche de production — à n'accepter qu'en connaissance de cause
 - Choisir l'hébergement, et remplacer l'étape Railway en conséquence.
 - Recréer les branches de déploiement, ou déclencher depuis `main` avec des
   environnements GitHub.
-- Passer `node-version` à `20`, ou mieux, à `node-version-file: .nvmrc` comme
-  le fait déjà `ci.yml`.
+- Passer `node-version` à `node-version-file: .nvmrc` comme le fait déjà
+  `ci.yml` — coder la version en dur est précisément ce qui a rendu `main`
+  rouge le 5 août.
 - Reposer les secrets : `RAILWAY_*` disparaissent, `PROD_URL` et `PAT`
   subsistent si le test de fumée est conservé.
 

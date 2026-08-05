@@ -7,11 +7,13 @@ français, sans i18n.
 
 ## Démarrer
 
-Le projet exige **Node 20** (voir `.nvmrc`). Vite 5 et `openapi-typescript` ne
-tournent pas sur les versions antérieures.
+Le projet exige **Node 24** (voir `.nvmrc`). La contrainte vient de `jsdom`, qui
+sert aux tests et réclame `^22.22.2 || ^24.15.0 || >=26.0.0` : sous Node 20 il
+plante au chargement et aucun test ne démarre. `npm ci --engine-strict` le
+refuse à l'installation plutôt que de laisser la casse arriver à l'exécution.
 
 ```bash
-nvm use            # ou : export PATH=$HOME/.nvm/versions/node/v20.19.0/bin:$PATH
+nvm use            # ou : export PATH=$HOME/.nvm/versions/node/v24.15.0/bin:$PATH
 npm install
 npm run dev        # http://localhost:5173
 ```

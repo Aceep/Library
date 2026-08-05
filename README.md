@@ -25,7 +25,7 @@ Comptes de développement : `alice` / `alice-dev-password` (rôle `admin`),
 L'adresse de l'API **n'apparaît qu'à un seul endroit**, `vite.config.ts` :
 
 ```ts
-const API = process.env.VITE_API_TARGET ?? 'http://192.168.86.219:3000'
+const API = process.env.VITE_API_TARGET ?? 'http://localhost:3000'
 ```
 
 Tout le code appelle des chemins relatifs (`/api/...`), jamais une adresse. Le
@@ -155,7 +155,7 @@ erreurs, ou des affichages faux.
 
 | Règle | Conséquence dans le code |
 |---|---|
-| `status` ne s'écrit pas sur `tv` ni `comic_series` | Il est **dérivé** des épisodes et tomes cochés. Le sélecteur n'existe pas pour ces types (`isDerivedStatusType`). Écrire quand même vaut `400`. |
+| `status` ne s'écrit pas sur `tv` ni `comic_series` | Il est **dérivé** des épisodes et tomes cochés. Le sélecteur n'existe pas pour ces types — `useReference().isDerivedStatusType`, lu chez l'API. Écrire quand même vaut `400`. |
 | `user_id` ne s'envoie jamais dans un corps d'écriture | `403` systématique. `TrackingPatch` ne comporte pas le champ : il est inexprimable. |
 | Rien ne se recalcule côté client | Toute écriture renvoie l'agrégat recalculé. `src/api/cache.ts` ne fait que le ranger. |
 | Les curseurs sont opaques | On s'arrête sur `next_cursor === null`, **jamais** sur `items.length < limit`. |

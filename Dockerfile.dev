@@ -1,0 +1,28 @@
+# Image de développement : Vite tourne dans le conteneur, le code arrive par
+# bind-mount. Sans rapport avec le `Dockerfile` de production, qui compile puis
+# sert le résultat par nginx et n'embarque aucun outil de dev.
+FROM node:20-bookworm-slim
+
+# L'hôte est un poste Linux : un fichier écrit dans le bind-mount garde l'uid du
+# conteneur. On recrée donc l'utilisateur de l'hôte ici, sinon `dist/` et
+# `node_modules` reviennent en root et ne s'effacent plus sans sudo.
+# `-o` : l'uid/gid d'un compte de domaine peut entrer en collision avec ceux de
+# l'image (l'utilisateur `node` occupe déjà 1000).
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -o -g ${GID} dev \
+ && useradd -o -u ${UID} -g ${GID} -m dev \
+ && mkdir -p /app/node_modules /home/dev/.npm \
+ && chown -R ${UID}:${GID} /app /home/dev
+
+# Les deux dossiers existent dans l'image *avant* que les volumes nommés ne s'y
+# montent : Docker recopie alors leur propriétaire sur le volume. Créés à la
+# volée, ils appartiendraient à root et `npm` ne pourrait plus y écrire.
+USER dev
+WORKDIR /app
+
+EXPOSE 5173
+
+# `--host 0.0.0.0` n'est pas cosmétique : Vite n'écoute que la loopback par
+# défaut, donc celle du conteneur — le port publié ne verrait rien passer.
+CMD ["sh", "-c", "npm ci --prefer-offline --no-audit --no-fund && npm run dev -- --host 0.0.0.0"]

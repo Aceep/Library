@@ -1,0 +1,38 @@
+services:
+  front:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      # Lus depuis `.env` (non versionné, propre à chaque poste). Voir le README.
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    # Port de l'hôte seulement : dans le conteneur Vite reste sur 5173, et le
+    # client HMR suit l'adresse de la page. `FRONT_PORT=5174 docker compose up`
+    # quand un autre serveur occupe déjà le port.
+    ports:
+      - '${FRONT_PORT:-5173}:5173'
+    environment:
+      # Équivalent en conteneur du défaut de `vite.config.ts` : `localhost` y
+      # désignerait le conteneur lui-même, `host.docker.internal` désigne la
+      # machine — donc le back lancé à côté, y compris celui de `../biblio-back`.
+      # Comme là-bas, pas d'IP de réseau local en dur : un défaut faux se
+      # connecte puis échoue partout sans dire pourquoi. Une autre machine se
+      # vise par variable :
+      #   VITE_API_TARGET=http://<adresse>:3000 docker compose up
+      VITE_API_TARGET: ${VITE_API_TARGET:-http://host.docker.internal:3000}
+    volumes:
+      - .:/app
+      # `node_modules` du conteneur, jamais celui de l'hôte : les deux sont
+      # installés par des versions de npm différentes, et les mélanger produit
+      # des pannes qui ne ressemblent pas à leur cause.
+      - node_modules:/app/node_modules
+      # Le cache npm survit à `docker compose down`, sinon chaque démarrage
+      # retélécharge tout l'arbre de dépendances.
+      - npm_cache:/home/dev/.npm
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+volumes:
+  node_modules:
+  npm_cache:

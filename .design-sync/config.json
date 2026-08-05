@@ -17,6 +17,7 @@
     }
   },
   "componentSrcMap": {
+    "AccountMenu": "src/components/AccountMenu.tsx",
     "AppShell": "src/components/AppShell.tsx",
     "Cover": "src/components/Cover.tsx",
     "EmptyState": "src/components/EmptyState.tsx",
@@ -30,6 +31,7 @@
     "NotificationsLink": "src/components/NotificationsLink.tsx",
     "PeopleDisclosure": "src/components/PeopleDisclosure.tsx",
     "ProgressBar": "src/components/ProgressBar.tsx",
+    "QuestProgress": "src/components/QuestProgress.tsx",
     "SagaList": "src/components/SagaList.tsx",
     "Screenshots": "src/components/Screenshots.tsx",
     "SeasonList": "src/components/SeasonList.tsx",

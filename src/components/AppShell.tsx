@@ -3,14 +3,14 @@ import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { useSession } from '../session/SessionContext'
 import AppFooter from './AppFooter'
 import NotificationsLink from './NotificationsLink'
-import IdentityDot from './IdentityDot'
+import AccountMenu from './AccountMenu'
 import styles from './AppShell.module.css'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
 
 export default function AppShell() {
-  const { user, isAdmin, logout } = useSession()
+  const { isAdmin } = useSession()
 
   return (
     <div className={styles.shell}>
@@ -52,6 +52,8 @@ export default function AppShell() {
                 </NavLink>
               </span>
             ) : null}
+            {/* Ce qui se regarde tous les jours reste dehors — c'est la seule
+                raison de ne pas le replier avec le reste. */}
             <NavLink to="/veille" className={styles.adminLink}>
               Veille
             </NavLink>
@@ -59,12 +61,7 @@ export default function AppShell() {
             <NavLink to="/recherche" className={styles.searchLink}>
               Ajouter une œuvre
             </NavLink>
-            <NavLink to="/mon-compte" className={styles.identityLink} title="Mon compte">
-              <IdentityDot account={user} withName />
-            </NavLink>
-            <button type="button" className={styles.logout} onClick={() => void logout()}>
-              Déconnexion
-            </button>
+            <AccountMenu />
           </div>
         </div>
       </header>

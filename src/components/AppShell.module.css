@@ -102,21 +102,6 @@
   color: var(--ink);
 }
 
-.logout {
-  background: none;
-  border: none;
-  padding: 0;
-  font: var(--caption);
-  color: var(--ink-muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--rule-strong);
-}
-
-.logout:hover {
-  color: var(--ink);
-}
-
 /**
  * Le champ de la page : marges et largeur maximale viennent des jetons, donc
  * les quatre paliers se règlent dans `tokens.css` et nulle part ailleurs.
@@ -138,11 +123,6 @@
   .main {
     padding: var(--s-6) var(--page-margin) var(--s-8);
   }
-}
-
-/* Son propre pseudo mène à son profil. */
-.identityLink:hover {
-  opacity: 0.75;
 }
 
 .adminGroup {

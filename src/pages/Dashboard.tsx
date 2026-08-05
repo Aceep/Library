@@ -1,58 +1,98 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import type { UseQueryResult } from '@tanstack/react-query'
-import { fetchHome, fetchLibrary } from '../api/endpoints'
-import type { LibraryFilters } from '../api/endpoints'
-import { MEDIA_TYPES, progressRatio, typeLabel, typeLabelPlural } from '../api/schema'
-import type { HomeResponse, LibraryItem, MediaType, Page } from '../api/schema'
-import Cover from '../components/Cover'
-import EmptyState from '../components/EmptyState'
+import { fetchHome } from '../api/endpoints'
+import { MEDIA_TYPES, progressRatio, typeLabel } from '../api/schema'
+import type { Account, HomeResponse, MediaType } from '../api/schema'
 import ErrorNotice from '../components/ErrorNotice'
-import ProgressBar from '../components/ProgressBar'
-import { NewContentBadge } from '../components/StatusBadge'
+import MemberChip from '../components/MemberChip'
+import Reveal from '../components/Reveal'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
 import styles from './Dashboard.module.css'
 
 type InProgressEntry = HomeResponse['in_progress']['book'][number]
 type FeedEntry = HomeResponse['feed'][number]
+type InProgressType = keyof HomeResponse['in_progress']
 
 /**
- * La bande de rayons, sous la une.
- *
- * `music` n'est pas un `MediaType` — l'API ne sert pas le rayon — mais il est
- * annoncé au même poids que les cinq autres : la médiathèque se présente pour
- * ce qu'elle vise, et le lien mène à la page qui l'explique.
- */
-const RAYONS: { key: string; label: string; to: string }[] = MEDIA_TYPES.map((type) => ({
-  key: type as string,
-  label: typeLabelPlural(type),
-  to: `/bibliotheque/${type}`,
-}))
-
-/**
- * Les types qui peuvent avoir des en-cours — c'est-à-dire ceux que
- * `/home` sert, la musique exceptée : un album n'a que deux états, il n'est
- * jamais « en cours ».
+ * Les types qui peuvent avoir des en-cours — ceux que `/home` sert, la musique
+ * exceptée : un album n'a que deux états, il n'est jamais « en cours ».
  *
  * La liste se déduit de la réponse plutôt que de s'écrire ici. Le jour où le
  * back servirait un rayon de plus, il apparaîtrait tout seul, dans l'ordre
- * d'affichage de `MEDIA_TYPES`.
+ * d'affichage de `MEDIA_TYPES`. Une liste de cinq écrite à la main casserait
+ * ce jour-là, en silence.
  */
-type InProgressType = keyof HomeResponse['in_progress']
-
 const inProgressTypes = (inProgress: HomeResponse['in_progress']) =>
   MEDIA_TYPES.filter((type): type is InProgressType => type in inProgress)
 
-/** Six entrées suffisent à une bande de couvertures : on n'en télécharge pas 40. */
-const RECENT_FILTERS: LibraryFilters = { sort: 'added', limit: 6 }
+/**
+ * La quête du jour — **en dur, et aucune route ne la sert**.
+ *
+ * `GET /quests` existe mais ne rend pas ça : ce sont des parcours composés à la
+ * main par un administrateur, avec leurs œuvres, leurs classements et leurs
+ * badges. Rien n'y choisit une œuvre par jour pour le cercle, rien n'y porte
+ * « proposée par », et il n'existe aucune mutation « accepter ».
+ *
+ * Le contenu ci-dessous est donc celui de la maquette, mot pour mot, et le
+ * restera tant que la sélection quotidienne n'est pas décidée côté serveur
+ * (`HANDOFF.md` § 8.3 la laisse ouverte). Les deux liens visent `/quetes`, un
+ * écran réel : un bouton d'action qui ne mène nulle part serait pire que le
+ * texte en dur.
+ */
+const QUETE = {
+  numero: 214,
+  titre: "Regardez quelque chose que K.B. a adoré et n'a jamais raconté.",
+  note:
+    "Elle l'a noté cinq étoiles en janvier 2024 et n'en a jamais écrit un mot. Trois heures et douze minutes. Personne d'autre dans le cercle ne l'a ouvert.",
+  meta: 'Film · 1979 · 3 h 12',
+  proposePar: 'K.B.',
+}
 
-const QUESTS_NOTE =
-  "Les quêtes sont en cours de développement côté API. La place est tenue, rien n'y sera inventé en attendant."
+/**
+ * Les nouvelles des signatures — **en dur, et rien ne les sert non plus**.
+ *
+ * Rien dans l'API ne suit un auteur, un réalisateur ou un groupe : on suit des
+ * membres et on surveille des œuvres, jamais des personnes. `HANDOFF.md` § 3 le
+ * dit lui-même — « static placeholder data for now » — et § 8.1 en fait une
+ * décision à prendre.
+ *
+ * Le jour où une route existe, c'est ce tableau qui disparaît ; la mise en
+ * page, elle, est déjà celle des vraies données.
+ */
+const SIGNATURES: { kind: string; date: string; titre: string; ligne: string; suivi: string; type: MediaType }[] = [
+  {
+    kind: 'Nouveau recueil annoncé',
+    date: '3 sept.',
+    titre: 'Ted Chiang — nouvelles inédites',
+    ligne: 'Neuf textes, dont trois jamais publiés. Le cercle a lu le premier recueil quatre fois en tout.',
+    suivi: '3 personnes',
+    type: 'book',
+  },
+  {
+    kind: 'Tournage confirmé',
+    date: '28 août',
+    titre: 'Céline Sciamma — sans titre',
+    ligne: 'Retour au format long après quatre ans. A.V. suit sa filmographie depuis 2019.',
+    suivi: '2 personnes',
+    type: 'movie',
+  },
+  {
+    kind: 'Album daté',
+    date: '21 août',
+    titre: 'Godspeed You! Black Emperor',
+    ligne: "Cinquième mouvement, sortie le 14 novembre. La bande-son de deux hivers du cercle.",
+    suivi: '4 personnes',
+    type: 'music',
+  },
+]
 
-const SUGGESTIONS_NOTE =
-  "Les suggestions sont en cours de développement côté API. La place est tenue, rien n'y sera inventé en attendant."
+const VERBE: Record<FeedEntry['kind'], string> = {
+  finished: 'a terminé',
+  rated: 'a noté',
+  started: 'a commencé',
+}
 
 export default function Dashboard() {
   const { user } = useSession()
@@ -61,411 +101,359 @@ export default function Dashboard() {
     queryFn: fetchHome,
   })
 
-  // Le catalogue est une seconde requête, et il ferme la page : elle ne bloque
-  // ni le rendu ni le reste. Son échec se dit sur une ligne, il ne remplace pas
-  // l'écran par une erreur.
-  const recent = useQuery({
-    queryKey: queryKeys.libraryWith(RECENT_FILTERS),
-    queryFn: ({ signal }) => fetchLibrary(RECENT_FILTERS, null, signal),
-  })
-
   if (isPending) return <p className={styles.loading}>Chargement…</p>
   if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
 
-  const groups = inProgressTypes(data.in_progress)
-    .map((type) => ({ type, entries: data.in_progress[type] }))
-    .filter((group) => group.entries.length > 0)
-  const hero = pickHero(data.in_progress)
+  const encours = inProgressTypes(data.in_progress).flatMap((type) =>
+    data.in_progress[type].map((entry) => ({ entry, type })),
+  )
+  // Un murmure *est* une critique écrite : un « terminé » sans texte n'a rien à
+  // citer, et une citation vide serait un cadre autour de rien.
+  const murmures = data.feed.filter((item) => item.review !== null)
 
   return (
     <div className={styles.page}>
-      <header className={styles.intro}>
-        <p className={styles.eyebrow}>Bonjour {user.pseudo}</p>
-        <h1 className={styles.title}>Ce qui est ouvert, et ce que le cercle a marqué</h1>
-      </header>
+      <Beam />
 
-      {hero ? <Hero hero={hero} /> : null}
+      <QuestBanner />
+      <Ticker feed={data.feed} />
 
-      <nav className={styles.rayons} aria-label="Les rayons">
-        {RAYONS.map((rayon) => (
-          <Link
-            key={rayon.key}
-            to={rayon.to}
-            className={styles.rayonLink}
-            data-media-type={rayon.key}
-          >
-            {rayon.label}
-          </Link>
-        ))}
-      </nav>
-
-      {/* 01 — les en-cours, en trois colonnes inégales : la première œuvre de
-          chaque rayon pèse plus que les deux suivantes. */}
-      <section className={styles.section}>
-        <SectionHead number="01" kicker="En cours" />
-        {groups.length === 0 ? (
-          <EmptyState
-            title="Rien en cours pour le moment"
-            note="Dès que tu commenceras une œuvre, elle apparaîtra ici avec de quoi la reprendre."
-            action={
-              <Link to="/recherche" className={styles.emptyAction}>
-                Ajouter une œuvre
-              </Link>
-            }
-          />
-        ) : (
-          <div className={styles.groups}>
-            {groups.map((group) => (
-              <div key={group.type} data-media-type={group.type}>
-                <h2 className={styles.groupTitle}>{typeLabelPlural(group.type)}</h2>
-                <ul className={styles.entries}>
-                  {group.entries.map((entry) => (
-                    <InProgressCard key={entry.media.id} entry={entry} type={group.type} />
-                  ))}
-                </ul>
-              </div>
+      <div className={styles.body}>
+        <main className={styles.main}>
+          <Reveal className={styles.section}>
+            <SectionHead
+              titre="Nouvelles des"
+              accent="signatures"
+              legende="auteurs · réalisateurs · groupes que vous suivez"
+            />
+            {SIGNATURES.map((item) => (
+              <SignatureRow key={item.titre} item={item} />
             ))}
+          </Reveal>
+
+          <Reveal className={styles.section}>
+            <SectionHead
+              titre="En"
+              accent="cours"
+              /* La maquette dit « ce que le cercle traverse ». `/home` ne rend
+                 que mes suivis — la légende dit donc ce qu'elle montre. */
+              legende="ce que je traverse en ce moment"
+            />
+            {encours.length === 0 ? (
+              <p className={styles.vide}>
+                Rien d'ouvert en ce moment. Le fonds attend.
+              </p>
+            ) : (
+              <div className={styles.tuiles}>
+                {encours.map(({ entry, type }) => (
+                  <EnCoursTile key={entry.media.id} entry={entry} type={type} me={user} />
+                ))}
+              </div>
+            )}
+          </Reveal>
+
+          <Reveal className={styles.section}>
+            <SectionHead
+              titre="Derniers"
+              accent="murmures"
+              legende="ce qu'ils viennent d'écrire"
+            />
+            {murmures.length === 0 ? (
+              <p className={styles.vide}>
+                {data.following_count === 0
+                  ? "Tu ne suis encore personne : le carnet reste blanc tant que le cercle n'y écrit pas."
+                  : "Personne n'a rien écrit ces trente derniers jours."}
+              </p>
+            ) : (
+              murmures.map((item) => <MurmureRow key={`${item.media.id}-${item.at}`} item={item} />)
+            )}
+          </Reveal>
+        </main>
+
+        <aside className={styles.aside} aria-labelledby="traces">
+          <div className={styles.asideHead}>
+            <h2 id="traces" className={styles.asideTitre}>
+              Traces <span className={styles.accent}>du cercle</span>
+            </h2>
+            <span className={styles.legende}>récemment</span>
           </div>
-        )}
-      </section>
-
-      <GhostSection
-        number="02"
-        kicker="Quêtes"
-        title="Ce qu'il reste à faire dans un jeu"
-        note={QUESTS_NOTE}
-      />
-
-      {/* Un fil, plus une colonne : chaque entrée porte son auteur et sa
-          couleur, puisqu'il n'y a plus de partenaire unique. */}
-      <section className={styles.partnerSection}>
-        <SectionHead number="03" kicker="Le carnet" />
-        <div>
-          <h2 className={styles.partnerTitle}>
-            {data.following_count > 0
-              ? `Le carnet du cercle · ${data.following_count} comptes suivis`
-              : 'Le carnet du cercle'}
-          </h2>
           {data.feed.length === 0 ? (
-            <p className={styles.quiet}>
-              {data.following_count === 0
-                ? "Tu ne suis personne pour l'instant : ce fil se remplira dès que ce sera le cas."
-                : 'Rien de neuf ces trente derniers jours.'}
-            </p>
+            <p className={styles.vide}>Aucune trace pour l'instant.</p>
           ) : (
-            <ul className={styles.activity}>
-              {data.feed.map((item) => (
-                <ActivityRow
-                  key={`${item.user.id}-${item.kind}-${item.media.id}-${item.at}`}
-                  item={item}
-                />
-              ))}
-            </ul>
+            data.feed.map((item) => <TraceRow key={`${item.media.id}-${item.at}`} item={item} />)
           )}
-        </div>
-      </section>
-
-      <GhostSection
-        number="04"
-        kicker="Suggestions"
-        title="Ce que le cercle a adoré et que tu n'as pas commencé"
-        note={SUGGESTIONS_NOTE}
-      />
-
-      {/* 05 — le catalogue, en bande de couvertures : la page se ferme sur une
-          image, pas sur une liste. */}
-      <section className={styles.section}>
-        <SectionHead number="05" kicker="Récemment ajouté" />
-        <div>
-          <h2 className={styles.partnerTitle}>Les dernières entrées au catalogue</h2>
-          <RecentRow query={recent} />
-        </div>
-      </section>
-    </div>
-  )
-}
-
-/**
- * Le numéro et le sourcil d'une section, dans la colonne de marge. Toutes les
- * sections de la une posent la même chrome : elle vit ici, pas cinq fois dans
- * le corps de la page.
- */
-function SectionHead({ number, kicker }: { number: string; kicker: string }) {
-  return (
-    <div>
-      <div className={styles.sectionNumber}>{number}</div>
-      <div className={styles.sectionKicker}>{kicker}</div>
-    </div>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* La une                                                              */
-/* ------------------------------------------------------------------ */
-
-interface HeroPick {
-  entry: InProgressEntry
-  type: MediaType
-  /** Éléments restant à cocher, nul sur une œuvre sans rien à cocher. */
-  remaining: number | null
-}
-
-/**
- * L'œuvre de la une : **celle qu'on est le plus près de finir**.
- *
- * On ne la choisit que parmi les types à cocher — un film à moitié vu n'existe
- * pas dans le contrat, il n'a pas de progression. Si rien n'a de progression,
- * la une prend la première œuvre ouverte et se passe de compte à rebours plutôt
- * que de disparaître.
- */
-function pickHero(inProgress: HomeResponse['in_progress']): HeroPick | null {
-  const all = inProgressTypes(inProgress).flatMap((type) =>
-    inProgress[type].map((entry) => ({ entry, type })),
-  )
-  if (all.length === 0) return null
-
-  let best: (HeroPick & { ratio: number }) | null = null
-
-  for (const { entry, type } of all) {
-    const { progress } = entry
-    const ratio = progressRatio(progress)
-    // `ratio >= 1` : tout est coché sans que l'œuvre soit sortie des en-cours.
-    // Ce n'est pas une œuvre qu'on reprend, c'est une qu'on vient de finir.
-    if (!progress || ratio === null || ratio >= 1) continue
-
-    const remaining = progress.total - progress.checked
-    // À progression égale, c'est le moins d'éléments restants qui l'emporte :
-    // « à deux tomes » invite mieux que « à vingt tomes ».
-    const closer =
-      !best || ratio > best.ratio || (ratio === best.ratio && remaining < (best.remaining ?? 0))
-    if (closer) best = { entry, type, remaining, ratio }
-  }
-
-  if (best) return { entry: best.entry, type: best.type, remaining: best.remaining }
-
-  const [first] = all
-  return { entry: first.entry, type: first.type, remaining: null }
-}
-
-const NUMBER_WORDS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf']
-
-/** Le compte à rebours s'écrit en toutes lettres jusqu'à neuf, comme en revue. */
-const heroKicker = ({ type, remaining }: HeroPick) => {
-  if (remaining === null) return 'En cours'
-  const noun = type === 'tv' ? 'épisode' : 'tome'
-  if (remaining === 1) return `À un ${noun} de la fin`
-  const count = remaining < NUMBER_WORDS.length ? NUMBER_WORDS[remaining] : String(remaining)
-  return `À ${count} ${noun}s de la fin`
-}
-
-function Hero({ hero }: { hero: HeroPick }) {
-  const { media, tracking, progress, next_up: nextUp } = hero.entry
-
-  return (
-    <section className={styles.hero} data-media-type={hero.type} aria-label="À la une">
-      <Link to={`/media/${media.id}`} className={styles.heroCover}>
-        <Cover url={media.cover_url} title={media.title} type={hero.type} ratio="3/4" />
-      </Link>
-
-      <div className={styles.heroBody}>
-        <p className={styles.heroKicker}>{heroKicker(hero)}</p>
-        <h2 className={styles.heroTitle}>
-          <Link to={`/media/${media.id}`}>{media.title}</Link>
-        </h2>
-        <p className={styles.heroMeta}>
-          {typeLabel(hero.type)}
-          {media.year ? ` · ${media.year}` : ''}
-        </p>
-
-        {/* La barre passe à l'ocre et non à la couleur du membre : sur sa propre
-            une, la progression n'a personne à désigner — elle appelle à agir. */}
-        <div className={styles.heroProgress}>
-          <ProgressBar
-            progress={progress}
-            color="var(--accent-mark)"
-            label={`Progression sur ${media.title}`}
-          />
-        </div>
-
-        <div className={styles.cardTags}>
-          {tracking.has_new_content ? <NewContentBadge /> : null}
-          {tracking.owned ? <span className={styles.owned}>Possédé</span> : null}
-        </div>
-
-        {nextUp ? (
-          <Link to={`/media/${media.id}`} className={`${styles.resume} ${styles.heroResume}`}>
-            Reprendre&nbsp;: {nextUp.title ?? defaultNextUpLabel(nextUp)}
+          <Link to="/notifications" className={styles.journal}>
+            Journal complet →
           </Link>
-        ) : null}
+        </aside>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Le faisceau du projecteur.
+ *
+ * Purement décoratif, donc `aria-hidden` et transparent aux clics. Il est en
+ * `position: absolute` sous tout le contenu, d'où le `z-index` explicite sur ce
+ * qui vient après.
+ */
+function Beam() {
+  return <div className={styles.beam} aria-hidden="true" />
+}
+
+/** L'étiquette d'un rayon : un aplat, texte quasi noir. Jamais une bordure. */
+function MediumLabel({ type, small = false }: { type: MediaType; small?: boolean }) {
+  return (
+    <span className={`${styles.medium} ${small ? styles.mediumSm : ''}`} data-media-type={type}>
+      {typeLabel(type)}
+    </span>
+  )
+}
+
+/**
+ * La bannière de quête. Jamais enveloppée dans `Reveal` : elle est au-dessus de
+ * la ligne de flottaison, déjà peinte quand l'observateur se met en route — une
+ * révélation y serait un clignotement.
+ *
+ * Les mots du titre montent un à un. Les délais s'écrivent en `:nth-child()`
+ * dans la feuille, pas en style inline : le titre est en dur, son nombre de
+ * mots est connu, et React réécrirait des délais posés à la main.
+ */
+function QuestBanner() {
+  return (
+    <section className={styles.quete} aria-labelledby="quete-du-jour">
+      <div className={styles.lampe} aria-hidden="true" />
+      <div className={styles.queteInner}>
+        <div className={styles.queteCadre}>
+          <div>
+            <div className={styles.queteSourcil}>
+              <span className={styles.quetePastille}>Quête du jour</span>
+              <span className={styles.queteFilet} aria-hidden="true" />
+              <span className={styles.queteMeta}>
+                Nº {QUETE.numero} · une seule par jour
+              </span>
+            </div>
+
+            <h1 id="quete-du-jour" className={styles.queteTitre}>
+              {QUETE.titre.split(' ').map((mot, index) => (
+                // La clé porte l'index : un même mot peut revenir dans la
+                // phrase, et son rang est ce qui le distingue.
+                //
+                // L'espace est **insécable** et à l'intérieur du span : une
+                // espace ordinaire entre deux `inline-block` est réduite à
+                // néant par la mise en page, et les mots se recollaient.
+                <span key={`${mot}-${index}`}>{mot}&nbsp;</span>
+              ))}
+            </h1>
+
+            <p className={styles.queteNote}>{QUETE.note}</p>
+
+            <div className={styles.queteActions}>
+              <Link to="/quetes" className={styles.queteCta}>
+                Voir les quêtes <span aria-hidden="true">→</span>
+              </Link>
+              <Link to="/quetes" className={styles.queteLien}>
+                Voir la fiche
+              </Link>
+              <span className={styles.queteAuteur}>
+                proposée par <span className={styles.queteAuteurNom}>{QUETE.proposePar}</span>
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.queteArt}>
+            <div className={styles.queteJaquette}>
+              <span className={styles.queteJaquetteNote}>jaquette · 2:3</span>
+            </div>
+            <div className={styles.queteArtMeta}>{QUETE.meta}</div>
+          </div>
+        </div>
       </div>
     </section>
   )
 }
 
-/* ------------------------------------------------------------------ */
-/* Les en-cours                                                        */
-/* ------------------------------------------------------------------ */
-
-function InProgressCard({ entry, type }: { entry: InProgressEntry; type: MediaType }) {
-  const { media, tracking, progress, next_up: nextUp } = entry
-
-  return (
-    <li className={styles.card}>
-      <Link to={`/media/${media.id}`} className={styles.cardLink}>
-        <div className={styles.cardCover}>
-          <Cover url={media.cover_url} title={media.title} type={type} />
-        </div>
-        <div className={styles.cardBody}>
-          <p className={styles.cardTitle}>{media.title}</p>
-          {media.year ? <p className={styles.cardYear}>{media.year}</p> : null}
-
-          {/* `progress` est nul sur les types sans éléments à cocher. */}
-          <ProgressBar
-            progress={progress}
-            color="var(--accent-mark)"
-            label={`Progression sur ${media.title}`}
-          />
-
-          <div className={styles.cardTags}>
-            {tracking.has_new_content ? <NewContentBadge /> : null}
-            {tracking.owned ? <span className={styles.owned}>Possédé</span> : null}
-          </div>
-        </div>
-      </Link>
-
-      {/* `next_up` est nul quand tout est coché : on masque le bouton, on ne
-          l'affiche pas désactivé. */}
-      {nextUp ? (
-        <Link to={`/media/${media.id}`} className={styles.resume}>
-          Reprendre&nbsp;: {nextUp.title ?? defaultNextUpLabel(nextUp)}
-        </Link>
-      ) : null}
-    </li>
-  )
-}
-
-const defaultNextUpLabel = (nextUp: NonNullable<InProgressEntry['next_up']>) =>
-  nextUp.kind === 'episode'
-    ? `S${nextUp.season_number}E${String(nextUp.number).padStart(2, '0')}`
-    : `Tome ${nextUp.number}`
-
-/* ------------------------------------------------------------------ */
-/* Le carnet                                                           */
-/* ------------------------------------------------------------------ */
-
-const ACTIVITY_VERB: Record<FeedEntry['kind'], string> = {
-  finished: 'a terminé',
-  rated: 'a noté',
-  started: 'a commencé',
-}
-
-function ActivityRow({ item }: { item: FeedEntry }) {
-  return (
-    // La couleur du membre arrive en runtime et ne descend que par `--identity` :
-    // elle n'est jamais écrite en CSS. Ici elle teinte la note, composée en
-    // Newsreader comme un chiffre de notice.
-    <li
-      className={styles.activityRow}
-      style={{ '--identity': item.user.identity_color } as CSSProperties}
-    >
-      {/* Deux liens distincts plutôt qu'un lien dans un lien : l'auteur mène à
-          son profil, le reste de la ligne mène à l'œuvre. */}
-      <Link
-        to={`/membres/${item.user.id}`}
-        className={styles.activityAuthorLink}
-        title={`Le profil de ${item.user.pseudo}`}
-      >
-        <span
-          className={styles.activityDot}
-          style={{ background: item.user.identity_color }}
-          aria-hidden="true"
-        />
-        <span className={styles.activityAuthor}>{item.user.pseudo}</span>
-      </Link>
-
-      <Link to={`/media/${item.media.id}`} className={styles.activityLink}>
-        <Cover url={item.media.cover_url} title={item.media.title} type={item.media.type} size="sm" />
-        <span className={styles.activityText}>
-          <span className={styles.activityVerb}>{ACTIVITY_VERB[item.kind]}</span>{' '}
-          <span className={styles.activityTitle}>{item.media.title}</span>
-          {item.rating !== null ? <span className={styles.activityRating}>{item.rating}/10</span> : null}
-          {item.review ? <span className={styles.activityReview}>« {item.review} »</span> : null}
-        </span>
-        <time className={styles.activityDate} dateTime={item.at}>
-          {formatDay(item.at)}
-        </time>
-      </Link>
-    </li>
-  )
-}
-
-const formatDay = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-
-/* ------------------------------------------------------------------ */
-/* Récemment ajouté                                                    */
-/* ------------------------------------------------------------------ */
-
-function RecentRow({ query }: { query: UseQueryResult<Page<LibraryItem>> }) {
-  if (query.isPending) return <p className={styles.quiet}>Chargement…</p>
-  // Le catalogue n'est pas la raison d'être de la page : son échec se dit, il
-  // ne réclame pas de réessayer.
-  if (query.isError) return <p className={styles.quiet}>Le catalogue n'a pas répondu.</p>
-  if (query.data.items.length === 0)
-    return <p className={styles.quiet}>Le catalogue est encore vide.</p>
-
-  return (
-    <ul className={styles.recentRow}>
-      {query.data.items.map((item) => (
-        <li key={item.id}>
-          <Link to={`/media/${item.id}`} className={styles.recentLink}>
-            <div className={styles.recentCover}>
-              <Cover url={item.cover_url} title={item.title} type={item.type} />
-            </div>
-            <p className={styles.recentTitle}>{item.title}</p>
-            <p className={styles.recentType}>{typeLabel(item.type)}</p>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* Les sections que l'API ne sert pas encore                           */
-/* ------------------------------------------------------------------ */
-
 /**
- * Une section annoncée, dessinée à vide.
+ * La bande défilante. Elle se compose du fil, et **rend `null` s'il est vide** :
+ * une bande décorative inventée dirait qu'il se passe quelque chose là où il ne
+ * se passe rien.
  *
- * Elle prend sa hauteur réelle avec des empreintes de couvertures : la page se
- * juge dans son rythme final, et la place est visiblement réservée plutôt que
- * comblée. Les empreintes sont en filet tireté, jamais en aplat — un aplat gris
- * se lit comme un chargement en cours, ce qui serait un mensonge.
+ * Le contenu est dupliqué parce que l'animation translate de -50 % : c'est la
+ * seconde copie qui rattrape la première sans saut.
  */
-function GhostSection({
-  number,
-  kicker,
-  title,
-  note,
+function Ticker({ feed }: { feed: FeedEntry[] }) {
+  if (feed.length === 0) return null
+
+  const bande = `${feed.map((item) => item.media.title).join(' · ')} · `
+
+  return (
+    <div className={styles.ticker} aria-hidden="true">
+      <div className={styles.tickerPiste}>
+        <span className={styles.tickerTexte}>{bande}</span>
+        <span className={styles.tickerTexte}>{bande}</span>
+      </div>
+    </div>
+  )
+}
+
+function SectionHead({
+  titre,
+  accent,
+  legende,
 }: {
-  number: string
-  kicker: string
-  title: string
-  note: string
+  titre: string
+  accent: string
+  legende: string
 }) {
   return (
-    <section className={styles.section}>
-      <SectionHead number={number} kicker={kicker} />
-      <div>
-        <h2 className={styles.partnerTitle}>{title}</h2>
-        <ul className={styles.ghostRow} aria-hidden="true">
-          {[0, 1, 2].map((slot) => (
-            <li key={slot} className={styles.ghostCard} />
-          ))}
-        </ul>
-        <p className={styles.ghostNote}>{note}</p>
-      </div>
-    </section>
+    <div className={styles.sectionHead}>
+      <h2 className={styles.sectionTitre}>
+        {titre} <span className={styles.accent}>{accent}</span>
+      </h2>
+      <span className={styles.legende}>{legende}</span>
+    </div>
   )
+}
+
+function SignatureRow({ item }: { item: (typeof SIGNATURES)[number] }) {
+  return (
+    <article className={styles.signature} data-media-type={item.type}>
+      <div className={styles.signatureArt} aria-hidden="true" />
+      <div>
+        <div className={styles.signatureKind}>
+          {item.kind} · {item.date}
+        </div>
+        <div className={styles.signatureTitre}>{item.titre}</div>
+        <div className={styles.signatureLigne}>{item.ligne}</div>
+        <div className={styles.signatureSuivi}>suivi par {item.suivi} du cercle</div>
+      </div>
+      <MediumLabel type={item.type} />
+    </article>
+  )
+}
+
+/**
+ * Une œuvre en cours.
+ *
+ * La progression est un filet de 2px rempli dans l'encre du membre, doublé
+ * d'une position composée (`p. 312 / 722`) — jamais un anneau, jamais une
+ * gélule. Le pourcentage se calcule pour la **largeur du filet**, pas pour être
+ * lu : c'est la fraction qui se lit.
+ */
+function EnCoursTile({
+  entry,
+  type,
+  me,
+}: {
+  entry: InProgressEntry
+  type: MediaType
+  me: Account
+}) {
+  const ratio = progressRatio(entry.progress)
+
+  return (
+    <Link
+      to={`/media/${entry.media.id}`}
+      className={styles.tuile}
+      data-media-type={type}
+      style={{ '--identity': me.identity_color } as CSSProperties}
+    >
+      <div className={styles.tuileHead}>
+        <MediumLabel type={type} small />
+        <MemberChip account={me} size="sm" />
+      </div>
+      <div className={styles.tuileArt} aria-hidden="true" />
+      <div className={styles.tuileTitre}>{entry.media.title}</div>
+      {entry.progress && ratio !== null ? (
+        <>
+          <div className={styles.tuileMesure}>
+            <span>
+              {entry.progress.checked} / {entry.progress.total}
+            </span>
+            <span>{Math.round(ratio * 100)} %</span>
+          </div>
+          <div
+            className={styles.tuileFilet}
+            role="progressbar"
+            aria-valuenow={entry.progress.checked}
+            aria-valuemin={0}
+            aria-valuemax={entry.progress.total}
+            aria-label={`Progression sur ${entry.media.title}`}
+          >
+            <span
+              className={styles.tuileFiletPlein}
+              style={{ width: `${Math.round(ratio * 100)}%` }}
+            />
+          </div>
+        </>
+      ) : (
+        // Rien à mesurer : ni barre ni « 0 % », qui laisserait croire à un
+        // début qui n'existe pas.
+        <div className={styles.tuileSansMesure}>commencé</div>
+      )}
+    </Link>
+  )
+}
+
+function MurmureRow({ item }: { item: FeedEntry }) {
+  return (
+    <article className={styles.murmure} data-media-type={item.media.type}>
+      <div className={styles.murmureQui}>
+        <MemberChip account={item.user} />
+        <span className={styles.murmureQuand}>
+          <time dateTime={item.at}>{quand(item.at)}</time>
+        </span>
+      </div>
+      <div className={styles.murmureCorps}>
+        <blockquote className={styles.murmureTexte}>« {item.review} »</blockquote>
+        <div className={styles.murmurePied}>
+          <span className={styles.murmureAPropos}>à propos de</span>
+          <Link to={`/media/${item.media.id}`} className={styles.murmureOeuvre}>
+            {item.media.title}
+          </Link>
+          <MediumLabel type={item.media.type} />
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function TraceRow({ item }: { item: FeedEntry }) {
+  return (
+    <div className={styles.trace} data-media-type={item.media.type}>
+      <span className={styles.traceHeure}>
+        <time dateTime={item.at}>{heure(item.at)}</time>
+      </span>
+      <div className={styles.traceDit}>
+        <MemberChip account={item.user} size="sm" />
+        <span className={styles.traceVerbe}> {VERBE[item.kind]} </span>
+        <Link to={`/media/${item.media.id}`} className={styles.traceOeuvre}>
+          {item.media.title}
+        </Link>
+        <MediumLabel type={item.media.type} small />
+      </div>
+    </div>
+  )
+}
+
+/** « il y a 2 h », « hier », « il y a 3 j ». Au-delà d'une semaine, la date. */
+const quand = (iso: string): string => {
+  const ecart = Date.now() - new Date(iso).getTime()
+  const heures = Math.floor(ecart / 3_600_000)
+  if (heures < 1) return "à l'instant"
+  if (heures < 24) return `il y a ${heures} h`
+  const jours = Math.floor(heures / 24)
+  if (jours === 1) return 'hier'
+  if (jours < 8) return `il y a ${jours} j`
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+
+/** L'heure sur une trace du jour, la date au-delà — une trace est située. */
+const heure = (iso: string): string => {
+  const date = new Date(iso)
+  const memeJour = new Date().toDateString() === date.toDateString()
+  return memeJour
+    ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }

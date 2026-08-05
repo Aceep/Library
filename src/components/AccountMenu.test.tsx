@@ -15,6 +15,19 @@ const ouvrir = () => {
   return trigger
 }
 
+/**
+ * La première entrée, prise **dans l'ordre du panneau** et non à son nom.
+ *
+ * Le fichier disait déjà ne pas nommer les entrées du milieu, pour ne pas
+ * casser à chaque ajout ; il nommait pourtant la première, et le repli du
+ * bandeau dans ce menu l'a fait changer. Ce qui s'éprouve ici est « la
+ * première », pas « Mes badges » — alors on la désigne comme telle.
+ *
+ * Les liens seuls suffisent : la déconnexion est un bouton, et c'est la
+ * dernière entrée du panneau.
+ */
+const premiereEntree = () => screen.getAllByRole('link')[0]
+
 describe('AccountMenu — le repli du compte', () => {
   it('garde ses entrées hors de portée tant qu’il est fermé', () => {
     renderWithProviders(<AccountMenu />)
@@ -48,7 +61,7 @@ describe('AccountMenu — le repli du compte', () => {
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
 
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('link', { name: 'Mes badges' })).toHaveFocus()
+    expect(premiereEntree()).toHaveFocus()
   })
 
   it('s’ouvre à la flèche haute en posant le focus sur la dernière', () => {
@@ -67,7 +80,7 @@ describe('AccountMenu — le repli du compte', () => {
   it('descend d’un cran à la fois, et boucle aux deux bouts', () => {
     renderWithProviders(<AccountMenu />)
     const trigger = ouvrir()
-    const premier = screen.getByRole('link', { name: 'Mes badges' })
+    const premier = premiereEntree()
     const dernier = screen.getByRole('button', { name: 'Déconnexion' })
 
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
@@ -96,7 +109,7 @@ describe('AccountMenu — le repli du compte', () => {
     expect(screen.getByRole('button', { name: 'Déconnexion' })).toHaveFocus()
 
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Home' })
-    expect(screen.getByRole('link', { name: 'Mes badges' })).toHaveFocus()
+    expect(premiereEntree()).toHaveFocus()
   })
 
   /**

@@ -48,7 +48,7 @@
 .reload {
   min-height: 44px;
   background: none;
-  border: var(--rule-w) solid var(--rule);
+  border: var(--rule-w) solid var(--rule-soft);
   padding: var(--space-3) var(--space-4);
   font: var(--caption);
   color: var(--ink-soft);

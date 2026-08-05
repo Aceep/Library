@@ -43,7 +43,7 @@
 .filters {
   display: flex;
   flex-wrap: wrap;
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   width: fit-content;
 }
 
@@ -59,7 +59,7 @@
 }
 
 .chip + .chip {
-  border-left: var(--rule-w) solid var(--rule);
+  border-left: var(--rule-w) solid var(--rule-soft);
 }
 
 .chip[aria-pressed='true'] {
@@ -200,7 +200,7 @@
 .ratings {
   margin-top: var(--space-6);
   padding-top: var(--space-5);
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .distribution {
@@ -218,7 +218,7 @@
 .scope {
   margin-top: var(--space-7);
   padding-top: var(--space-4);
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
   font-size: var(--text-xs);
   color: var(--ink-faint);
   max-width: var(--measure);
@@ -246,7 +246,7 @@
   min-height: 44px;
   padding: 0 var(--space-3);
   background: var(--paper-raised);
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   border-radius: var(--radius);
   color: var(--ink);
 }
@@ -257,7 +257,7 @@
 }
 
 .duels {
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .communs {
@@ -272,6 +272,6 @@
 .commun {
   font-size: var(--text-sm);
   color: var(--ink);
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   padding: var(--space-2) var(--space-3);
 }

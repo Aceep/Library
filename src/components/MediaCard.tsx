@@ -1,11 +1,20 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { useReference } from '../reference/ReferenceContext'
-import type { Account, LibraryItem, MediaType, UserTracking } from '../api/schema'
+import type { Account, LibraryItem, MediaType, OthersSummary, UserTracking } from '../api/schema'
 import Cover from './Cover'
 import ProgressBar from './ProgressBar'
 import StatusBadge, { NewContentBadge } from './StatusBadge'
 import styles from './MediaCard.module.css'
+
+/**
+ * Combien d'abonnements la pile nomme avant de basculer dans le compte.
+ *
+ * Deux, plus moi, plus la ligne de reste : quatre lignes, la hauteur que
+ * `.trackings` réserve. Changer ce nombre sans changer `--pile-rows` dans la
+ * feuille rend les vignettes de nouveau inégales.
+ */
+const MAX_FOLLOWED_LINES = 2
 
 /**
  * Une œuvre en vignette, avec les suivis de chacun.
@@ -18,8 +27,20 @@ import styles from './MediaCard.module.css'
  * `progress` et `tracking.me` restent **mon** point de vue dans les deux cas,
  * même sur le profil de quelqu'un d'autre : c'est ce que dit le contrat, et
  * c'est pourquoi rien ici ne dépend de la page qui l'affiche.
+ *
+ * **Toutes les vignettes ont la même hauteur**, quelle que soit la charge
+ * utile — jaquette absente, année absente, type sans progression, un suiveur
+ * ou douze. C'est un gabarit, pas une conséquence du contenu : chaque zone
+ * garde sa place dans `MediaCard.module.css` même vide, et le nombre de
+ * lignes de suivi est plafonné ici. Une grille dont les cases changent de
+ * taille selon ce que le serveur a renvoyé ne se parcourt pas du regard.
  */
 export default function MediaCard({ item, me }: { item: LibraryItem; me: Account }) {
+  // Le plafond fait partie du gabarit : au-delà, la pile déborderait la
+  // hauteur réservée et la vignette recommencerait à suivre son contenu.
+  const named = item.tracking.following.slice(0, MAX_FOLLOWED_LINES)
+  const unnamed = item.tracking.following.length - named.length
+
   return (
     // La teinte du rayon arrive par l'attribut, comme dans `Cover` : elle ne
     // teinte ici qu'un filet déjà présent — celui qui sépare la notice de la
@@ -30,14 +51,18 @@ export default function MediaCard({ item, me }: { item: LibraryItem; me: Account
 
         <div className={styles.cardBody}>
           <p className={styles.cardTitle}>{item.title}</p>
-          {item.year ? <p className={styles.cardYear}>{item.year}</p> : null}
 
-          {/* Nul sur les types sans éléments à cocher : le composant s'efface. */}
-          <ProgressBar
-            progress={item.progress}
-            color={me.identity_color}
-            label={`Progression sur ${item.title}`}
-          />
+          {/* Fente à hauteur réservée : l'année manque souvent et `ProgressBar`
+              s'efface sur les types sans éléments à cocher. Les deux gardent
+              leur place plutôt que de faire remonter la pile de suivi. */}
+          <div className={styles.cardMeta}>
+            {item.year ? <p className={styles.cardYear}>{item.year}</p> : null}
+            <ProgressBar
+              progress={item.progress}
+              color={me.identity_color}
+              label={`Progression sur ${item.title}`}
+            />
+          </div>
 
           <div className={styles.trackings}>
             <TrackingLine
@@ -48,7 +73,7 @@ export default function MediaCard({ item, me }: { item: LibraryItem; me: Account
             />
             {/* Un rayon reste lisible : on nomme les abonnements, on compte le
                 reste. La vignette n'est pas l'endroit où tout déballer. */}
-            {item.tracking.following.map((entry) => (
+            {named.map((entry) => (
               <TrackingLine
                 key={entry.user.id}
                 tracking={entry.tracking}
@@ -57,20 +82,36 @@ export default function MediaCard({ item, me }: { item: LibraryItem; me: Account
                 type={item.type}
               />
             ))}
-            {item.tracking.others.count > 0 ? (
-              <p className={styles.othersLine}>
-                +{item.tracking.others.count} autre
-                {item.tracking.others.count > 1 ? 's' : ''}
-                {item.tracking.others.average_rating !== null
-                  ? ` · ${item.tracking.others.average_rating}/10 en moyenne`
-                  : ''}
-              </p>
+            {/* Dernière ligne du gabarit. Vide, elle ne rend rien : c'est la
+                feuille qui lui garde sa place, pas un texte de repli. */}
+            {unnamed > 0 || item.tracking.others.count > 0 ? (
+              <p className={styles.othersLine}>{restLabel(unnamed, item.tracking.others)}</p>
             ) : null}
           </div>
         </div>
       </Link>
     </li>
   )
+}
+
+/**
+ * Ce que la pile ne nomme pas : les abonnements au-delà du plafond, puis les
+ * membres que je ne suis pas.
+ *
+ * Les deux comptes restent **distincts**. `others` est un agrégat du serveur —
+ * `average_rating` ne porte que sur lui — et additionner nos lignes masquées
+ * dedans fabriquerait une moyenne que personne n'a calculée.
+ */
+const restLabel = (unnamed: number, others: OthersSummary): string => {
+  const parts = []
+  if (unnamed > 0) parts.push(`+${unnamed} abonnement${unnamed > 1 ? 's' : ''}`)
+  if (others.count > 0) {
+    parts.push(
+      `+${others.count} autre${others.count > 1 ? 's' : ''}` +
+        (others.average_rating !== null ? ` · ${others.average_rating}/10 en moyenne` : ''),
+    )
+  }
+  return parts.join(' · ')
 }
 
 /**

@@ -18,8 +18,22 @@
   width: 100%;
 }
 
+/**
+ * Le grand format d'un rayon. Il suit sa cellule, il ne la contredit pas.
+ *
+ * Cette taille valait 200px en dur, et ses deux appelants la posent dans une
+ * grille fluide : la jaquette occupait la moitié d'une colonne de 411px, et
+ * sous 768px elle débordait — un `1fr` prend pour minimum le contenu, donc
+ * deux colonnes de 200px passaient la largeur de la page et faisaient défiler
+ * l'écran de côté. Seule `sm` fixe encore une largeur, parce que c'est une
+ * vraie vignette de fil d'activité.
+ *
+ * `lg` ne se distingue donc plus de `base` que par la typographie du repli,
+ * qui est ce qu'on lui demande vraiment : un titre composé en grand quand la
+ * jaquette manque.
+ */
 .lg {
-  width: 200px;
+  width: 100%;
 }
 
 /* Le grand format d'une fiche : l'artwork occupe sa colonne, en 3:4. */

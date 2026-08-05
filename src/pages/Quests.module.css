@@ -34,7 +34,7 @@
 
 /* Création — encadrée comme un panneau d'administration, discrète. */
 .create {
-  border: var(--rule-w) solid var(--rule);
+  border: var(--rule-w) solid var(--rule-soft);
   padding: var(--space-4);
   margin-bottom: var(--space-6);
 }
@@ -61,7 +61,7 @@
   font-size: var(--text-base);
   padding: var(--space-2) var(--space-3);
   background: var(--paper-raised);
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   color: var(--ink);
 }
 
@@ -74,7 +74,7 @@
 .moreButton {
   min-height: 44px;
   background: none;
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   padding: var(--space-3) var(--space-4);
   font: var(--caption);
   color: var(--ink-soft);
@@ -103,12 +103,12 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .row {
   padding: var(--space-5) 0;
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
 }
 
 .rowHead {
@@ -134,7 +134,7 @@
   letter-spacing: var(--eyebrow-tracking);
   text-transform: uppercase;
   color: var(--ink-faint);
-  border: var(--rule-w) solid var(--rule);
+  border: var(--rule-w) solid var(--rule-soft);
   padding: 2px var(--space-2);
 }
 

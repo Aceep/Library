@@ -5,7 +5,7 @@
  */
 .figure {
   padding-left: var(--space-4);
-  border-left: var(--rule-w-strong) solid var(--rule);
+  border-left: var(--rule-w-strong) solid var(--rule-soft);
 }
 
 .label {
@@ -58,7 +58,7 @@
 /* Le mot est dit dans l'étiquette, pas seulement suggéré par la composition. */
 .basisTag {
   color: var(--ink-faint);
-  border: var(--rule-w) solid var(--rule);
+  border: var(--rule-w) solid var(--rule-soft);
   padding: 1px var(--space-2);
   text-transform: none;
 }

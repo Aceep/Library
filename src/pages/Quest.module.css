@@ -35,7 +35,7 @@
   letter-spacing: var(--eyebrow-tracking);
   text-transform: uppercase;
   color: var(--ink-faint);
-  border: var(--rule-w) solid var(--rule);
+  border: var(--rule-w) solid var(--rule-soft);
   padding: 2px var(--space-2);
 }
 
@@ -88,7 +88,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .item {
@@ -96,7 +96,7 @@
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) 0;
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
 }
 
 .itemCover {
@@ -150,7 +150,7 @@
 .itemRemove {
   flex: none;
   background: none;
-  border: var(--rule-w) solid var(--rule);
+  border: var(--rule-w) solid var(--rule-soft);
   padding: var(--space-2) var(--space-3);
   font: var(--caption);
   color: var(--ink-muted);
@@ -173,7 +173,7 @@
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) 0;
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
 }
 
 .standingUser {
@@ -199,7 +199,7 @@
 /* Administration */
 .admin {
   margin-top: var(--space-7);
-  border: var(--rule-w) solid var(--rule);
+  border: var(--rule-w) solid var(--rule-soft);
   padding: var(--space-5);
 }
 
@@ -233,7 +233,7 @@
   font-size: var(--text-sm);
   padding: var(--space-2) var(--space-3);
   background: var(--paper-raised);
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   color: var(--ink);
   width: 100%;
 }
@@ -258,7 +258,7 @@
 .button {
   min-height: 44px;
   background: none;
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   padding: var(--space-2) var(--space-4);
   font: var(--caption);
   color: var(--ink-soft);
@@ -283,7 +283,7 @@
 }
 
 .buttonDanger {
-  border-color: var(--rule);
+  border-color: var(--rule-soft);
   color: var(--ink-faint);
 }
 
@@ -303,7 +303,7 @@
 .search {
   margin-top: var(--space-6);
   padding-top: var(--space-5);
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .searchTitle {
@@ -326,7 +326,7 @@
   display: flex;
   flex-wrap: wrap;
   margin-top: var(--space-4);
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   width: fit-content;
 }
 
@@ -341,7 +341,7 @@
 }
 
 .chip + .chip {
-  border-left: var(--rule-w) solid var(--rule);
+  border-left: var(--rule-w) solid var(--rule-soft);
 }
 
 .chip[aria-pressed='true'] {
@@ -365,7 +365,7 @@
   list-style: none;
   margin: var(--space-4) 0 0;
   padding: 0;
-  border-top: var(--rule-w) solid var(--rule);
+  border-top: var(--rule-w) solid var(--rule-soft);
 }
 
 .result {
@@ -373,7 +373,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) 0;
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
 }
 
 .resultCover {

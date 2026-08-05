@@ -49,6 +49,7 @@ export const progressRatio = (progress: Progress | null | undefined): number | n
 | `src/components/` | Composants réutilisables, un `<Nom>.tsx` + un `<Nom>.module.css` du même nom |
 | `src/pages/` | Un composant par route, même appairage `.tsx` / `.module.css` |
 | `src/session/` | Qui je suis — `SessionContext`, `useSession`, `useLogin` |
+| `src/theme/` | Jour / Nuit — l'attribut `data-mode` fait foi, React ne fait que le lire |
 | `src/styles/` | `tokens.css`, `global.css`, `fonts.css` |
 
 Un composant qui n'est utilisé que par un seul écran peut rester dans le fichier de cet
@@ -110,15 +111,50 @@ jamais par comparaison de chaîne sur le message.
   d'espacement inventé (`var(--space-3)`, `gap: var(--space-2)`). Un `px` littéral reste
   acceptable pour une dimension propre au composant — une hauteur de filet, un
   `padding-bottom: 2px` sous un soulignement.
-- **La couleur ne décore pas.** Chromie forte réservée à l'identité des membres ; les
-  statuts sont des teintes sourdes sur du texte de 12–14 px et des filets, jamais des
-  aplats. Un état se distingue en valeur, en graisse ou en filet.
+- **Deux mondes, pas un thème clair et son inverse.** La nuit est l'état naturel, le jour
+  la variante ; la nuit est un cinéma (noir bleuté froid), le jour du papier (crème
+  chaud). On n'unifie pas leur température. Le mode se lit sur `data-mode`, posé sur
+  `<html>` **avant la première peinture** par le script d'`index.html` — un composant ne
+  nomme jamais un mode, il nomme un rôle.
+- **Ambre = structure et atmosphère. Doré = action.** `--amber` porte les mots de section
+  et les sourcils ; `--gold` ne porte que ce qui se clique. **Un élément doré qui ne
+  s'actionne pas est un bug.** En jour, `--gold` ne fait que 1,97:1 en texte : on compose
+  avec `--gold-text`, on remplit avec `--gold`.
+- **Les gels de rayon n'ont que deux emplacements** : la nav des rayons du bandeau et les
+  étiquettes de médium. Nulle part ailleurs — ni teinte de ligne, ni traitement d'artwork,
+  ni couleur de section. Ils arrivent par `data-media-type`, qui pose **deux** variables :
+  `--type-hue` pour ce qui compose ou trace, `--gel` pour ce qui remplit. Les confondre
+  rend l'étiquette illisible en jour.
+- **Un rayon est un aplat à texte quasi noir ; un membre est une pastille bordée à sa
+  propre encre.** C'est une différence de *forme*, pas de teinte, et c'est elle qui garde
+  les deux systèmes lisibles sur une même ligne. Ne jamais l'inverser.
+- **Deux langages d'ombre, séparés par la taille.** `--block` (décalé, sans flou) pour la
+  petite chrome ; `--lift` (chute floue) pour le grand contenu. **Jamais les deux sur un
+  même élément.** Aucun `border-radius`, nulle part — seule la pastille d'identité reste
+  ronde.
+- **Le mouvement n'anime que l'opacité et la transformation**, jamais la mise en page.
+  Une section qui entre passe par `Reveal` — observateur unique, filet de sécurité de
+  2,6 s pour qu'une panne ne laisse jamais la page blanche, échelonnement en CSS et non
+  par mutation de `style`. `will-change` est réservé à la bande défilante. Sous mouvement
+  réduit, les animations infinies s'**arrêtent** : les durées à zéro ne les arrêtent pas.
 - La couleur d'identité arrive en runtime, posée en variable sur l'élément :
   `style={{ '--identity': color } as CSSProperties}`. C'est le seul usage normal du style
   inline dans un composant, avec les dimensions calculées (largeur d'une barre de
   progression).
 - Les variantes se portent en attribut de données, pas en classe conditionnelle :
   `data-status={status}` puis `.badge[data-status='doing']`.
+
+### Le bloc d'alias est un échafaudage, pas un vocabulaire
+
+La fin de `tokens.css` traduit les anciens noms (`--surface-page`, `--ink-soft`,
+`--ink-faint`, `--accent`, `--type-movie`, `--paper*`, `--text-*`…) vers la nouvelle
+palette. Il existe pour que la trentaine d'écrans pas encore repris **suivent le thème**
+au lieu de casser.
+
+**Rien de neuf ne doit y puiser.** Un écran repris abandonne les anciens noms, et le bloc
+rétrécit jusqu'à disparaître. Même statut pour `--font-sans` (Inter Tight) : il ne survit
+que pour le corps de texte des écrans denses pas encore repris — la direction n'admet que
+deux familles, Cormorant Garamond et IBM Plex Mono.
 
 ### Un écran ne restyle jamais l'intérieur d'un composant
 

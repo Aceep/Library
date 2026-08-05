@@ -2,22 +2,45 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { FocusEvent, KeyboardEvent } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useSession } from '../session/SessionContext'
-import IdentityDot from './IdentityDot'
+import MemberChip from './MemberChip'
 import styles from './AccountMenu.module.css'
 
 /**
- * Ce qui m'appartient et ne se consulte pas tous les jours.
+ * Tout ce que le bandeau ne montre plus.
  *
- * La ligne de partage est la fréquence, pas la nature : les nouveautés et la
- * veille se regardent chaque jour et restent donc dans le bandeau, les badges
- * et les statistiques une fois par mois et se replient ici. Le compte et la
- * déconnexion les rejoignent — ils étaient déjà les deux dernières entrées de
- * la barre, et personne ne s'y rend par curiosité.
+ * La ligne de partage **n'est plus la fréquence**. Le bandeau appartient
+ * désormais aux rayons — six pastilles, la recherche, le thème — et il n'a
+ * plus la place d'une seconde rangée de liens : ce qui n'est pas un rayon
+ * descend ici, quelle que soit la fréquence à laquelle on s'y rend.
+ *
+ * Deux exceptions restent dehors, et pour la même raison : leur libellé porte
+ * un compteur. Les nouveautés annoncent ce qui n'est pas lu, et le replier
+ * reviendrait à cacher une notification.
+ *
+ * Deux groupes : ce qui regarde le cercle, puis ce qui m'appartient. Le second
+ * finit par la déconnexion, qui n'est l'affaire de personne d'autre.
  */
-const ENTRIES: { to: string; label: string }[] = [
-  { to: '/badges', label: 'Mes badges' },
-  { to: '/statistiques', label: 'Mes statistiques' },
-  { to: '/mon-compte', label: 'Mon compte' },
+const GROUPS: { title: string; entries: { to: string; label: string; admin?: true }[] }[] = [
+  {
+    title: 'Le cercle',
+    entries: [
+      { to: '/membres', label: 'Les membres' },
+      { to: '/comparer', label: 'Comparer' },
+      { to: '/quetes', label: 'Les quêtes' },
+      { to: '/veille', label: 'La veille' },
+      { to: '/recherche', label: 'Ajouter une œuvre' },
+      { to: '/administration/invitations', label: 'Inviter', admin: true },
+      { to: '/administration/membres', label: 'Les comptes', admin: true },
+    ],
+  },
+  {
+    title: 'Moi',
+    entries: [
+      { to: '/badges', label: 'Mes badges' },
+      { to: '/statistiques', label: 'Mes statistiques' },
+      { to: '/mon-compte', label: 'Mon compte' },
+    ],
+  },
 ]
 
 /**
@@ -37,7 +60,7 @@ const ENTRIES: { to: string; label: string }[] = [
  * introuvable par son rôle, pas seulement invisible.
  */
 export default function AccountMenu() {
-  const { user, logout } = useSession()
+  const { user, logout, isAdmin } = useSession()
   const [open, setOpen] = useState(false)
   // Où poser le focus à l'ouverture. `null` au clic : la souris a déjà désigné,
   // déplacer le focus ferait sauter la page sous le curseur.
@@ -138,30 +161,44 @@ export default function AccountMenu() {
           setFocusOnOpen(null)
         }}
       >
-        <IdentityDot account={user} withName />
-        {/* Le nom seul ne dit pas ce qu'on ouvre ; l'ajout reste dans le nom
-            accessible, dont le libellé visible demeure le début. */}
-        <span className="sr-only"> — mon compte</span>
+        <MemberChip account={user} />
+        {/* La pastille ne porte que des initiales ; le nom accessible doit
+            dire de qui et de quoi il s'agit. */}
+        <span className="sr-only">{user.pseudo} — mon compte</span>
         <span className={styles.caret} aria-hidden="true">
           ▾
         </span>
       </button>
 
       <div id={panelId} className={styles.panel} hidden={!open}>
+        {GROUPS.map((group) => {
+          const entries = group.entries.filter((entry) => !entry.admin || isAdmin)
+          // Un groupe dont l'administration est le seul contenu n'a pas de
+          // titre à afficher à qui n'est pas administrateur.
+          if (entries.length === 0) return null
+
+          return (
+            <div key={group.title} className={styles.group}>
+              <p className={styles.groupTitle}>{group.title}</p>
+              <ul className={styles.list}>
+                {entries.map((entry) => (
+                  <li key={entry.to}>
+                    <NavLink
+                      to={entry.to}
+                      data-menuitem
+                      className={({ isActive }) =>
+                        isActive ? `${styles.item} ${styles.itemActive}` : styles.item
+                      }
+                    >
+                      {entry.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        })}
         <ul className={styles.list}>
-          {ENTRIES.map((entry) => (
-            <li key={entry.to}>
-              <NavLink
-                to={entry.to}
-                data-menuitem
-                className={({ isActive }) =>
-                  isActive ? `${styles.item} ${styles.itemActive}` : styles.item
-                }
-              >
-                {entry.label}
-              </NavLink>
-            </li>
-          ))}
           <li>
             <button
               type="button"

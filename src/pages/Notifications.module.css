@@ -39,13 +39,13 @@
   justify-content: space-between;
   gap: var(--space-4);
   padding-bottom: var(--space-4);
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
   margin-bottom: var(--space-5);
 }
 
 .filterGroup {
   display: flex;
-  border: var(--rule-w) solid var(--rule-strong);
+  border: var(--rule-w) solid var(--rule);
   width: fit-content;
   overflow: hidden;
 }
@@ -61,7 +61,7 @@
 }
 
 .chip + .chip {
-  border-left: var(--rule-w) solid var(--rule);
+  border-left: var(--rule-w) solid var(--rule-soft);
 }
 
 .chip:hover:not(:disabled) {
@@ -79,7 +79,7 @@
 .markRead {
   min-height: 44px;
   background: none;
-  border: var(--rule-w) solid var(--rule);
+  border: var(--rule-w) solid var(--rule-soft);
   padding: var(--space-3) var(--space-4);
   font: var(--caption);
   color: var(--ink-soft);
@@ -112,7 +112,7 @@
   justify-content: space-between;
   gap: var(--space-5);
   padding: var(--space-4) 0 var(--space-4) var(--space-4);
-  border-bottom: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule-soft);
   /* Le filet gauche est toujours réservé : sans ça, marquer une notification
      comme lue décalerait toute la ligne de deux pixels. */
   border-left: var(--rule-w-strong) solid transparent;

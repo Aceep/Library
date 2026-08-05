@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../api/client'
 import { addMedia, searchExternal } from '../api/endpoints'
@@ -13,6 +13,10 @@ import styles from './Search.module.css'
 
 export default function Search() {
   const [type, setType] = useState<MediaType>('movie')
+  // Le champ du bandeau arrive ici par `?q=`. Sans cette lecture il mènerait à
+  // un écran vide, c'est-à-dire qu'il mentirait sur ce qu'il vient de recevoir.
+  const [params] = useSearchParams()
+  const initial = params.get('q')?.trim() ?? ''
 
   return (
     <div className={styles.page}>
@@ -36,16 +40,22 @@ export default function Search() {
       </nav>
 
       {/* `key` : changer d'onglet remet à zéro la requête et les résultats,
-          plutôt que d'afficher ceux du type précédent le temps d'un aller-retour. */}
-      <TypeSearch key={type} type={type} />
+          plutôt que d'afficher ceux du type précédent le temps d'un aller-retour.
+          La requête d'URL y entre aussi — arriver avec un `?q=` différent
+          relance la recherche au lieu de garder l'ancienne à l'écran. */}
+      <TypeSearch key={`${type}:${initial}`} type={type} initial={initial} />
     </div>
   )
 }
 
-function TypeSearch({ type }: { type: MediaType }) {
-  const [draft, setDraft] = useState('')
+function TypeSearch({ type, initial }: { type: MediaType; initial: string }) {
+  const [draft, setDraft] = useState(initial)
   const [byIsbn, setByIsbn] = useState(false)
-  const [submitted, setSubmitted] = useState<{ q?: string; isbn?: string } | null>(null)
+  // Une requête venue de l'URL est déjà validée : on la soumet d'emblée plutôt
+  // que de la poser dans le champ en attendant une seconde validation.
+  const [submitted, setSubmitted] = useState<{ q?: string; isbn?: string } | null>(
+    initial ? { q: initial } : null,
+  )
 
   const search = useInfiniteQuery({
     queryKey: queryKeys.search(type, submitted),

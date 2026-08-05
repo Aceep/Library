@@ -10,7 +10,7 @@
   flex: 1;
   height: var(--bar-h);
   min-width: 40px;
-  background: var(--rule);
+  background: var(--rule-soft);
   overflow: hidden;
 }
 

@@ -210,3 +210,25 @@ export type NotificationKind = NotificationItem['kind']
 /** Ce que répondent les deux routes de lecture : combien, et combien il en reste. */
 export type NotificationRead =
   paths['/notifications/read-all']['post']['responses'][200]['content']['application/json']
+
+/**
+ * Une saga : des œuvres distinctes qui se suivent, chacune avec sa fiche.
+ *
+ * C'est la forme qui manquait pour les suites de films — une série a des
+ * saisons, un manga des tomes, une trilogie a **trois fiches**.
+ *
+ * Le point à ne pas manquer : `parts` contient des œuvres **absentes de la
+ * médiathèque** (`in_library: false`, `media: null`). Ce n'est pas un trou dans
+ * la donnée, c'est le sujet : c'est cette ligne-là que la veille surveille, et
+ * elle compte au dénominateur de `progress`. « 1 sur 3 » reste vrai quand deux
+ * parties n'ont pas encore de fiche.
+ */
+export type SagaResponse =
+  paths['/sagas/{id}']['get']['responses'][200]['content']['application/json']
+
+export type Saga = SagaResponse['saga']
+
+export type SagaPart = Saga['parts'][number]
+
+/** Le résumé d'une saga, tel qu'il accompagne une fiche d'œuvre. */
+export type SagaSummary = NonNullable<MediaDetail['sagas']>[number]

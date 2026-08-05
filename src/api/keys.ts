@@ -15,6 +15,13 @@ export const queryKeys = {
    */
   notifications: ['notifications'] as const,
   notificationsWith: (filters: unknown) => ['notifications', filters] as const,
+  /**
+   * Une saga. Sous son propre préfixe et **non** sous `media` : elle rassemble
+   * des œuvres distinctes, et une écriture sur l'une d'elles ne la périme pas
+   * — c'est `progress` qu'il faut relire, ce que fait l'invalidation ci-dessous.
+   */
+  saga: (id: string) => ['saga', id] as const,
+  sagas: ['saga'] as const,
   home: ['home'] as const,
   compare: ['compare'] as const,
   compareWith: (userId: string) => ['compare', userId] as const,
@@ -34,6 +41,8 @@ export const queryKeys = {
   memberLibrary: (userId: string, filters: unknown) =>
     ['library', 'member', userId, filters] as const,
   media: (id: string) => ['media', id] as const,
+  /** Le préfixe de toutes les fiches — pour ce qui les périme toutes à la fois. */
+  mediaAll: ['media'] as const,
   /**
    * Le journal d'un membre sur une œuvre — le mien quand `userId` est nul.
    *

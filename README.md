@@ -167,6 +167,7 @@ erreurs, ou des affichages faux.
 | Les `503` ne concernent que la recherche externe | Dégradation sur place dans l'onglet, jamais de page d'erreur globale. |
 | `POST /media` → `created: false` n'est pas une erreur | L'ajout est idempotent : on ouvre la fiche dans les deux cas, sans message de doublon. |
 | `cover_url` ment souvent | Nulle, ou pointant vers une image absente. `Cover` réagit aussi à l'échec de chargement. |
+| Une saga contient des œuvres **absentes** de la médiathèque | `in_library: false`, `media: null`. Ce n'est pas un trou dans la donnée, c'est le sujet : c'est cette ligne-là que la veille surveille. Elles **comptent au dénominateur** de `progress` — « 1 sur 3 » reste vrai quand deux parties n'ont pas de fiche, et l'écran doit le dire, sans quoi on lit « il m'en reste deux à voir ». |
 | Les écritures par lot existent | `PUT /episodes/batch` (`scope: season` / `until`) plutôt que N requêtes. |
 | `DELETE /media/:id` est **réservé aux administrateurs** | `403` pour les autres. Le geste n'est proposé qu'au rôle `admin` ; « retirer de ma bibliothèque » reste ouvert à tous. |
 | `identity_color` est **libre**, sans unicité | Deux membres peuvent partager une teinte, alors qu'elle seule les distingue. `/mon-compte` prévient quand le choix se rapproche d'un compte suivi, sans jamais l'interdire. |
@@ -197,7 +198,7 @@ src/
   components/ AppShell, AppFooter, Cover, MediaCard, ProgressBar, StatusBadge,
               TrackingPanel, MediaMetadata, MediaLog, Availability, SeasonList,
               VolumeGrid, Showcase, MemberLibrary, FollowButton, IdentityDot,
-              ErrorNotice, ErrorBoundary, EmptyState, NotificationsLink
+              ErrorNotice, ErrorBoundary, EmptyState, NotificationsLink, SagaList
   pages/      Login, Dashboard, TypeLibrary, MediaDetail, Search, Compare,
               Members, UserProfile, MyAccount, About, Invitation,
               AdminInvitations, AdminUsers, ComingSoon
@@ -222,6 +223,7 @@ par un lien reçu, sans compte.
 | `/bibliotheque/:type` | Un rayon, filtrable, paginé au curseur. Six types, `music` compris — sur un rayon de musique, le filtre « en cours » ne s'affiche pas |
 | `/media/:id` | Fiche : métadonnées, mon suivi, ceux des abonnements, saisons ou tomes, mon journal daté, et — films et séries — où regarder |
 | `/recherche` | Chercher chez les sources externes et ajouter |
+| `/sagas/:id` | Une saga : ses parties dans l'ordre de sortie, ma progression, la veille. **Les parties absentes de la médiathèque y figurent** et comptent au dénominateur |
 | `/notifications` | Les nouveautés : épisodes et tomes parus, œuvres ajoutées à une saga, quêtes. Filtrable sur les non lues, marquage à l'unité ou en bloc |
 | `/comparer` | Comparaison avec un compte suivi, au choix |
 | `/membres` · `/membres/:id` | L'annuaire, les profils, s'abonner ; sur un profil : sa vitrine, la répartition de sa bibliothèque, et sa bibliothèque dépliée |
@@ -237,8 +239,8 @@ désormais côté API et le front ne l'a pas encore câblé — c'est du travail
 faire, pas une absence côté back. **Aucune donnée fictive** n'est affichée en
 attendant.
 
-Restent non câblés, tous servis par l'API : les sagas, la veille, les badges et
-les statistiques.
+Restent non câblés, tous servis par l'API : la veille sur les œuvres (celle sur
+les sagas l'est), les badges et les statistiques.
 
 Les **notifications** ne sont plus dans cette liste : `/notifications` les sert
 depuis l'étape 2, avec le compteur de non lues dans la coquille. Celles qui

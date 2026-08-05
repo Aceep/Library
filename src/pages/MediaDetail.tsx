@@ -20,6 +20,7 @@ import MediaLog from '../components/MediaLog'
 import MediaMetadata from '../components/MediaMetadata'
 import ProgressBar from '../components/ProgressBar'
 import Screenshots from '../components/Screenshots'
+import SagaList from '../components/SagaList'
 import SeasonList from '../components/SeasonList'
 import TrackingPanel, { FollowedTrackings } from '../components/TrackingPanel'
 import VolumeGrid from '../components/VolumeGrid'
@@ -179,6 +180,10 @@ function Detail({ id }: { id: string }) {
           type={detail.type}
         />
       </div>
+
+      {/* Les sagas auxquelles l'œuvre appartient. La section s'efface d'elle-même
+          quand il n'y en a aucune, ce qui est le cas le plus fréquent. */}
+      <SagaList sagas={detail.sagas ?? []} />
 
       {/* Où regarder : films et séries seulement — le champ n'existe pas sur
           les autres types, et la route y répond 400. */}

@@ -64,6 +64,46 @@ describe('MediaDetail — la fiche', () => {
   })
 
   /**
+   * L'écran le plus partagé du dépôt, et celui que l'étape 3 vient rouvrir.
+   * La section n'apparaît que s'il y a une saga — la plupart des œuvres n'en
+   * ont aucune, et un intitulé vide se lirait comme un manque.
+   */
+  it('ne montre aucune section « saga » quand l’œuvre n’en a pas', async () => {
+    fetchMediaDetail.mockResolvedValue(FILM)
+    renderDetail()
+
+    await screen.findByRole('heading', { name: 'Matrix' })
+    expect(screen.queryByRole('heading', { name: /^Sagas?$/ })).not.toBeInTheDocument()
+  })
+
+  it('annonce la saga et ce qui lui manque, sans quitter la fiche', async () => {
+    fetchMediaDetail.mockResolvedValue({
+      ...FILM,
+      sagas: [
+        {
+          id: '00000000-0000-4000-8000-0000000000c1',
+          title: 'The Matrix — la trilogie',
+          source: 'tmdb',
+          part_count: 3,
+          in_library_count: 1,
+          watched: false,
+        },
+      ],
+    })
+    renderDetail()
+
+    expect(await screen.findByRole('heading', { name: 'Saga' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'The Matrix — la trilogie' })).toHaveAttribute(
+      'href',
+      '/sagas/00000000-0000-4000-8000-0000000000c1',
+    )
+    // Les deux nombres sont dits séparément : « 1 partie » effacerait ce que
+    // la veille est là pour surveiller.
+    expect(screen.getByText('3 parties, dont 2 pas encore dans la médiathèque')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Surveiller' })).toBeInTheDocument()
+  })
+
+  /**
    * Le cas qui compte autant que le cas passant : une fiche qui échoue doit
    * **dire** qu'elle échoue. Le message vient du serveur, on ne le réécrit pas.
    */

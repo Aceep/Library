@@ -1,0 +1,147 @@
+/**
+ * Rien de neuf : sourcil, titre sérif, filets. La seule chose que cet écran
+ * ajoute au vocabulaire est la façon de marquer une partie absente — en
+ * **valeur**, pas en teinte, comme le veut `tokens.css` : la ligne pâlit et le
+ * mot le dit. Aucun rouge, ce n'est pas une erreur qu'une partie manque.
+ */
+.page {
+  max-width: var(--max-content);
+}
+
+.intro {
+  margin-bottom: var(--space-7);
+}
+
+.eyebrow {
+  font: var(--eyebrow);
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+.title {
+  font: var(--title-1);
+  color: var(--ink);
+  max-width: var(--measure);
+}
+
+.summary {
+  margin-top: var(--space-4);
+  font-size: var(--text-base);
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.progress {
+  margin-top: var(--space-5);
+  padding-left: var(--space-4);
+  border-left: var(--rule-w-strong) solid var(--rule-strong);
+}
+
+.progressLine {
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+
+.progressNote {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  max-width: var(--measure);
+}
+
+.actions {
+  margin-top: var(--space-5);
+}
+
+.parts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: var(--rule-w) solid var(--rule);
+}
+
+.part {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: var(--rule-w) solid var(--rule);
+}
+
+/* La partie absente s'efface sans disparaître : elle compte au dénominateur,
+   elle doit rester lisible. */
+.partAbsent .partTitle,
+.partAbsent .partPosition {
+  color: var(--ink-muted);
+}
+
+.partAbsent .partCover {
+  opacity: 0.45;
+}
+
+.partLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+  flex: 1;
+}
+
+a.partLink:hover .partTitle {
+  color: var(--accent);
+}
+
+.partPosition {
+  flex: none;
+  width: 2ch;
+  text-align: right;
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.partCover {
+  flex: none;
+  width: 48px;
+}
+
+.partBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.partTitle {
+  font-size: var(--text-base);
+  color: var(--ink);
+  transition: color var(--dur-2) var(--ease-page);
+}
+
+.partYear {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.partStatus {
+  flex: none;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  padding-right: var(--space-1);
+}
+
+.partUntracked,
+.partMissing {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.loading {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}

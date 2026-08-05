@@ -15,6 +15,7 @@ import type {
   Page,
   ReferenceStatuses,
   RefreshResponse,
+  SagaResponse,
   SearchResult,
   SeriesAggregate,
   Session,
@@ -744,3 +745,17 @@ export const markNotificationRead = (id: string) =>
   api.post<NotificationRead>(`/notifications/${id}/read`)
 
 export const markAllNotificationsRead = () => api.post<NotificationRead>('/notifications/read-all')
+
+// --- Sagas (§10) -----------------------------------------------------------
+
+export const fetchSaga = (id: string, signal?: AbortSignal) =>
+  api.get<SagaResponse>(`/sagas/${id}`, undefined, signal)
+
+/**
+ * Veille sur une saga : être prévenu quand une nouvelle partie **sort**.
+ *
+ * Idempotent des deux côtés, et lever la veille ne supprime pas les
+ * notifications déjà reçues — elles disent quelque chose qui a eu lieu.
+ */
+export const setSagaWatch = (id: string, watched: boolean) =>
+  watched ? api.put<SagaResponse>(`/sagas/${id}/watch`) : api.delete<SagaResponse>(`/sagas/${id}/watch`)

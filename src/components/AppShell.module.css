@@ -178,6 +178,51 @@
  * Doré parce qu'il s'actionne, mais composé en `--gold-text` : en jour, `--gold`
  * ne fait que 1,97:1 sur le fond. Il remplit, il ne compose pas.
  */
+/**
+ * Le lien d'évitement : hors cadre tant qu'on ne l'atteint pas au clavier.
+ *
+ * `transform` et non `display: none` — un nœud masqué ne se tabule pas, et un
+ * lien d'évitement qui ne se tabule pas n'existe pas. C'est aussi la seule
+ * propriété que le mouvement a le droit d'animer, et sous mouvement réduit
+ * `tokens.css` met déjà les durées à zéro.
+ *
+ * Il reprend le langage de la petite chrome — filet, mono, ombre en bloc
+ * décalée — et il est doré parce qu'il s'actionne.
+ */
+.skip {
+  position: absolute;
+  top: 0;
+  left: var(--page-margin);
+  z-index: 100; /* au-dessus du bandeau collant, qui est à 50 */
+  transform: translateY(-200%);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  color: var(--gold-text);
+  border: var(--rule-w) solid var(--gold);
+  box-shadow: 4px 4px 0 0 var(--gold);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: transform var(--dur-2) var(--ease-page);
+}
+
+.skip:focus-visible {
+  transform: translateY(var(--s-2));
+}
+
+/**
+ * La cible du lien n'est pas un contrôle. Le filet doré du focus dirait « ceci
+ * s'actionne » sur un rectangle large comme l'écran — et un élément doré qui ne
+ * s'actionne pas est un bug. Ce qui se voit, c'est la remontée en haut et la
+ * tabulation suivante, qui repart du premier lien du contenu.
+ */
+.main:focus-visible {
+  outline: none;
+}
+
 .search {
   font-family: var(--font-mono);
   font-size: 10.5px;

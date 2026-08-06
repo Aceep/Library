@@ -8,12 +8,14 @@ import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Compare.module.css'
 
 type BothFinished = CompareResponse['both_finished'][number]
 type Loved = CompareResponse['loved_by_them'][number]
 
 export default function Compare() {
+  useDocumentTitle('Comparer')
   const { user } = useSession()
 
   // `/compare` exige désormais un `user_id` : il n'y a plus de partenaire

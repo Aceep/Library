@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './NotFound.module.css'
 
 /**
@@ -15,6 +16,7 @@ import styles from './NotFound.module.css'
  * vide.
  */
 export default function NotFound() {
+  useDocumentTitle('Adresse inconnue')
   const { pathname } = useLocation()
 
   return (

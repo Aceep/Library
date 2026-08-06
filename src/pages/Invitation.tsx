@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { checkInvitation, login, register, resetPassword } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import ErrorNotice from '../components/ErrorNotice'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Invitation.module.css'
 
 const MIN_PASSWORD = 8
@@ -16,6 +17,7 @@ const MIN_PASSWORD = 8
  * créer un compte, `password_reset` pour en reprendre un.
  */
 export default function Invitation() {
+  useDocumentTitle('Invitation')
   const { token } = useParams()
   if (!token) return null
   return <Gate key={token} token={token} />

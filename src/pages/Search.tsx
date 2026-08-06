@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
@@ -9,8 +9,10 @@ import type { MediaType, SearchResult } from '../api/schema'
 import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
 import Reveal from '../components/Reveal'
+import { useAnnounce } from '../components/Announcer'
 import { RAYONNAGES } from '../rayons'
 import { queryKeys } from '../api/keys'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Search.module.css'
 
 /** Combien de recherches passées la page garde sous la main. */
@@ -64,6 +66,7 @@ const noterRecente = (q: string) => {
 export default function Search() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q')?.trim() ?? ''
+  useDocumentTitle(q === '' ? 'Recherche' : `Recherche : ${q}`)
   const [draft, setDraft] = useState(q)
   // L'ISBN est une recherche exacte, et seuls les livres en ont un : elle sort
   // de l'éventail plutôt que de lancer cinq requêtes qui répondront 400.
@@ -105,6 +108,41 @@ export default function Search() {
   const enCours = groupes.some((g) => g.requete.isPending && q !== '')
   const total = groupes.reduce((n, g) => n + (g.requete.data?.items.length ?? 0), 0)
   const aucunResultat = q !== '' && !enCours && total === 0
+
+  /*
+    Ce que la recherche dit à voix haute.
+
+    **Une** phrase, et seulement quand les six rayons sont revenus. L'écran a
+    déjà pris cette décision pour son état vide — « sans quoi il clignoterait
+    entre deux réponses » — et l'oreille mérite la même loi : six annonces dont
+    l'ordre dépendrait de la latence de TMDB seraient un brouhaha.
+
+    Elle compte les sources muettes en plus des résultats : une source
+    injoignable n'est pas une absence d'œuvre. L'écran le dit à l'œil depuis
+    toujours, il fallait aussi le dire à l'oreille.
+  */
+  const annoncer = useAnnounce()
+  const muets = groupes.filter((g) => g.requete.error).length
+  const derniere = useRef('')
+
+  useEffect(() => {
+    if (q === '' || enCours) return
+
+    const trouve =
+      total === 0
+        ? `Aucun résultat pour ${q}.`
+        : `${total} résultat${total > 1 ? 's' : ''} pour ${q}.`
+    const pannes =
+      muets > 0
+        ? ` ${muets} source${muets > 1 ? 's' : ''} injoignable${muets > 1 ? 's' : ''}.`
+        : ''
+    const phrase = trouve + pannes
+
+    // Revenir sur l'écran sert le même cache et rejouerait la même phrase.
+    if (derniere.current === phrase) return
+    derniere.current = phrase
+    annoncer(phrase)
+  }, [q, enCours, total, muets, annoncer])
 
   return (
     <div className={styles.page}>

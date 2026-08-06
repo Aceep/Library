@@ -8,8 +8,10 @@ import {
 } from '../api/endpoints'
 import type { NotificationItem, NotificationKind } from '../api/schema'
 import { queryKeys } from '../api/keys'
+import { useAnnounce } from '../components/Announcer'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Notifications.module.css'
 
 /**
@@ -46,6 +48,7 @@ const formatDate = (iso: string) =>
 
 export default function Notifications() {
   const queryClient = useQueryClient()
+  const annoncer = useAnnounce()
   const [unreadOnly, setUnreadOnly] = useState(false)
 
   const filters = { unread: unreadOnly }
@@ -70,13 +73,24 @@ export default function Notifications() {
 
   const toutLire = useMutation({
     mutationFn: () => markAllNotificationsRead(),
-    onSuccess: invalider,
+    onSuccess: (resultat) => {
+      // Le compte vient du serveur — c'est lui qui sait combien il en a
+      // marquées, et le geste vide la liste sans qu'un mot soit prononcé.
+      const n = resultat.updated
+      const s = n > 1 ? 's' : ''
+      annoncer(`${n} nouveauté${s} marquée${s} comme lue${s}.`)
+      invalider()
+    },
   })
 
   const items = data?.pages.flatMap((page) => page.items) ?? []
   // Le compteur accompagne chaque page et vaut pour l'ensemble : on lit celui
   // de la première plutôt que de compter `items`, qui n'en est qu'une tranche.
   const unreadCount = data?.pages[0]?.unread_count ?? 0
+
+  // Le compteur dans l'onglet vient du serveur, comme celui de la pastille du
+  // bandeau : rien n'est recompté ici.
+  useDocumentTitle(unreadCount > 0 ? `Nouveautés (${unreadCount})` : 'Nouveautés')
 
   return (
     <div className={styles.page}>

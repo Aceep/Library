@@ -15,6 +15,7 @@ import MemberLibrary from '../components/MemberLibrary'
 import Reveal from '../components/Reveal'
 import Showcase from '../components/Showcase'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './UserProfile.module.css'
 
 type Tab = 'following' | 'followers'
@@ -34,6 +35,8 @@ function Profile({ id }: { id: string }) {
     queryKey: queryKeys.user(id),
     queryFn: ({ signal }) => fetchUser(id, signal),
   })
+
+  useDocumentTitle(data?.user.pseudo ?? null)
 
   if (isPending) return <p className={styles.loading}>Chargement…</p>
   if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />

@@ -12,6 +12,7 @@ import QuestProgress from '../components/QuestProgress'
 import Reveal from '../components/Reveal'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Dashboard.module.css'
 
 /**
@@ -113,6 +114,7 @@ const VERBE: Record<FeedEntry['kind'], string> = {
 }
 
 export default function Dashboard() {
+  useDocumentTitle(null)
   const { user } = useSession()
   const { data, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.home,

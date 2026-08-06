@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError } from '../api/client'
 import { useLogin } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Login.module.css'
 
 export default function Login() {
+  useDocumentTitle('Se connecter')
   const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
   /** Secondes restantes avant de pouvoir réessayer, après un 429. */

@@ -5,13 +5,16 @@ import { changePassword, fetchFollowing, updateMe } from '../api/endpoints'
 import { SUGGESTED_COLORS, TOO_CLOSE, colorDistance, isHexColor } from '../api/colors'
 import { queryKeys } from '../api/keys'
 import type { Session } from '../api/schema'
+import { useAnnounce } from '../components/Announcer'
 import ErrorNotice from '../components/ErrorNotice'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './MyAccount.module.css'
 
 const MIN_PASSWORD = 8
 
 export default function MyAccount() {
+  useDocumentTitle('Mon compte')
   const { user } = useSession()
 
   return (
@@ -34,6 +37,7 @@ export default function MyAccount() {
 function IdentitySection() {
   const { user } = useSession()
   const queryClient = useQueryClient()
+  const annoncer = useAnnounce()
   const [color, setColor] = useState(user.identity_color)
   const [avatar, setAvatar] = useState(user.avatar_url ?? '')
 
@@ -58,6 +62,8 @@ function IdentitySection() {
       )
       void queryClient.invalidateQueries({ queryKey: queryKeys.people })
       void queryClient.invalidateQueries({ queryKey: queryKeys.home })
+      // Le « Enregistré » plus bas n'apparaissait qu'à l'œil.
+      annoncer('Profil enregistré.')
     },
   })
 
@@ -192,6 +198,7 @@ function IdentitySection() {
 }
 
 function PasswordSection() {
+  const annoncer = useAnnounce()
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -202,6 +209,7 @@ function PasswordSection() {
       setCurrent('')
       setNext('')
       setConfirm('')
+      annoncer('Mot de passe changé.')
     },
   })
 

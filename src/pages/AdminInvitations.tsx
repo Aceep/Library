@@ -8,6 +8,7 @@ import AccessDenied from '../components/AccessDenied'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './AdminInvitations.module.css'
 
 const FILTERS: Array<{ value: InvitationStatus | null; label: string }> = [
@@ -32,6 +33,7 @@ const STATUS_LABEL: Record<InvitationStatus, string> = {
 }
 
 export default function AdminInvitations() {
+  useDocumentTitle('Invitations')
   const { isAdmin } = useSession()
   // Le back revérifie de son côté (403) : cette garde évite d'afficher un
   // écran qui ne répondrait rien, elle ne tient pas lieu de sécurité.

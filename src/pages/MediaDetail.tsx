@@ -28,6 +28,7 @@ import SeasonList from '../components/SeasonList'
 import TrackingPanel, { FollowedTrackings } from '../components/TrackingPanel'
 import VolumeGrid from '../components/VolumeGrid'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './MediaDetail.module.css'
 
 export default function MediaDetail() {
@@ -46,6 +47,8 @@ function Detail({ id }: { id: string }) {
     queryKey: queryKeys.media(id),
     queryFn: ({ signal }) => fetchMediaDetail(id, signal),
   })
+
+  useDocumentTitle(data?.title ?? null)
 
   /** Les listes dépendent du suivi : elles redeviennent fausses à chaque écriture. */
   const invalidateLists = () => {

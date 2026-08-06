@@ -323,6 +323,9 @@
   grid-template-columns: repeat(var(--rayon-cols), minmax(0, 1fr));
   grid-auto-rows: var(--rayon-row);
   gap: var(--s-5);
+  /* La mosaïque est l'ancre du changement de page : sans cette marge, le
+     bandeau collant recouvrirait sa première rangée à l'arrivée. */
+  scroll-margin-top: calc(var(--masthead-h) + var(--s-4));
 }
 
 .tile,

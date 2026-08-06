@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { Announcer } from './components/Announcer'
 import ErrorBoundary from './components/ErrorBoundary'
 import { createQueryClient } from './api/queryClient'
 import './styles/global.css'
@@ -16,9 +17,14 @@ root.render(
         montage. Le repli est statique et n'a donc besoin d'aucun contexte. */}
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        {/* Autour du routeur, et non dans la coquille : la connexion et
+            l'invitation vivent hors de celle-ci, et ont autant besoin d'une
+            voix que le reste. */}
+        <Announcer>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </Announcer>
       </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,

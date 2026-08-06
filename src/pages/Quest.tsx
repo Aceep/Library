@@ -18,6 +18,7 @@ import BadgeMedal from '../components/BadgeMedal'
 import ErrorNotice from '../components/ErrorNotice'
 import IdentityDot from '../components/IdentityDot'
 import QuestProgress from '../components/QuestProgress'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Quest.module.css'
 
 const formatDate = (iso: string) =>
@@ -35,6 +36,8 @@ function QuestDetail({ id }: { id: string }) {
     queryKey: queryKeys.quest(id),
     queryFn: ({ signal }) => fetchQuest(id, signal),
   })
+
+  useDocumentTitle(data?.quest.title ?? null)
 
   if (isPending) return <p className={styles.loading}>Chargement…</p>
   if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />

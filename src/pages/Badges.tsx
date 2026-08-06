@@ -7,6 +7,7 @@ import { useSession } from '../session/SessionContext'
 import BadgeMedal from '../components/BadgeMedal'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Badges.module.css'
 
 const formatDate = (iso: string) =>
@@ -26,6 +27,7 @@ const formatDate = (iso: string) =>
  * quand même du bon côté le jour où il existera.
  */
 export default function Badges() {
+  useDocumentTitle('Badges')
   const { user, isAdmin } = useSession()
 
   const profil = useQuery({

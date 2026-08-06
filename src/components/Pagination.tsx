@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { RefObject } from 'react'
 import type { PageInfo } from '../api/schema'
 import styles from './Pagination.module.css'
 
@@ -55,6 +56,19 @@ export interface PaginationProps {
   onNavigate: (page: number) => void
   /** Étiquette de la navigation, pour distinguer deux paginations d'un même écran. */
   label?: string
+  /**
+   * Ce qu'il faut ramener sous les yeux après un changement de page **à la
+   * souris**.
+   *
+   * Changer de page ne change pas l'adresse d'écran, donc rien ne remontait :
+   * on se retrouvait en bas de la page 2, devant sa pagination, sans avoir vu
+   * son début. C'est la *liste* qu'on ramène, pas le document — remonter tout
+   * en haut ferait retraverser l'en-tête du rayon à chaque page.
+   *
+   * Au clavier, rien : le focus rendu au numéro courant emmène déjà le regard,
+   * et y ajouter un défilement ferait deux mouvements pour un geste.
+   */
+  ancre?: RefObject<HTMLElement>
 }
 
 /**
@@ -97,18 +111,32 @@ export default function Pagination({
   hrefOf,
   onNavigate,
   label = 'Pages du rayon',
+  ancre,
 }: PaginationProps) {
   const nav = useRef<HTMLElement>(null)
   const courant = useRef<HTMLAnchorElement>(null)
   // Ne rendre le focus qu'après une navigation **au clavier** : le faire à
   // chaque rendu volerait le focus à qui est en train de lire ailleurs.
   const rendreLeFocus = useRef(false)
+  // Au montage, on *arrive* : la page 1 n'est pas un changement de page, et
+  // ramener la liste sous les yeux sauterait l'en-tête du rayon à l'arrivée.
+  const premier = useRef(true)
 
   useEffect(() => {
-    if (!rendreLeFocus.current) return
-    rendreLeFocus.current = false
-    courant.current?.focus()
-  }, [info.page])
+    if (premier.current) {
+      premier.current = false
+      return
+    }
+    if (rendreLeFocus.current) {
+      rendreLeFocus.current = false
+      courant.current?.focus()
+      return
+    }
+    // `?.()` : jsdom n'implémente pas `scrollIntoView`, et les tests de
+    // pagination cliquent « Page 2 ». Même garde que `Reveal` sur
+    // `IntersectionObserver`, et pour la même raison.
+    ancre?.current?.scrollIntoView?.({ block: 'start' })
+  }, [info.page, ancre])
 
   // Une seule page ne se pagine pas. Zéro non plus : la liste est vide, et
   // l'écran a déjà un état vide qui le dit mieux qu'une pagination à une case.

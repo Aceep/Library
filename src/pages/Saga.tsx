@@ -7,6 +7,7 @@ import { useReference } from '../reference/ReferenceContext'
 import WatchToggle from '../components/WatchToggle'
 import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Saga.module.css'
 
 export default function Saga() {
@@ -20,6 +21,8 @@ function SagaDetail({ id }: { id: string }) {
     queryKey: queryKeys.saga(id),
     queryFn: ({ signal }) => fetchSaga(id, signal),
   })
+
+  useDocumentTitle(data?.saga.title ?? null)
 
   if (isPending) return <p className={styles.loading}>Chargement…</p>
   if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />

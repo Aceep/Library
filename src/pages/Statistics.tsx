@@ -19,6 +19,7 @@ import StatDuel from '../components/StatDuel'
 import type { DuelSide } from '../components/StatDuel'
 import StatFigure from '../components/StatFigure'
 import StatRanking from '../components/StatRanking'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Statistics.module.css'
 
 const PERIODS: { value: StatPeriod; label: string; dans: string }[] = [
@@ -104,6 +105,7 @@ const formatMonth = (mois: string) => {
 }
 
 export default function Statistics() {
+  useDocumentTitle('Statistiques')
   const { user } = useSession()
   const [params] = useSearchParams()
   // Tout est public : on peut regarder le tableau de bord d'un autre membre.

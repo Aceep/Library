@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchMemberLibraryPage } from '../api/endpoints'
@@ -48,6 +48,9 @@ export default function MemberLibrary({
   me: Account
   trackedCount: number
 }) {
+  // Le haut de la grille : c'est elle qu'on ramène sous les yeux en changeant
+  // de page, pas le haut du profil.
+  const liste = useRef<HTMLUListElement>(null)
   const [type, setType] = useState<MediaType | null>(null)
   const [status, setStatus] = useState<TrackingStatus | null>(null)
   const [favoriteOnly, setFavoriteOnly] = useState(false)
@@ -202,7 +205,7 @@ export default function MemberLibrary({
         )
       ) : (
         <>
-          <ul className={styles.grid} aria-busy={list.isFetching}>
+          <ul ref={liste} className={styles.grid} aria-busy={list.isFetching}>
             {items.map((item) => (
               <MediaCard key={item.id} item={item} me={me} />
             ))}
@@ -217,6 +220,7 @@ export default function MemberLibrary({
               // ne dirait pas de quoi il s'agit, et la page en contient déjà une
               // autre navigation.
               label={isMe ? 'Pages de ma bibliothèque' : `Pages de la bibliothèque de ${pseudo}`}
+              ancre={liste}
             />
           ) : null}
         </>

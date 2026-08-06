@@ -16,9 +16,11 @@ import AccessDenied from '../components/AccessDenied'
 import ErrorNotice from '../components/ErrorNotice'
 import IdentityDot from '../components/IdentityDot'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './AdminUsers.module.css'
 
 export default function AdminUsers() {
+  useDocumentTitle('Les comptes')
   const { isAdmin } = useSession()
   // Le back revérifie et répond 403 : cette garde évite d'afficher un écran
   // muet, elle ne tient pas lieu de sécurité.

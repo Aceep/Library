@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -18,6 +18,7 @@ import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
 import { RAYONNAGES } from '../rayons'
 import type { Rayonnage } from '../rayons'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './TypeLibrary.module.css'
 
 /**
@@ -57,6 +58,11 @@ export default function TypeLibrary() {
 }
 
 function Library({ type }: { type: MediaType }) {
+  // Le haut de la mosaïque : c'est *elle* qu'on ramène sous les yeux en
+  // changeant de page, pas le haut du document — sans quoi on retraverserait
+  // l'en-tête du rayon à chaque fois.
+  const liste = useRef<HTMLUListElement>(null)
+  useDocumentTitle(typeLabelPlural(type))
   const { user } = useSession()
   const { statusesOf } = useReference()
   const [status, setStatus] = useState<TrackingStatus | null>(null)
@@ -238,7 +244,7 @@ function Library({ type }: { type: MediaType }) {
                 saute pas, et un lecteur d'écran doit savoir qu'elles ne sont plus
                 à jour.
               */}
-              <ul className={styles.shelf} aria-busy={isFetching}>
+              <ul ref={liste} className={styles.shelf} aria-busy={isFetching}>
                 {items.map((item, rang) => (
                   <Tuile
                     key={item.id}
@@ -263,6 +269,7 @@ function Library({ type }: { type: MediaType }) {
                   hrefOf={adresseDe}
                   onNavigate={allerA}
                   label={`Pages du rayon ${typeLabelPlural(type).toLowerCase()}`}
+                  ancre={liste}
                 />
               ) : (
                 <p className={styles.end}>

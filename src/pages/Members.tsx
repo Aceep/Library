@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Members.module.css'
 
 type Sort = 'pseudo' | 'joined'
@@ -18,6 +19,7 @@ const SORTS: Array<{ value: Sort; label: string }> = [
 ]
 
 export default function Members() {
+  useDocumentTitle('Le cercle')
   const { user } = useSession()
   const [sort, setSort] = useState<Sort>('pseudo')
   const [includeDeactivated, setIncludeDeactivated] = useState(false)

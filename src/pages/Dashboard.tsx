@@ -116,7 +116,7 @@ export default function Dashboard() {
   const { user } = useSession()
   const { data, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.home,
-    queryFn: fetchHome,
+    queryFn: ({ signal }) => fetchHome(signal),
   })
 
   if (isPending) return <p className={styles.loading}>Chargement…</p>
@@ -239,10 +239,47 @@ function MediumLabel({ type, small = false }: { type: MediaType; small?: boolean
  * aller-retour réseau.
  */
 function QuestBanner() {
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: queryKeys.quests,
     queryFn: ({ signal }) => fetchQuests(signal),
   })
+
+  /*
+    L'échec ne se confond pas avec l'attente. Sans cette branche, une panne des
+    quêtes emportait en silence la section qui porte le **seul `<h1>` de
+    l'accueil** : la page se retrouvait sans titre, et rien ne disait pourquoi.
+    Le message est celui du serveur, affiché tel quel ; la reprise vit sur
+    `/quetes`, où elle a un écran à elle.
+  */
+  if (error) {
+    return (
+      <section className={styles.quete} aria-labelledby="quete-en-avant">
+        <div className={styles.lampe} aria-hidden="true" />
+        <div className={styles.queteInner}>
+          <div className={styles.queteCadre}>
+            <div>
+              <div className={styles.queteSourcil}>
+                <span className={styles.quetePastille}>Quêtes</span>
+                <span className={styles.queteFilet} aria-hidden="true" />
+              </div>
+
+              <h1 id="quete-en-avant" className={styles.queteTitre}>
+                {titreEnMots('Les quêtes n’ont pas pu être chargées.')}
+              </h1>
+
+              <p className={styles.queteNote}>{(error as Error).message}</p>
+
+              <div className={styles.queteActions}>
+                <Link to="/quetes" className={styles.queteCta}>
+                  Réessayer <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   if (!data) return null
 

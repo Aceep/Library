@@ -135,6 +135,19 @@ function IdentitySection() {
         </label>
       </div>
 
+      {/*
+        La liste des abonnements n'est pas venue : sans elle la comparaison ne
+        peut pas se faire, et son silence ressemblerait à « aucune teinte n'est
+        proche ». Le dire vaut mieux que laisser choisir une encre qui en double
+        une autre. Pas de reprise : ce n'est pas le sujet de l'écran.
+      */}
+      {following.error ? (
+        <p className={styles.warn}>
+          Impossible de vérifier les teintes déjà prises&nbsp;: la liste de tes abonnements n'a pas
+          pu être chargée.
+        </p>
+      ) : null}
+
       {/* Signalé, jamais bloqué : le back accepte, et c'est peut-être voulu. */}
       {clash ? (
         <p className={styles.clash}>

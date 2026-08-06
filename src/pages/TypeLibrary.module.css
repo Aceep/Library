@@ -121,6 +121,23 @@
   text-align: right;
 }
 
+/**
+ * Un bloc secondaire qui n'a pas pu se charger le dit, et le reste de l'écran
+ * continue de servir. Même forme que la source muette de la recherche — un
+ * filet à gauche, la voix en italique : c'est le même propos, « je n'ai pas
+ * pu regarder », qui ne doit jamais se lire « il n'y a rien ».
+ */
+.panne {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--voice);
+  border-left: 2px solid var(--rule-soft);
+  padding-left: var(--s-4);
+  margin-top: var(--s-4);
+  max-width: 60ch;
+}
+
 /* ---- En cours ---- */
 
 .encours {

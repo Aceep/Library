@@ -225,10 +225,32 @@ function Releve({
   // Le tableau de bord d'un membre est public, comme le reste du profil. Il
   // arrive après le profil et sans le bloquer : le relevé se dessine quand il
   // est là, le reste de l'écran n'attend pas.
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: queryKeys.stats(userId),
     queryFn: ({ signal }) => fetchStats(userId, null, signal),
   })
+
+  /*
+    Le relevé se tait quand il n'a pas pu être lu.
+
+    Sans cette branche, `dashboard` restait `null` et chaque `Figure` affichait
+    son tiret : « note moyenne — », « terminées — ». Or le tiret dit *rien de
+    noté*, pas *rien de su*. C'est exactement la distinction que le reste du
+    dépôt défend (« zéro d'ignorance » contre « zéro d'inaction »), et la
+    laisser filer ici ferait mentir le profil sur ce que le membre a fait.
+  */
+  if (error) {
+    return (
+      <Reveal className={styles.releve}>
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle}>
+            Le <em>relevé</em>
+          </h2>
+        </div>
+        <p className={styles.panne}>Le relevé n’a pas pu être chargé.</p>
+      </Reveal>
+    )
+  }
 
   const dashboard = data?.dashboard ?? null
   const notes = dashboard?.highlights.ratings ?? null

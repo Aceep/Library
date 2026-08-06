@@ -50,6 +50,53 @@ const networkError = () =>
     0,
   )
 
+/**
+ * Le délai de garde a tranché. Distinct de `NETWORK` : la connexion a réussi,
+ * c'est la réponse qui n'est jamais venue — et les deux ne se corrigent pas de
+ * la même façon.
+ */
+const timeoutError = () =>
+  new ApiError(
+    {
+      code: 'TIMEOUT',
+      message: "L'API n'a pas répondu à temps. Réessaie, et signale-le si ça se répète.",
+      retryable: true,
+    },
+    0,
+  )
+
+/**
+ * Un 200 dont le corps n'est pas du JSON.
+ *
+ * Le rendre `null` en silence — ce que faisait ce module — transformait une
+ * panne de transport en succès : la requête se résolvait, aucune branche
+ * d'erreur ne pouvait se déclencher, et l'écran cassait au premier
+ * déréférencement, dans l'`ErrorBoundary`. Le symptôme ne ressemblait pas à sa
+ * cause. Le cas réel est le repli SPA (`nginx.conf`), qui sert `index.html`
+ * avec un 200 sur un chemin d'API qui n'existe pas.
+ */
+const malformedError = () =>
+  new ApiError(
+    {
+      code: 'MALFORMED',
+      message:
+        "L'API a répondu autre chose que du JSON — le serveur renvoie sans doute la page de l'application à sa place.",
+      retryable: true,
+    },
+    0,
+  )
+
+/**
+ * Combien de temps on attend avant de déclarer la panne.
+ *
+ * Une écriture a droit à plus : verser une œuvre va chercher la fiche complète
+ * chez la source, et `Search` annonce déjà « plusieurs secondes » à l'écran.
+ * Sans ces deux valeurs, une connexion pendue laissait `isPending` à `true`
+ * pour toujours — et l'écran restait sur son « Chargement… », sans issue.
+ */
+const DELAI_LECTURE = 20_000
+const DELAI_ECRITURE = 45_000
+
 const parseRetryAfter = (value: string | null): number | null => {
   if (!value) return null
   const seconds = Number(value)
@@ -76,11 +123,17 @@ const buildUrl = (path: string, query?: RequestOptions['query']) => {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, query, signal } = options
 
+  // Deux signaux distincts, et il faut savoir lequel a tranché : une navigation
+  // annule la requête, et une annulation n'est pas une panne à montrer.
+  const garde = AbortSignal.timeout(method === 'GET' ? DELAI_LECTURE : DELAI_ECRITURE)
+  const combine = signal ? AbortSignal.any([signal, garde]) : garde
+
   let response: Response
+  let raw: string
   try {
     response = await fetch(buildUrl(path, query), {
       method,
-      signal,
+      signal: combine,
       // Inutile en même origine, mais garde le code valable le jour où l'API
       // sera réellement en ligne.
       credentials: 'include',
@@ -92,19 +145,27 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     })
-  } catch {
+
+    if (response.status === 204) return undefined as T
+
+    // La lecture du corps s'annule aussi : elle est dans le même `try` pour que
+    // les trois issues ci-dessous la couvrent.
+    raw = await response.text()
+  } catch (error) {
+    // L'appelant a annulé — React Query au démontage. On relaie tel quel : la
+    // requête doit être traitée comme annulée, jamais comme échouée.
+    if (signal?.aborted) throw error
+    if (garde.aborted) throw timeoutError()
     throw networkError()
   }
 
-  if (response.status === 204) return undefined as T
-
-  const raw = await response.text()
   let payload: unknown = null
+  let illisible = false
   if (raw) {
     try {
       payload = JSON.parse(raw)
     } catch {
-      payload = null
+      illisible = true
     }
   }
 
@@ -120,6 +181,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
           }
     throw new ApiError(body, response.status, parseRetryAfter(response.headers.get('Retry-After')))
   }
+
+  // Un corps vide est légitime — il vaut `null`. Un corps non vide qui ne parse
+  // pas ne l'est pas : c'est une panne, et elle se dit.
+  if (illisible) throw malformedError()
 
   return payload as T
 }

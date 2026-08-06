@@ -142,6 +142,22 @@
   margin-left: auto;
 }
 
+/**
+ * Le relevé qui n'a pas pu être lu le dit, au lieu d'afficher ses tirets.
+ * Un tiret veut dire « rien de noté » ; il ne peut pas vouloir dire aussi
+ * « rien de su », sans quoi le profil ment sur ce que le membre a fait.
+ */
+.panne {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--voice);
+  border-left: 2px solid var(--rule-soft);
+  padding-left: var(--s-4);
+  margin-top: var(--s-4);
+  max-width: 60ch;
+}
+
 .figures {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

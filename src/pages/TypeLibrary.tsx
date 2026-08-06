@@ -307,29 +307,45 @@ function EnCours({
   const aUnEnCours = statusesOf(type).some((statut) => statut.value === 'doing')
 
   const filters: LibraryFilters = { type, status: 'doing', limit: 3 }
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: queryKeys.libraryPage(filters, 1),
     queryFn: ({ signal }) => fetchLibraryPage(filters, 1, signal),
     enabled: aUnEnCours,
   })
 
   const items = data?.items ?? []
-  // Rien en cours n'est pas un incident : la section disparaît, elle n'affiche
-  // pas un vide décoré.
-  if (items.length === 0) return null
 
   // Le titre se compose en deux voix — le premier mot droit, la suite en
   // italique — comme tous les titres de section de la direction.
   const [premier, ...suite] = titre.split(' ')
+  const entete = (
+    <div className={styles.sectionHead}>
+      <h2 className={styles.sectionTitle}>
+        {premier} <em>{suite.join(' ')}</em>
+      </h2>
+      <span className={styles.sectionNote}>ce que je traverse</span>
+    </div>
+  )
+
+  // Une panne se dit. Sans cette branche, la section disparaissait comme si de
+  // rien n'était et « on n'a pas pu regarder » se lisait « tu n'as rien en
+  // cours » — la seule des deux phrases qu'on ne peut pas laisser croire.
+  if (error) {
+    return (
+      <Reveal>
+        {entete}
+        <p className={styles.panne}>Ce que tu traverses n’a pas pu être chargé.</p>
+      </Reveal>
+    )
+  }
+
+  // Rien en cours n'est pas un incident : la section disparaît, elle n'affiche
+  // pas un vide décoré.
+  if (items.length === 0) return null
 
   return (
     <Reveal>
-      <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>
-          {premier} <em>{suite.join(' ')}</em>
-        </h2>
-        <span className={styles.sectionNote}>ce que je traverse</span>
-      </div>
+      {entete}
       <ul className={styles.encours}>
         {items.map((item) => (
           <li key={item.id} className={styles.encoursTile}>

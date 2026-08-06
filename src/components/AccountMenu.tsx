@@ -9,13 +9,16 @@ import styles from './AccountMenu.module.css'
  * Tout ce que le bandeau ne montre plus.
  *
  * La ligne de partage **n'est plus la fréquence**. Le bandeau appartient
- * désormais aux rayons — six pastilles, la recherche, le thème — et il n'a
- * plus la place d'une seconde rangée de liens : ce qui n'est pas un rayon
+ * désormais à ses huit destinations — les six rayons, les quêtes, le cercle —
+ * et il n'a plus la place d'une seconde rangée de liens : ce qui n'y figure pas
  * descend ici, quelle que soit la fréquence à laquelle on s'y rend.
  *
- * Deux exceptions restent dehors, et pour la même raison : leur libellé porte
- * un compteur. Les nouveautés annoncent ce qui n'est pas lu, et le replier
- * reviendrait à cacher une notification.
+ * `Les membres` et `Les quêtes` **ne sont plus listés ici** : ils sont montés
+ * dans la rangée du bandeau. Les y laisser ferait deux chemins vers le même
+ * écran à trente centimètres l'un de l'autre.
+ *
+ * Les nouveautés restent dehors, et pour une autre raison : leur libellé porte
+ * un compteur. Le replier reviendrait à cacher une notification.
  *
  * Deux groupes : ce qui regarde le cercle, puis ce qui m'appartient. Le second
  * finit par la déconnexion, qui n'est l'affaire de personne d'autre.
@@ -24,9 +27,7 @@ const GROUPS: { title: string; entries: { to: string; label: string; admin?: tru
   {
     title: 'Le cercle',
     entries: [
-      { to: '/membres', label: 'Les membres' },
       { to: '/comparer', label: 'Comparer' },
-      { to: '/quetes', label: 'Les quêtes' },
       { to: '/veille', label: 'La veille' },
       { to: '/recherche', label: 'Ajouter une œuvre' },
       { to: '/administration/invitations', label: 'Inviter', admin: true },

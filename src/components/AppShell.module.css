@@ -50,22 +50,27 @@
 /* ---- Les rayons ---- */
 
 /**
- * Six rayons composés à l'identique, plus « Tous ». Ils filtrent un fonds
- * unique — ce ne sont pas six destinations à l'identité propre —, et seule
- * leur teinte les distingue : le gel arrive par `data-media-type`.
+ * Huit destinations : les six rayons, puis les quêtes et le cercle. Les rayons
+ * filtrent un fonds unique — ce ne sont pas six destinations à l'identité
+ * propre —, et seule leur teinte les distingue : le gel arrive par
+ * `data-media-type`.
+ *
+ * **Jamais `justify-self: start`** : la rangée se dimensionnerait alors sur son
+ * contenu et passerait sous le groupe de droite. C'est `width: 100%` +
+ * `min-width: 0` qui la tiennent dans sa colonne, et c'est écrit dans la
+ * maquette comme une leçon apprise à la dure.
  *
  * 10,5px et non les 12 de la maquette, et c'est arithmétique : elle nomme ses
  * rayons « Manga » et « Jeux », le dépôt les nomme « Mangas & BD » et « Jeux
  * vidéo » — ce sont les noms justes de ces rayons, et on ne les abrège pas
- * pour tenir dans une maquette. Sept pastilles à 12px demanderaient ~700px là
- * où la rangée en a ~510 (`--max-content` plafonne à 1360 : il n'existe pas de
- * cas plus large à dessiner).
+ * pour tenir dans une maquette.
  */
 .rayons {
   display: flex;
   align-items: center;
   gap: 6px;
-  justify-self: start;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -75,23 +80,13 @@
   text-transform: uppercase;
 }
 
-/* La vue sans filtre. Dorée parce qu'elle est le geste par défaut. */
-.rayonAll {
-  color: var(--gold-ink);
-  background: var(--gold);
-  font-weight: 600;
-  padding: 8px 10px;
-  border: var(--rule-w) solid var(--gold);
-  box-shadow: var(--block);
-  flex: none;
-}
-
 /**
  * L'ombre en bloc — décalée, sans flou — est le langage de la petite chrome.
  * Le grand contenu prend `--lift`, qui est flou. Jamais les deux ensemble.
  */
-.rayon {
-  color: var(--type-hue);
+.rayon,
+.quetes,
+.cercle {
   padding: 8px 10px;
   border: var(--rule-w) solid var(--rule);
   box-shadow: 0 0 0 0 var(--rule);
@@ -103,12 +98,68 @@
     background var(--dur-2) var(--ease-page);
 }
 
-.rayon:hover,
-.rayonActive {
+.rayon {
+  color: var(--type-hue);
+}
+
+.rayon:hover {
   border-color: var(--type-hue);
   background: color-mix(in oklab, var(--gel) 14%, transparent);
   box-shadow: 4px 4px 0 0 var(--type-hue);
   transform: translate(-2px, -2px);
+}
+
+/**
+ * Le rayon courant est un **aplat** de son gel à texte quasi noir. C'est la
+ * différence de forme — aplat contre pastille bordée — qui sépare un rayon d'un
+ * membre sur une même ligne, et elle ne s'inverse jamais.
+ *
+ * `--gel` remplit, `--type-hue` compose : en jour le gel brut tombe à 2:1 en
+ * texte, les confondre rendrait la pastille illisible.
+ */
+.rayonActive {
+  color: var(--gel-ink);
+  background: var(--gel);
+  border-color: var(--gel);
+  font-weight: 600;
+}
+
+/* Les quêtes se font, elles ne se contemplent pas : doré, comme toute action. */
+.quetes {
+  color: var(--gold-text);
+}
+
+.quetes:hover {
+  border-color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 14%, transparent);
+  box-shadow: 4px 4px 0 0 var(--gold);
+  transform: translate(-2px, -2px);
+}
+
+.quetesActive {
+  color: var(--gold-ink);
+  background: var(--gold);
+  border-color: var(--gold);
+  font-weight: 600;
+}
+
+/* Le cercle nomme une structure, pas un geste : ambre, jamais doré. */
+.cercle {
+  color: var(--amber);
+}
+
+.cercle:hover {
+  border-color: var(--amber);
+  background: color-mix(in oklab, var(--amber) 14%, transparent);
+  box-shadow: 4px 4px 0 0 var(--amber);
+  transform: translate(-2px, -2px);
+}
+
+.cercleActive {
+  color: var(--bg);
+  background: var(--amber);
+  border-color: var(--amber);
+  font-weight: 600;
 }
 
 /* ---- Le groupe de droite ---- */
@@ -121,58 +172,33 @@
   justify-self: end;
 }
 
-/* Le champ de recherche : petite chrome, donc ombre en bloc et survol doré. */
+/**
+ * L'accès à la recherche : petite chrome, donc ombre en bloc et lever au survol.
+ *
+ * Doré parce qu'il s'actionne, mais composé en `--gold-text` : en jour, `--gold`
+ * ne fait que 1,97:1 sur le fond. Il remplit, il ne compose pas.
+ */
 .search {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  border: var(--rule-w) solid var(--rule);
-  background: var(--surface);
-  padding: var(--s-2) var(--s-3);
-  flex: 0 1 210px;
-  min-width: 108px;
-  box-shadow: var(--block);
-  transition:
-    border-color var(--dur-3) var(--ease-page),
-    box-shadow var(--dur-3) var(--ease-page);
-}
-
-.search:focus-within,
-.search:hover {
-  border-color: var(--gold);
-  box-shadow: 4px 4px 0 0 var(--gold);
-}
-
-.searchLabel {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--gold-text);
+  background: var(--surface);
+  border: var(--rule-w) solid var(--gold);
+  padding: 9px 13px;
+  white-space: nowrap;
   flex: none;
+  box-shadow: 4px 4px 0 0 var(--gold);
+  transition:
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-rise);
 }
 
-/* L'invite est de la voix humaine : italique, et dans le crème réservé. */
-.searchInput {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 16px;
-  color: var(--ink);
-  background: none;
-  border: none;
-  padding: 0;
-  min-width: 0;
-  flex: 1;
-}
-
-.searchInput::placeholder {
-  color: var(--voice);
-  opacity: 0.75;
-}
-
-.searchInput:focus {
-  outline: none;
+.search:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--gold);
 }
 
 /* Jour / Nuit — sourd au repos, doré au survol comme tout ce qui s'actionne. */
@@ -224,28 +250,63 @@
   padding: var(--s-5) var(--page-margin) 0;
 }
 
+/* Premier palier : la rangée se resserre avant de changer de place. */
+@media (max-width: 1340px) {
+  .rayons {
+    gap: 5px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  .rayon,
+  .quetes,
+  .cercle {
+    padding: 8px 8px;
+  }
+}
+
 /**
- * Paliers — repris de la maquette. Sous 1180px la nav des rayons disparaît : la
- * bibliothèque reste accessible par l'accueil, et six pastilles compressées ne
- * se lisent plus.
+ * Sous 1180px, la rangée **passe à la ligne** et devient un rail défilant.
+ *
+ * La maquette obtient ce rail en recopiant les huit liens sous le bandeau ;
+ * nous les laissons où ils sont et c'est la grille qui les déplace — une seule
+ * copie dans le DOM, donc une seule lecture par un lecteur d'écran.
+ *
+ * `overflow-x: auto` remplace le `hidden` du bandeau large : en rail, ce qui
+ * dépasse doit s'atteindre, pas se couper.
  */
 @media (max-width: 1180px) {
+  .headerInner {
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+    align-items: center;
+    height: auto;
+    padding-top: var(--s-3);
+    gap: var(--s-3) var(--s-4);
+  }
+
   .rayons {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    overflow-x: auto;
+    padding-bottom: var(--s-3);
+    scrollbar-width: none;
+  }
+
+  .rayons::-webkit-scrollbar {
     display: none;
   }
 }
 
-@media (max-width: 767px) {
-  /* Deux colonnes seulement — la nav est déjà repliée, et la colonne du milieu
-     laissée vide poussait la marque sous le groupe de droite. */
-  .headerInner {
-    grid-template-columns: auto auto;
-    justify-content: space-between;
-    gap: var(--s-3);
-    height: auto;
-    padding: var(--s-3) var(--page-margin);
+@media (max-width: 900px) {
+  .headerInner,
+  .main {
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
   }
+}
 
+@media (max-width: 767px) {
   .brand {
     font-size: 22px;
   }
@@ -254,6 +315,9 @@
     gap: var(--s-3);
   }
 
+  /* La rangée du haut porte déjà les nouveautés, le thème et le compte : le
+     bouton n'y tient plus. La recherche reste atteignable par « Ajouter une
+     œuvre » dans le menu de compte, qui mène au même écran. */
   .search {
     display: none;
   }

@@ -1,245 +1,393 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--s-6);
 }
 
+/* ---- L'en-tête ---- */
+
 .intro {
-  border-bottom: 1px solid var(--rule-soft);
-  padding-bottom: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
 }
 
 .eyebrow {
-  font-size: var(--text-xs);
-  letter-spacing: 0.14em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-bottom: var(--space-2);
+  color: var(--muted);
 }
 
-.title {
-  font-size: var(--text-2xl);
-}
-
-/* ---- Onglets ---- */
-
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  border-bottom: 1px solid var(--rule-soft);
-}
-
-.tab {
-  font: inherit;
-  font-size: var(--text-sm);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: var(--space-2) var(--space-4);
-  color: var(--ink-muted);
-  cursor: pointer;
-  margin-bottom: -1px;
-}
-
-.tab:hover {
-  color: var(--ink);
-}
-
-.tab[aria-pressed='true'] {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-
-/* ---- Formulaire ---- */
-
+/**
+ * La requête **est** le titre de l'écran. Elle se compose donc à la taille d'un
+ * titre, sur un filet doré : c'est la seule ligne de la page où l'on écrit, et
+ * tout ce qui suit en découle.
+ */
 .form {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
+  align-items: baseline;
+  gap: var(--s-5);
+  border-bottom: 2px solid var(--gold);
+  padding-bottom: var(--s-4);
 }
 
 .input {
-  font: inherit;
-  font-size: var(--text-base);
-  color: var(--ink);
-  background: var(--paper-raised);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-4);
   flex: 1;
-  min-width: 16rem;
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(30px, 4.4vw, 60px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--ink);
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.input::placeholder {
+  font-style: italic;
+  color: var(--voice);
+  opacity: 0.6;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .submit {
-  font: inherit;
-  font-size: var(--text-sm);
-  background: var(--ink);
-  color: var(--paper);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-5);
+  flex: none;
+  background: var(--gold);
+  color: var(--gold-ink);
+  border: var(--rule-w) solid var(--gold);
+  padding: var(--s-3) var(--s-5);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   cursor: pointer;
+  box-shadow: var(--block);
+  transition:
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-rise);
+}
+
+.submit:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--rule);
 }
 
 .submit:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
+  box-shadow: none;
+  transform: none;
+}
+
+.introFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-5);
 }
 
 .isbnToggle {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--ink-muted);
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
   cursor: pointer;
 }
 
-.hint,
-.count {
-  font-size: var(--text-sm);
-  color: var(--ink-faint);
-}
+/* ---- Les dernières recherches ---- */
 
-/* ---- Source indisponible ---- */
-
-.unavailable {
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--status-doing);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  background: var(--paper-raised);
+.recentes {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-left: auto;
 }
 
-.unavailableText {
-  font-size: var(--text-base);
-  color: var(--ink-soft);
+.recentesLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: var(--s-2);
 }
 
-.unavailableNote {
-  font-size: var(--text-sm);
-  color: var(--ink-faint);
+.recente {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  padding: 7px 11px;
+  background: none;
+  border: var(--rule-w) solid var(--rule);
+  color: var(--ink-2);
+  cursor: pointer;
+  box-shadow: 3px 3px 0 0 var(--rule-soft);
+  transition:
+    transform var(--dur-2) var(--ease-rise),
+    color var(--dur-2) var(--ease-page),
+    border-color var(--dur-2) var(--ease-page);
 }
 
-/* ---- Résultats ---- */
+.recente:hover {
+  transform: translate(-2px, -2px);
+  color: var(--gold-text);
+  border-color: var(--gold);
+}
+
+.hint {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--muted);
+  max-width: 56ch;
+}
+
+/* ---- Un rayon de résultats ---- */
+
+.groupe {
+  display: block;
+}
+
+.groupeHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  border-bottom: var(--rule-w) solid var(--rule);
+  padding-bottom: var(--s-3);
+}
+
+/* Le nom du rayon est un aplat de son gel : la même forme que dans le bandeau
+   et sur une étiquette de médium, et nulle part ailleurs. */
+.groupeNom {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gel-ink);
+  background: var(--gel);
+  padding: 6px 12px;
+}
+
+.groupeRule {
+  flex: 1 1 24px;
+  min-width: 24px;
+  height: var(--rule-w);
+  background: var(--gel);
+  opacity: 0.45;
+}
+
+.groupeCompte {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/**
+ * Une source injoignable **reste à l'écran**. Le groupe disparu ferait lire une
+ * panne comme une absence d'œuvre, et c'est la confusion la plus coûteuse de cet
+ * écran : on ajouterait une fiche en double faute de l'avoir vue.
+ */
+.indisponible {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--voice);
+  border-left: 2px solid var(--rule-soft);
+  padding-left: var(--s-4);
+  margin-top: var(--s-4);
+  max-width: 60ch;
+}
+
+/* ---- Une ligne de résultat ---- */
 
 .results {
   display: flex;
   flex-direction: column;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
 }
 
 .result {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-4) 0;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: var(--s-5);
+  align-items: center;
+  border: var(--rule-w) solid var(--rule-soft);
+  padding: var(--s-4) var(--s-5);
+  box-shadow: var(--lift);
+  transition:
+    border-color var(--dur-3) var(--ease-page),
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-page);
 }
 
-.result + .result {
-  border-top: 1px solid var(--rule-soft);
+.result:hover {
+  border-color: var(--gel);
+  transform: translateY(-4px);
+  box-shadow: 0 22px 44px -20px color-mix(in oklab, var(--gel) 55%, transparent);
 }
 
 .resultCover {
-  width: 64px;
-  flex: none;
+  width: 76px;
 }
 
 .resultBody {
-  flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 
 .resultTitle {
   font-family: var(--font-serif);
-  font-size: var(--text-base);
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .resultOriginal {
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
+  font-family: var(--font-serif);
   font-style: italic;
-  margin-top: calc(var(--space-2) * -1);
+  font-size: 16px;
+  color: var(--muted);
+  margin-top: var(--s-1);
 }
 
 .resultMeta {
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
-}
-
-.resultSummary {
-  font-size: var(--text-sm);
-  color: var(--ink-soft);
-  max-width: 62ch;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-top: var(--s-2);
 }
 
 .resultAction {
   flex: none;
-  padding-top: var(--space-1);
 }
 
+/* Verser au fonds est l'action de l'écran : elle est dorée, et pleine. */
 .addButton {
-  font: inherit;
-  font-size: var(--text-sm);
-  background: var(--ink);
-  color: var(--paper);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-4);
-  cursor: pointer;
+  background: var(--gold);
+  color: var(--gold-ink);
+  border: var(--rule-w) solid var(--gold);
+  padding: var(--s-3) var(--s-4);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--block);
+  transition:
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-rise);
+}
+
+.addButton:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--rule);
 }
 
 .addButton:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
+  box-shadow: none;
+  transform: none;
 }
 
+/* Déjà au fonds : ce n'est plus une action à faire, c'est un chemin à suivre. */
 .openButton {
-  font: inherit;
-  font-size: var(--text-sm);
-  background: transparent;
-  color: var(--ink-soft);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-4);
-  cursor: pointer;
+  background: none;
+  color: var(--ink-2);
+  border: var(--rule-w) solid var(--rule);
+  padding: var(--s-3) var(--s-4);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--dur-2) var(--ease-page),
+    border-color var(--dur-2) var(--ease-page);
 }
 
 .openButton:hover {
-  background: var(--paper-sunken);
   color: var(--ink);
+  border-color: var(--gel);
 }
 
-.more {
-  display: flex;
-  justify-content: center;
+/* ---- Rien au fonds ---- */
+
+/**
+ * Un bloc en tireté, jamais une illustration : la direction range les états
+ * vides illustrés parmi ses critères de rejet. Une place libre se dessine
+ * comme une place libre.
+ */
+.vide {
+  border: var(--rule-w) dashed var(--rule);
+  padding: var(--s-8) var(--s-7);
 }
 
-.moreButton {
-  font: inherit;
-  font-size: var(--text-sm);
-  background: transparent;
-  color: var(--ink-soft);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-5);
-  cursor: pointer;
+.videEyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: var(--s-4);
 }
 
-.moreButton:hover:not(:disabled) {
-  background: var(--paper-sunken);
-  color: var(--ink);
+.videTitle {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(30px, 3.6vw, 46px);
+  line-height: 1.1;
+  max-width: 30ch;
+  margin-bottom: var(--s-4);
+}
+
+.videNote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 19px;
+  color: var(--voice);
+  max-width: 52ch;
+}
+
+@media (max-width: 900px) {
+  .result {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: var(--s-4);
+  }
+
+  /* L'action passe sous le titre : à cette largeur, une troisième colonne
+     réduit le titre à deux mots par ligne. */
+  .resultAction {
+    grid-column: 1 / -1;
+  }
+
+  .recentes {
+    margin-left: 0;
+  }
 }

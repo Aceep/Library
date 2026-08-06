@@ -4,27 +4,219 @@
   gap: var(--s-7);
 }
 
+/* ---- L'en-tête du rayon ---- */
+
 .intro {
-  border-bottom: var(--rule-w) solid var(--ink);
-  padding-bottom: var(--s-5);
+  border-bottom: var(--rule-w) solid var(--rule);
+  padding-bottom: var(--s-7);
 }
 
-.eyebrow {
-  font: var(--eyebrow);
-  letter-spacing: var(--eyebrow-tracking);
+.introHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+/* Le numéro est un aplat du gel à texte quasi noir — la forme d'un rayon. */
+.numero {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-muted);
+  color: var(--gel-ink);
+  background: var(--gel);
+  padding: 5px 11px;
+}
+
+.introRule {
+  flex: 1 1 24px;
+  min-width: 24px;
+  height: var(--rule-w);
+  background: var(--gel);
+  opacity: 0.5;
+}
+
+.compte {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/**
+ * Le nom du rayon, à la taille où un mot devient une enseigne. `11vw` le fait
+ * suivre la fenêtre ; les bornes l'empêchent de devenir illisible en bas et
+ * d'écraser la page en haut.
+ */
+.title {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(64px, 11vw, 168px);
+  line-height: 0.88;
+  letter-spacing: -0.04em;
+  margin-bottom: var(--s-6);
+}
+
+.introBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: var(--s-7);
+  align-items: start;
+}
+
+.presentation {
+  font-family: var(--font-serif);
+  font-size: 25px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 54ch;
+  text-wrap: pretty;
+}
+
+/* La citation est de la voix humaine : italique, crème réservé, filet de gel. */
+.citation {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1.55;
+  color: var(--voice);
+  border-left: 2px solid var(--gel);
+  padding-left: var(--s-5);
+}
+
+/* ---- Les têtes de section ---- */
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-5);
+  border-bottom: var(--rule-w) solid var(--rule);
+  padding-bottom: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 34px;
+}
+
+/* La moitié italique d'un titre de section prend le gel du rayon. */
+.sectionTitle em {
+  font-style: italic;
+  color: var(--gel);
+}
+
+.sectionNote {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-left: auto;
+  text-align: right;
+}
+
+/* ---- En cours ---- */
+
+.encours {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-5);
+}
+
+.encoursTile {
+  border: var(--rule-w) solid var(--rule-soft);
+  background: var(--bg-2);
+  box-shadow: var(--lift);
+  transition:
+    border-color var(--dur-3) var(--ease-page),
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-page);
+}
+
+.encoursTile:hover {
+  border-color: var(--gel);
+  transform: translateY(-5px);
+  box-shadow: 0 22px 46px -20px color-mix(in oklab, var(--gel) 55%, transparent);
+}
+
+.encoursLink {
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-5);
+}
+
+.encoursHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: var(--s-4);
 }
 
-.title {
-  font: var(--display-2);
-  letter-spacing: -0.035em;
+/* L'étiquette de médium : le second des deux seuls emplacements du gel. */
+.medium {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gel-ink);
+  background: var(--gel);
+  padding: 3px 7px;
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
+.encoursArt {
+  display: flex;
+  justify-content: center;
+  height: 200px;
+  margin-bottom: var(--s-4);
+  background: linear-gradient(
+    150deg,
+    color-mix(in oklab, var(--gel) 12%, var(--surface)),
+    var(--surface)
+  );
+}
+
+.encoursTitle {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.encoursAt {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: var(--s-3);
+}
+
+/**
+ * La progression est **un filet**, pas une barre : 2px, rempli à sa part dans
+ * l'encre du membre. `--part` est une dimension calculée — l'un des deux seuls
+ * usages normaux du style en ligne.
+ */
+.encoursRule {
+  display: block;
+  height: 2px;
+  background: var(--rule-soft);
+  margin-top: var(--s-2);
+  position: relative;
+}
+
+.encoursRule::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--part);
+  background: var(--identity);
 }
 
 /* ---- Filtres ---- */
@@ -35,8 +227,8 @@
   align-items: center;
   gap: var(--s-5);
   padding: var(--s-3) 0;
-  border-top: var(--rule-w) solid var(--rule-soft);
   border-bottom: var(--rule-w) solid var(--rule-soft);
+  margin-bottom: var(--s-5);
 }
 
 .filterGroup {
@@ -47,103 +239,296 @@
 .chip {
   min-height: 36px;
   padding: var(--s-2) var(--s-4);
-  font-size: 12.5px;
-  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
   background: transparent;
   border: var(--rule-w) solid var(--rule-soft);
-  border-radius: var(--radius-0);
-  cursor: pointer;
-  transition: border-color var(--dur-2) var(--ease-page);
+  transition:
+    border-color var(--dur-2) var(--ease-page),
+    color var(--dur-2) var(--ease-page);
 }
 
-
-
 .chip:hover {
-  border-color: var(--ink-muted);
+  border-color: var(--muted);
   color: var(--ink);
 }
 
 .chip[aria-pressed='true'] {
   background: var(--ink);
   border-color: var(--ink);
-  color: var(--surface-raised);
+  color: var(--bg);
 }
 
 .toggle,
 .sort {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--ink-muted);
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
   cursor: pointer;
 }
 
 .sort select {
   font: inherit;
-  min-height: 44px;
+  min-height: 36px;
   color: var(--ink);
   background: transparent;
   border: none;
   border-bottom: var(--rule-w) solid var(--rule-soft);
-  border-radius: var(--radius-0);
   padding: var(--s-2) 0;
 }
 
-/* ---- Grille ---- */
+/* ---- La mosaïque ---- */
 
 /**
- * La colonne se règle sur la jaquette, pas l'inverse.
+ * Le rayonnage.
  *
- * Trois colonnes fixes donnaient 411px de large sur un grand écran, pour une
- * vignette dont l'artwork en occupait 200 : la moitié de chaque case restait
- * vide à droite de l'image. Maintenant que la jaquette suit sa cellule, trois
- * colonnes lui feraient 616px de haut et on ne verrait plus qu'une rangée.
+ * `--rayon-cols` et `--rayon-row` sont posés par l'écran depuis la table de
+ * disposition : c'est le seul endroit où le rythme d'un rayon est décrit, et il
+ * arrive ici en variables plutôt qu'en six jeux de règles.
  *
- * `auto-fill` sur un minimum de 200px rend la même jaquette qu'avant — cinq
- * colonnes vers 1440px, quatre vers 1024 — et surtout des cases égales à
- * toutes les largeurs, sans palier à écrire.
+ * **Toutes les tuiles tiennent une seule rangée.** Les maquettes en font
+ * s'étendre deux sur deux rangées ; on s'en passe, et c'est délibéré : un
+ * `span` vertical laisse des trous que seul `grid-auto-flow: dense` comble, et
+ * `dense` réordonne l'affichage sans réordonner le DOM — l'ordre de tabulation
+ * ne suivrait plus l'ordre visible. Le rythme irrégulier vient donc des
+ * largeurs seules.
  */
-.grid {
+.shelf {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--s-8) var(--gutter);
+  grid-template-columns: repeat(var(--rayon-cols), minmax(0, 1fr));
+  grid-auto-rows: var(--rayon-row);
+  gap: var(--s-5);
 }
 
-/* ---- Pagination ---- */
+.tile,
+.spine {
+  grid-column: span var(--span);
+  border: var(--rule-w) solid var(--rule-soft);
+  background: var(--bg-2);
+  overflow: hidden;
+  min-width: 0;
+  box-shadow: var(--lift);
+  transition:
+    border-color var(--dur-3) var(--ease-page),
+    transform var(--dur-4) var(--ease-rise),
+    box-shadow var(--dur-4) var(--ease-page);
+}
 
-.more {
+.tile:hover,
+.spine:hover {
+  border-color: var(--gel);
+  transform: translateY(-6px);
+  box-shadow: 0 26px 52px -20px color-mix(in oklab, var(--gel) 58%, transparent);
+}
+
+.tileLink {
   display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+
+/**
+ * La zone d'artwork prend la hauteur qui reste ; la jaquette y est **posée au
+ * centre à son vrai ratio**, jamais recadrée ni étirée. Ce qui l'entoure est la
+ * surface creuse — c'est elle qui absorbe la différence entre une tuile d'une
+ * colonne et une tuile de trois.
+ */
+.tileArt {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  padding-top: var(--space-3);
+  /* Le lavis de gel de la maquette. Il n'est pas décoratif ici : c'est ce qui
+     occupe la place laissée autour d'une jaquette qu'on refuse de recadrer,
+     et sans lui une tuile large sur une jaquette étroite est un trou noir. */
+  background: linear-gradient(
+    155deg,
+    color-mix(in oklab, var(--gel) 12%, var(--surface)),
+    var(--surface)
+  );
 }
 
-.moreButton {
-  font: inherit;
-  font-size: var(--text-sm);
-  color: var(--ink-soft);
-  background: var(--paper-raised);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-5);
-  cursor: pointer;
+/* Le reste du cercle est un nombre, pas des identités : l'API ne les déballe
+   pas, et une pastille sans nom ne dirait rien. */
+.tileRest {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1.5px solid var(--rule-soft);
+  padding: 1px 4px;
 }
 
-.moreButton:hover:not(:disabled) {
-  background: var(--paper-sunken);
-  color: var(--ink);
+.tileUnits {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-left: auto;
+  white-space: nowrap;
 }
 
-.moreButton:disabled {
-  cursor: default;
-  color: var(--ink-faint);
+.tileFoot {
+  display: block;
+  border-top: var(--rule-w) solid var(--rule-soft);
+  padding: var(--s-3) var(--s-4);
+  min-width: 0;
+  flex: none;
+}
+
+.tileLine {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+/* Qui a laissé une trace, et ce que l'ensemble compte. La rangée s'efface
+   entièrement quand il n'y a ni l'un ni l'autre — pas de fente réservée : ici
+   la hauteur d'une tuile vient de la grille, pas de son contenu. */
+.tileMarks {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--s-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tileTitle {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tileYear {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--muted);
+  margin-left: auto;
+  flex: none;
+}
+
+/* ---- Les tranches, propres au rayon des livres ---- */
+
+/**
+ * Une tranche est un livre vu de côté : pas de jaquette, le titre debout au
+ * pied. C'est la seule forme de tuile qui ne montre pas d'artwork, et c'est
+ * ce mélange — quelques-uns de face, le reste en tranche — qui donne au rayon
+ * son allure de bibliothèque.
+ */
+.spineLink {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: var(--s-3) var(--s-3);
+  background: linear-gradient(100deg, color-mix(in oklab, var(--gel) 10%, var(--surface)), var(--surface));
+}
+
+.spineChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.spineFoot {
+  display: block;
+  min-width: 0;
+}
+
+.spineTitle {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+.spineYear {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-top: var(--s-2);
+}
+
+/* ---- Verser une œuvre ---- */
+
+.verser {
+  grid-column: span 2;
+  border: var(--rule-w) dashed var(--rule);
+  transition:
+    border-color var(--dur-3) var(--ease-page),
+    background var(--dur-3) var(--ease-page);
+}
+
+.verser:hover {
+  border-color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 8%, transparent);
+}
+
+.verserLink {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  padding: var(--s-4);
+}
+
+.verserLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-text);
+}
+
+.verserNote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--muted);
+  margin-top: var(--s-2);
+}
+
+/* ---- Pagination et vides ---- */
+
+.loading {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .end {
   text-align: center;
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
-  padding-top: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-top: var(--s-5);
 }
 
 /* Même contrôle que sur la une : c'est le même bouton, sur deux pages. */
@@ -151,29 +536,77 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  border: var(--rule-w) solid var(--ink);
+  border: var(--rule-w) solid var(--gold);
+  background: var(--gold);
   padding: 0 var(--s-5);
-  font: var(--eyebrow);
-  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--ink);
-  transition: background var(--dur-2) var(--ease-page);
+  color: var(--gold-ink);
+  box-shadow: var(--block);
+  transition:
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-rise);
 }
 
 .emptyAction:hover {
-  background: var(--surface-sunken);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--rule);
 }
 
 /**
- * Paliers — la grille se compte toute seule au-dessus de la tablette. Sur
- * téléphone on impose deux colonnes : `auto-fill` sur un minimum de 200px
- * n'en tiendrait qu'une, et un rayon qui se parcourt une œuvre à la fois
- * n'est plus un rayon.
+ * Paliers — ceux des maquettes.
+ *
+ * Sous 1100px la mosaïque tombe à une colonne : les motifs de largeur n'ont
+ * plus de sens quand il n'y a qu'une piste, et `--span` est neutralisé.
  */
+@media (max-width: 1100px) {
+  .shelf {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: 260px;
+  }
+
+  .tile,
+  .spine,
+  .verser {
+    grid-column: span 1;
+  }
+
+  .introBody {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-5);
+  }
+}
+
+@media (max-width: 900px) {
+  .encours {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shelf {
+    grid-auto-rows: 240px;
+  }
+}
+
 @media (max-width: 767px) {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--s-6) var(--gutter);
+  .presentation {
+    font-size: 20px;
+  }
+
+  .citation {
+    font-size: 17px;
+  }
+
+  .sectionTitle {
+    font-size: 26px;
+  }
+
+  /* La légende de rythme double une information déjà portée par la page ; sous
+     cette largeur elle chevauchait le titre. */
+  .sectionNote {
+    display: none;
   }
 
   .filters {

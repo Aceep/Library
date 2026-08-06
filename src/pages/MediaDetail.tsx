@@ -12,11 +12,13 @@ import {
 } from '../api/endpoints'
 import type { TrackingPatch } from '../api/endpoints'
 import { typeLabel } from '../api/schema'
-import type { MediaDetail as MediaDetailType, RefreshResponse } from '../api/schema'
+import type { Account, MediaDetail as MediaDetailType, RefreshResponse } from '../api/schema'
+import { RAYONNAGES } from '../rayons'
 import Availability from '../components/Availability'
 import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
 import MediaLog from '../components/MediaLog'
+import MemberChip from '../components/MemberChip'
 import MediaMetadata from '../components/MediaMetadata'
 import ProgressBar from '../components/ProgressBar'
 import Screenshots from '../components/Screenshots'
@@ -96,43 +98,84 @@ function Detail({ id }: { id: string }) {
 
   const detail = data
 
+  const rayon = RAYONNAGES[detail.type]
+
   return (
-    <article className={styles.page}>
-      <p className={styles.breadcrumb}>
-        <Link to={`/bibliotheque/${detail.type}`}>{typeLabel(detail.type)}</Link>
-      </p>
-
+    <article className={styles.page} data-media-type={detail.type}>
+      {/*
+        L'en-tête de la fiche reprend celui de la superposition des maquettes :
+        l'étiquette de médium en aplat de gel, la méta en mono, puis le titre en
+        grand avec l'année en italique sourde. Le rayon reste atteignable d'un
+        clic — la maquette ferme une superposition, un écran a besoin d'un
+        chemin de retour.
+      */}
       <header className={styles.header}>
-        <div className={styles.headerCover}>
-          <Cover
-            url={detail.cover_url}
-            title={detail.title}
-            type={detail.type}
-            size="full"
-            ratio="3/4"
-          />
+        <div className={styles.headerMarks}>
+          <Link to={`/bibliotheque/${detail.type}`} className={styles.medium}>
+            {typeLabel(detail.type)}
+          </Link>
+          <span className={styles.headerMeta}>
+            {[detail.original_title !== detail.title ? detail.original_title : null, detail.source]
+              .filter(Boolean)
+              .join(' · ')}
+          </span>
         </div>
+        {/*
+          `aria-label` alors que le texte est déjà visible, et ce n'est pas une
+          redondance : le nom accessible se calcule en **découpant par nœud puis
+          en élaguant chacun**, si bien qu'un espace posé au bord d'un élément
+          disparaît. Titre et année dans deux nœuds donnent « Matrix1999 », que
+          l'espace soit écrit dans le balisage ou dessiné par `margin-left`.
+          L'étiquette dit mot pour mot ce que l'écran montre.
+        */}
+        <h1
+          className={styles.title}
+          aria-label={detail.year ? `${detail.title} ${detail.year}` : detail.title}
+        >
+          {detail.title}
+          {detail.year ? <span className={styles.titleYear}> {detail.year}</span> : null}
+        </h1>
+      </header>
 
-        <div className={styles.headerBody}>
-          <h1 className={styles.title}>{detail.title}</h1>
-          {detail.original_title && detail.original_title !== detail.title ? (
-            <p className={styles.originalTitle}>{detail.original_title}</p>
-          ) : null}
-          <p className={styles.meta}>
-            {[typeLabel(detail.type), detail.year ?? null].filter(Boolean).join(' · ')}
-          </p>
-
-          {detail.summary ? <p className={styles.summary}>{detail.summary}</p> : null}
-
-          {/* L'API ne renvoie plus que ma progression sur la fiche : celle des
-              autres se lit œuvre par œuvre dans leurs suivis, plus bas. */}
-          <div className={styles.progressPair}>
-            <ProgressLine
-              label={user.pseudo}
-              color={user.identity_color}
-              progress={detail.progress.me}
+      <div className={styles.body}>
+        <div className={styles.aside}>
+          <div className={styles.asideArt}>
+            <Cover
+              url={detail.cover_url}
+              title={detail.title}
+              type={detail.type}
+              size="full"
+              ratio={rayon.ratio}
             />
           </div>
+
+          <AuFonds detail={detail} me={user} />
+        </div>
+
+        <div className={styles.main}>
+          {/* Le repli de la maquette, mot pour mot : une fiche sans résumé est
+              une place laissée à qui en écrira un, pas un vide à masquer. */}
+          <p className={styles.summary}>
+            {detail.summary ??
+              "Cette fiche n’a pas encore de résumé — la première personne du cercle qui en écrit un le laisse ici pour les autres."}
+          </p>
+
+          {/* L'API ne renvoie plus que ma progression sur la fiche : celle des
+              autres se lit œuvre par œuvre dans leurs suivis, plus bas.
+
+              La condition est ici et pas seulement dans `ProgressLine` : un
+              conteneur vide occupe quand même sa gouttière dans la colonne, et
+              laissait une bande blanche sous le résumé de tout ce qui n'a rien
+              à cocher — un film, un album. */}
+          {detail.progress.me ? (
+            <div className={styles.progressPair}>
+              <ProgressLine
+                label={user.pseudo}
+                color={user.identity_color}
+                progress={detail.progress.me}
+              />
+            </div>
+          ) : null}
 
           <MediaMetadata detail={detail} />
 
@@ -160,8 +203,6 @@ function Detail({ id }: { id: string }) {
           {refreshResult && !refresh.isPending ? (
             <RefreshReport result={refreshResult} onDismiss={() => setRefreshResult(null)} />
           ) : null}
-        </div>
-      </header>
 
       <div className={styles.panels}>
         <TrackingPanel
@@ -264,7 +305,50 @@ function Detail({ id }: { id: string }) {
           error={removeMedia.error}
         />
       ) : null}
+        </div>
+      </div>
     </article>
+  )
+}
+
+/**
+ * Qui a un exemplaire de l'œuvre au fonds.
+ *
+ * La maquette appelle ce bloc « Registre des prêts » et lui fait porter des
+ * dates de prêt et de retour. **Nous ne suivons aucun prêt** : le contrat ne
+ * connaît qu'un booléen `owned` sur un suivi. Garder le mot « prêt » ferait
+ * promettre à l'écran une information que personne n'a saisie — le bloc dit
+ * donc ce qu'il sait, et rien de plus.
+ *
+ * Les possesseurs se lisent sur la fiche déjà chargée : moi, puis les comptes
+ * auxquels je suis abonné. `others` reste un nombre et ne se filtre pas sur la
+ * possession — on ne l'additionne donc pas ici, ce serait compter des gens dont
+ * on ignore s'ils possèdent quoi que ce soit.
+ */
+function AuFonds({ detail, me }: { detail: MediaDetailType; me: Account }) {
+  const proprietaires = [
+    ...(detail.tracking.me?.owned ? [me] : []),
+    ...detail.tracking.following.filter((e) => e.tracking?.owned).map((e) => e.user),
+  ]
+
+  return (
+    <div className={styles.auFonds}>
+      <p className={styles.asideLabel}>Qui l’a au fonds</p>
+      {proprietaires.length === 0 ? (
+        <p className={styles.auFondsVide}>
+          Personne parmi ceux que tu suis n’en a d’exemplaire.
+        </p>
+      ) : (
+        <ul className={styles.auFondsListe}>
+          {proprietaires.map((account) => (
+            <li key={account.id} className={styles.auFondsLigne}>
+              <MemberChip account={account} size="sm" />
+              <span className={styles.auFondsNom}>{account.pseudo}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

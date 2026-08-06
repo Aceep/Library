@@ -15,6 +15,17 @@ import styles from './Cover.module.css'
  * repli quand le chargement échoue, sans jamais mettre l'URL en cache sous
  * l'identifiant de l'œuvre.
  */
+/**
+ * `2/3` n'a pas de classe : c'est le ratio écrit sur `.cover`, et lui ajouter
+ * une classe qui le redit ne ferait qu'une seconde source pour la même valeur.
+ */
+const RATIO_CLASSES: Record<'2/3' | '3/4' | '16/9' | '1/1', string | undefined> = {
+  '2/3': undefined,
+  '3/4': styles.ratio34,
+  '16/9': styles.ratio169,
+  '1/1': styles.ratio11,
+}
+
 export default function Cover({
   url,
   title,
@@ -25,20 +36,34 @@ export default function Cover({
   url: string | null
   title: string
   type: MediaType
-  size?: 'sm' | 'base' | 'lg' | 'full'
   /**
-   * 2:3 en grille, 3:4 en grand format. Le ratio est une propriété du
-   * composant : une page qui le veut différent le demande, elle ne va pas
-   * réécrire l'intérieur de la couverture depuis sa propre feuille.
+   * `tile` est le format de la mosaïque d'un rayon : la tuile impose sa
+   * **hauteur** (la rangée de la grille), la jaquette en déduit sa largeur. Les
+   * autres formats font l'inverse — largeur imposée, hauteur déduite.
+   *
+   * C'est ce qui permet à une tuile de trois colonnes et à une tuile d'une
+   * colonne de faire la même hauteur sans jamais recadrer une jaquette : elle
+   * est posée au centre, et ce qui reste autour est la surface creuse.
    */
-  ratio?: '2/3' | '3/4'
+  size?: 'sm' | 'base' | 'lg' | 'full' | 'tile'
+  /**
+   * Le ratio est une propriété du composant : une page qui le veut différent le
+   * demande, elle ne va pas réécrire l'intérieur de la couverture depuis sa
+   * propre feuille.
+   *
+   * Les quatre valeurs sont celles des rayons — 2:3 pour les livres, les films
+   * et les mangas, 16:9 pour les séries et les jeux, 1:1 pour les disques —
+   * plus le 3:4 du grand format d'une fiche. Une jaquette **n'est jamais
+   * recadrée** : c'est le ratio du médium qui commande, pas la place
+   * disponible.
+   */
+  ratio?: '2/3' | '3/4' | '16/9' | '1/1'
 }) {
   // On mémorise l'URL en échec, pas un booléen : quand le back renvoie une
   // nouvelle jaquette, l'image est retentée d'elle-même.
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
-  const className = `${styles.cover} ${styles[size]}${
-    ratio === '3/4' ? ` ${styles.ratio34}` : ''
-  }`
+  const ratioClass = RATIO_CLASSES[ratio]
+  const className = `${styles.cover} ${styles[size]}${ratioClass ? ` ${ratioClass}` : ''}`
 
   // Les jaquettes recopiées par l'API arrivent en URL absolue, composée depuis
   // une base qui n'est pas forcément joignable d'ici. On la ramène à un chemin

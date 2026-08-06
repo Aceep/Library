@@ -1,6 +1,4 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { useThemeMode } from '../theme/useThemeMode'
 import AppFooter from './AppFooter'
@@ -34,36 +32,18 @@ export function ThemeToggle() {
 }
 
 /**
- * Le champ de recherche du bandeau.
+ * L'accès à la recherche.
  *
- * C'est un vrai formulaire, pas un lien déguisé : on tape et on valide, et
- * `/recherche` reprend la requête depuis `?q=`. Un champ qui mènerait à un
- * écran vide mentirait sur ce qu'il vient de recevoir.
+ * La maquette remplace le champ du bandeau par un bouton : la recherche y est
+ * une superposition, pas une frappe au vol. Tant que cette superposition
+ * n'existe pas, le bouton mène à l'écran de recherche — une destination réelle
+ * plutôt qu'un geste promis.
  */
-function SearchField() {
-  const [draft, setDraft] = useState('')
-  const navigate = useNavigate()
-
-  const onSubmit = (event: FormEvent) => {
-    event.preventDefault()
-    const q = draft.trim()
-    navigate(q ? `/recherche?q=${encodeURIComponent(q)}` : '/recherche')
-  }
-
+function SearchLink() {
   return (
-    <form className={styles.search} onSubmit={onSubmit} role="search">
-      <label className={styles.searchLabel} htmlFor="recherche-bandeau">
-        Chercher
-      </label>
-      <input
-        id="recherche-bandeau"
-        className={styles.searchInput}
-        type="search"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        placeholder="un titre, un auteur…"
-      />
-    </form>
+    <NavLink to="/recherche" className={styles.search}>
+      Chercher
+    </NavLink>
   )
 }
 
@@ -72,8 +52,21 @@ function SearchField() {
  *
  * **Les rayons sont un filtre d'un seul fonds, pas six destinations à
  * l'identité propre.** Ils se composent donc tous pareil, et seule leur teinte
- * — le gel porté par `data-media-type` — les distingue. « Tous » vise
- * l'accueil, qui est la vue sans filtre.
+ * — le gel porté par `data-media-type` — les distingue. À l'état actif, la
+ * pastille se remplit de son gel et le texte passe en `--gel-ink` : c'est la
+ * distinction de *forme* qui sépare un rayon (aplat) d'un membre (pastille
+ * bordée), et elle ne s'inverse pas.
+ *
+ * Deux destinations ferment la rangée : **Quêtes** en doré, parce qu'on y va
+ * pour faire quelque chose, et **Le cercle** en ambre, parce qu'il nomme une
+ * structure. La marque mène à l'accueil — inutile de lui donner une seconde
+ * pastille dans la même barre.
+ *
+ * **La rangée n'est écrite qu'une fois.** La maquette la recopie sous le
+ * bandeau pour en faire un rail défilant sous 1180px ; nous la laissons où elle
+ * est et c'est la grille qui la fait passer à la ligne. Deux copies des mêmes
+ * huit liens seraient deux fois lues par un lecteur d'écran, alors qu'une seule
+ * est visible.
  */
 export default function AppShell() {
   const { pathname } = useLocation()
@@ -87,9 +80,6 @@ export default function AppShell() {
           </NavLink>
 
           <nav className={styles.rayons} aria-label="Les rayons">
-            <NavLink to="/" end className={styles.rayonAll}>
-              Tous
-            </NavLink>
             {MEDIA_TYPES.map((type) => (
               <NavLink
                 key={type}
@@ -102,10 +92,26 @@ export default function AppShell() {
                 {typeLabelPlural(type)}
               </NavLink>
             ))}
+            <NavLink
+              to="/quetes"
+              className={({ isActive }) =>
+                isActive ? `${styles.quetes} ${styles.quetesActive}` : styles.quetes
+              }
+            >
+              Quêtes
+            </NavLink>
+            <NavLink
+              to="/membres"
+              className={({ isActive }) =>
+                isActive ? `${styles.cercle} ${styles.cercleActive}` : styles.cercle
+              }
+            >
+              Le cercle
+            </NavLink>
           </nav>
 
           <div className={styles.account}>
-            <SearchField />
+            <SearchLink />
             <NotificationsLink />
             <ThemeToggle />
             <AccountMenu />

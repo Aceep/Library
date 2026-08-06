@@ -5,74 +5,153 @@
 }
 
 .loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}
-
-.breadcrumb {
-  font: var(--eyebrow);
-  letter-spacing: var(--eyebrow-tracking);
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-muted);
-}
-
-.breadcrumb a:hover {
-  color: var(--ink);
 }
 
 /* ---- En-tête ---- */
 
 .header {
-  display: grid;
-  grid-template-columns: 7fr 5fr;
-  gap: var(--s-7);
-  align-items: start;
-  border-bottom: var(--rule-w) solid var(--ink);
-  padding-bottom: var(--s-8);
+  border-bottom: var(--rule-w) solid var(--rule);
+  padding-bottom: var(--s-6);
 }
 
-/* L'artwork passe à droite ; sa taille et son ratio sont demandés à `Cover`. */
-.headerCover {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.headerBody {
-  grid-column: 1;
-  grid-row: 1;
-  min-width: 0;
+.headerMarks {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-5);
+  align-items: center;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-5);
+}
+
+/**
+ * L'étiquette de médium : aplat de gel, texte quasi noir. C'est aussi le retour
+ * au rayon — la maquette ferme une superposition, un écran a besoin d'un lien.
+ */
+.medium {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gel-ink);
+  background: var(--gel);
+  padding: 4px 9px;
+}
+
+.headerMeta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .title {
-  font: var(--display-1);
-  letter-spacing: -0.04em;
-  max-width: 16ch;
-}
-
-.originalTitle {
   font-family: var(--font-serif);
-  font-size: 20px;
-  font-style: italic;
-  color: var(--ink-muted);
-  margin-top: calc(var(--s-5) * -1 + var(--s-1));
+  font-weight: 400;
+  font-size: clamp(36px, 4.4vw, 60px);
+  line-height: 1.02;
+  letter-spacing: -0.022em;
 }
 
-.meta {
-  font: var(--eyebrow);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-  margin-top: calc(var(--s-5) * -1 + var(--s-2));
+/* L'année accompagne le titre sans le concurrencer : moitié moins grande,
+   italique, sourde. */
+/* Pas de `margin-left` : la séparation est un vrai caractère dans le balisage,
+   pour que le nom accessible dise « Matrix 1999 » et non « Matrix1999 ». */
+.titleYear {
+  font-weight: 300;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 0.5em;
+}
+
+/* ---- Les deux colonnes ---- */
+
+/**
+ * La superposition des maquettes devient la mise en page de l'écran : une
+ * colonne étroite pour l'artwork et ce qui l'entoure, une colonne large pour ce
+ * que le cercle en a écrit.
+ */
+.body {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+}
+
+.aside {
+  border-right: var(--rule-w) solid var(--rule);
+  padding-right: var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+
+.asideArt {
+  box-shadow: var(--lift);
+}
+
+.main {
+  min-width: 0;
+  padding-left: var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-7);
 }
 
 .summary {
-  font: var(--lede);
-  color: var(--ink-soft);
-  max-width: 46ch;
+  font-family: var(--font-serif);
+  font-size: 21px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 62ch;
   text-wrap: pretty;
+}
+
+/* ---- Qui l'a au fonds ---- */
+
+.asideLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: var(--s-3);
+}
+
+.auFonds {
+  border-top: var(--rule-w) solid var(--rule-soft);
+  padding-top: var(--s-4);
+}
+
+.auFondsListe {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.auFondsLigne {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.auFondsNom {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-2);
+}
+
+.auFondsVide {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 15.5px;
+  line-height: 1.45;
+  color: var(--muted);
 }
 
 /* ---- Progression des deux comptes ---- */
@@ -331,26 +410,57 @@
  * Tablette : l'artwork remonte au-dessus du titre et les panneaux s'empilent —
  * c'est la règle de la spécification pour cet écran.
  */
-@media (max-width: 1023px) {
-  .header {
-    grid-template-columns: 1fr;
+/**
+ * Le palier des maquettes : à 900px la superposition devient une feuille pleine
+ * page et ses deux colonnes n'en font plus qu'une. Ici c'est le filet vertical
+ * qui devient horizontal — l'artwork passe au-dessus, borné pour ne pas occuper
+ * tout l'écran avant qu'on ait lu quoi que ce soit.
+ */
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aside {
+    border-right: 0;
+    border-bottom: var(--rule-w) solid var(--rule);
+    padding-right: 0;
+    padding-bottom: var(--s-6);
+    flex-direction: row;
     gap: var(--s-5);
+    align-items: start;
   }
 
-  .headerCover {
-    grid-column: 1;
-    grid-row: 1;
-    max-width: 320px;
+  .asideArt {
+    flex: 0 0 200px;
   }
 
-  .headerBody {
-    grid-column: 1;
-    grid-row: 2;
+  .auFonds {
+    flex: 1;
+    min-width: 0;
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .main {
+    padding-left: 0;
+    padding-top: var(--s-6);
   }
 
   .panels {
     grid-template-columns: 1fr;
     gap: var(--s-7);
+  }
+}
+
+@media (max-width: 560px) {
+  .aside {
+    flex-direction: column;
+  }
+
+  .asideArt {
+    flex: none;
+    max-width: 240px;
   }
 }
 

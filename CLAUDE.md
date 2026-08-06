@@ -51,6 +51,7 @@ export const progressRatio = (progress: Progress | null | undefined): number | n
 | `src/session/` | Qui je suis — `SessionContext`, `useSession`, `useLogin` |
 | `src/theme/` | Jour / Nuit — l'attribut `data-mode` fait foi, React ne fait que le lire |
 | `src/styles/` | `tokens.css`, `global.css`, `fonts.css` |
+| `src/rayons.ts` | Le rythme de rangement de chaque médium — ratio, colonnes, motif de mosaïque, les mots pour dire « en cours ». Rien n'y vient du contrat : ce sont des choix de présentation, et les mêmes valent sur le rayon comme sur la fiche |
 
 Un composant qui n'est utilisé que par un seul écran peut rester dans le fichier de cet
 écran. On ne crée un fichier dans `components/` que le jour du deuxième appelant.
@@ -120,11 +121,14 @@ jamais par comparaison de chaîne sur le message.
   et les sourcils ; `--gold` ne porte que ce qui se clique. **Un élément doré qui ne
   s'actionne pas est un bug.** En jour, `--gold` ne fait que 1,97:1 en texte : on compose
   avec `--gold-text`, on remplit avec `--gold`.
-- **Les gels de rayon n'ont que deux emplacements** : la nav des rayons du bandeau et les
-  étiquettes de médium. Nulle part ailleurs — ni teinte de ligne, ni traitement d'artwork,
-  ni couleur de section. Ils arrivent par `data-media-type`, qui pose **deux** variables :
-  `--type-hue` pour ce qui compose ou trace, `--gel` pour ce qui remplit. Les confondre
-  rend l'étiquette illisible en jour.
+- **Les gels de rayon ne servent qu'à nommer un rayon** : la rangée du bandeau, les
+  étiquettes de médium, l'en-tête d'un rayon ou d'un groupe de résultats, et les barres de
+  répartition d'un relevé. Nulle part ailleurs — ni teinte de ligne, ni traitement
+  d'artwork, ni couleur de section. Ils arrivent par `data-media-type`, qui pose **deux**
+  variables : `--type-hue` pour ce qui compose ou trace, `--gel` pour ce qui remplit. Les
+  confondre rend l'étiquette illisible en jour.
+  Attention : `--gel` a une **valeur par défaut** au `:root`. Un `var(--gel, …)` ne se
+  replie donc jamais — c'est sur la présence de `data-media-type` qu'on sélectionne.
 - **Un rayon est un aplat à texte quasi noir ; un membre est une pastille bordée à sa
   propre encre.** C'est une différence de *forme*, pas de teinte, et c'est elle qui garde
   les deux systèmes lisibles sur une même ligne. Ne jamais l'inverser.
@@ -192,6 +196,10 @@ sélecteurs de descendance les contournent, et c'est précisément ce qu'il ne f
 - Accessibilité en même temps que le balisage, pas après : `role`, `aria-valuenow`,
   `aria-pressed` sur les segments et les notes, `aria-hidden="true"` sur les pastilles de
   couleur qui doublent un texte.
+- **Un titre coupé en deux nœuds a besoin d'un `aria-label`.** Le nom accessible se calcule
+  en découpant par élément puis en élaguant chacun : l'espace posé au bord d'un `<span>`
+  disparaît, et `Matrix` + `<span>1999</span>` s'annonce « Matrix1999 » — que l'espace soit
+  écrit dans le balisage ou dessiné par une marge. Mesuré, pas supposé.
 - `useMemo` / `useCallback` seulement pour stabiliser une valeur de contexte. Le reste du
   code s'en passe : la mémoïsation défensive rend le code moins lisible sans rien gagner
   ici.

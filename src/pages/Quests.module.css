@@ -1,68 +1,149 @@
 /**
- * Une liste de notices, comme la veille et les nouveautés. Le brouillon se
- * marque par un mot en capitales et une valeur pâle — pas par une teinte :
- * `tokens.css` réserve la couleur aux membres et à l'ocre d'action.
+ * Le registre des quêtes.
+ *
+ * L'écran est **doré d'un bout à l'autre**, et jamais gel : une quête n'est pas
+ * un rayon, c'est un parcours qu'on accepte de suivre. Le brouillon se marque
+ * par un mot en capitales dans un filet discret — pas par une teinte, qui
+ * ferait croire à un état plutôt qu'à une visibilité.
  */
 .page {
   max-width: var(--max-content);
 }
 
 .intro {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--s-7);
 }
 
+.introHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+/* Doré et non gel : les quêtes ne sont pas un rayon, et on y va pour agir. */
 .eyebrow {
-  font: var(--eyebrow);
-  letter-spacing: var(--eyebrow-tracking);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-muted);
-  margin-bottom: var(--space-3);
+  color: var(--gold-ink);
+  background: var(--gold);
+  padding: 5px 11px;
+}
+
+.introRule {
+  flex: 1 1 24px;
+  min-width: 24px;
+  height: var(--rule-w);
+  background: var(--gold);
+  opacity: 0.45;
+}
+
+.compte {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .title {
-  font: var(--title-1);
-  color: var(--ink);
-  max-width: var(--measure);
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(56px, 9vw, 132px);
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  margin-bottom: var(--s-5);
 }
 
 .lede {
-  margin-top: var(--space-4);
-  font-size: var(--text-sm);
-  color: var(--ink-muted);
-  max-width: var(--measure);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 62ch;
+  text-wrap: pretty;
 }
 
-/* Création — encadrée comme un panneau d'administration, discrète. */
+/**
+ * Écrire une quête : le bloc encadré de 2px de la maquette. Le cadre appuyé le
+ * sépare du registre — c'est le seul endroit de l'écran où l'on produit quelque
+ * chose plutôt que de lire.
+ */
 .create {
-  border: var(--rule-w) solid var(--rule-soft);
-  padding: var(--space-4);
-  margin-bottom: var(--space-6);
+  border: 2px solid var(--rule);
+  background: var(--bg-2);
+  padding: var(--s-6) var(--s-7);
+  margin-bottom: var(--s-7);
+  box-shadow: var(--lift);
+}
+
+.createHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+.createTitle {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 30px;
+}
+
+/* La moitié italique est dorée ici, et c'est justifié : le titre nomme
+   l'action que le bloc permet. */
+.createTitle em {
+  font-style: italic;
+  color: var(--gold-text);
+}
+
+.createNote {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-left: auto;
 }
 
 .createLabel {
   display: block;
-  font: var(--eyebrow);
-  letter-spacing: var(--eyebrow-tracking);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-muted);
-  margin-bottom: var(--space-3);
+  color: var(--muted);
+  margin-bottom: var(--s-3);
 }
 
 .createRow {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--s-3);
   flex-wrap: wrap;
+  align-items: center;
 }
 
+/* Le champ est une ligne à écrire, pas une boîte : filet dessous, voix humaine
+   en italique — c'est du texte qu'on compose, pas une valeur qu'on saisit. */
 .createInput {
   flex: 1;
   min-width: 16rem;
-  font: inherit;
-  font-size: var(--text-base);
-  padding: var(--space-2) var(--space-3);
-  background: var(--paper-raised);
-  border: var(--rule-w) solid var(--rule);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 19px;
   color: var(--ink);
+  background: none;
+  border: none;
+  border-bottom: var(--rule-w) solid var(--rule-soft);
+  padding: var(--s-2) 0;
+}
+
+.createInput::placeholder {
+  color: var(--muted);
 }
 
 .createInput:focus-visible {
@@ -70,92 +151,130 @@
   outline-offset: var(--focus-offset);
 }
 
-.createButton,
-.moreButton {
+/* Le seul doré plein de l'écran, et il s'actionne. */
+.createButton {
   min-height: 44px;
-  background: none;
-  border: var(--rule-w) solid var(--rule);
-  padding: var(--space-3) var(--space-4);
-  font: var(--caption);
-  color: var(--ink-soft);
+  background: var(--gold);
+  color: var(--gold-ink);
+  border: var(--rule-w) solid var(--gold);
+  padding: var(--s-3) var(--s-5);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: border-color var(--dur-2) var(--ease-page);
+  box-shadow: var(--block);
+  transition:
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-rise);
 }
 
 .createButton:hover:not(:disabled) {
-  border-color: var(--ink);
-  color: var(--ink);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--rule);
 }
 
 .createButton:disabled {
   opacity: 0.45;
   cursor: default;
+  box-shadow: none;
+  transform: none;
 }
 
 .createHint {
-  margin-top: var(--space-3);
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
+  margin-top: var(--s-4);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--muted);
   max-width: var(--measure);
 }
 
 .list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: var(--rule-w) solid var(--rule-soft);
+  border-top: var(--rule-w) solid var(--rule);
 }
 
+/**
+ * Une quête est un enregistrement encadré, comme toute notice de la direction :
+ * filet discret, aucun rayon, et au survol le cadre prend le doré et la ligne se
+ * lève. Les rayons prêtent leur gel aux œuvres ; une quête n'en est pas une.
+ */
 .row {
-  padding: var(--space-5) 0;
-  border-bottom: var(--rule-w) solid var(--rule-soft);
+  border: var(--rule-w) solid var(--rule-soft);
+  padding: var(--s-5) var(--s-6);
+  margin-top: var(--s-5);
+  box-shadow: var(--lift);
+  transition:
+    border-color var(--dur-3) var(--ease-page),
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-page);
+}
+
+.row:hover {
+  border-color: var(--gold);
+  transform: translateY(-4px);
+  box-shadow: 0 22px 46px -20px color-mix(in oklab, var(--gold) 45%, transparent);
 }
 
 .rowHead {
   display: flex;
   align-items: baseline;
-  gap: var(--space-3);
+  gap: var(--s-4);
   flex-wrap: wrap;
 }
 
 .rowTitle {
-  font: var(--title-2);
+  font-family: var(--font-serif);
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.15;
   color: var(--ink);
-  text-decoration: none;
   transition: color var(--dur-2) var(--ease-page);
 }
 
 .rowTitle:hover {
-  color: var(--accent);
+  color: var(--gold-text);
 }
 
 .draft {
-  font: var(--eyebrow);
-  letter-spacing: var(--eyebrow-tracking);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--muted);
   border: var(--rule-w) solid var(--rule-soft);
-  padding: 2px var(--space-2);
+  padding: 2px 7px;
 }
 
+/* La description est de la voix humaine : quelqu'un dit pourquoi ces œuvres. */
 .rowNote {
-  margin-top: var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--ink-soft);
-  max-width: var(--measure);
+  margin-top: var(--s-3);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 16.5px;
+  line-height: 1.45;
+  color: var(--voice);
+  max-width: 58ch;
 }
 
 .rowProgress {
-  margin-top: var(--space-3);
+  margin-top: var(--s-4);
 }
 
 .rowDue {
-  margin-top: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
+  margin-top: var(--s-3);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }

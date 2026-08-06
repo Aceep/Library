@@ -1,15 +1,18 @@
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchFollowers, fetchFollowing, fetchUser } from '../api/endpoints'
+import { fetchFollowers, fetchFollowing, fetchStats, fetchUser } from '../api/endpoints'
 import type { UserSummary } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
-import type { UserDetail } from '../api/schema'
+import type { MediaType, UserDetail } from '../api/schema'
 import BadgeMedal from '../components/BadgeMedal'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
+import MemberChip from '../components/MemberChip'
 import MemberLibrary from '../components/MemberLibrary'
+import Reveal from '../components/Reveal'
 import Showcase from '../components/Showcase'
 import { useSession } from '../session/SessionContext'
 import styles from './UserProfile.module.css'
@@ -43,12 +46,19 @@ function Profile({ id }: { id: string }) {
         <Link to="/membres">Les membres</Link>
       </p>
 
+      {/*
+        L'en-tête d'un membre : sa pastille en grand, un filet de son encre, la
+        date d'entrée. L'encre n'est portée que par la pastille et le filet —
+        un membre est une pastille **bordée**, jamais un aplat ; c'est ce qui le
+        distingue d'un rayon sur une même ligne.
+      */}
       <header className={styles.header}>
-        <span
-          className={styles.dot}
-          style={{ background: user.identity_color }}
-          aria-hidden="true"
-        />
+        <div className={styles.headerMarks} style={{ '--identity': user.identity_color } as CSSProperties}>
+          <MemberChip account={user} size="lg" />
+          <span className={styles.headerRule} aria-hidden="true" />
+          <span className={styles.joined}>du cercle depuis le {formatDate(data.joined_at)}</span>
+        </div>
+
         <div className={styles.headerBody}>
           <h1 className={styles.title}>
             {user.pseudo}
@@ -62,7 +72,6 @@ function Profile({ id }: { id: string }) {
               Ce compte est désactivé. Ce qu'il a écrit reste en place et lui reste attribué.
             </p>
           ) : null}
-          <p className={styles.joined}>Membre depuis le {formatDate(data.joined_at)}</p>
         </div>
 
         {isMe ? null : (
@@ -70,19 +79,12 @@ function Profile({ id }: { id: string }) {
         )}
       </header>
 
-      <dl className={styles.counters}>
-        <Counter label="Œuvres suivies" value={data.tracked_count} />
-        <Counter label="Abonnements" value={data.following_count} />
-        <Counter label="Abonnés" value={data.followers_count} />
-      </dl>
-
-      {/* La répartition ne vient qu'avec le profil détaillé — l'annuaire ne la
-          porte pas. Elle dit en un coup d'œil ce qu'un total ne dit pas :
-          quelqu'un qui suit trente livres et deux films n'est pas quelqu'un
-          qui en suit seize de chaque. */}
-      {data.tracked_count > 0 ? (
-        <Breakdown counts={data.counts} />
-      ) : null}
+      <Releve
+        userId={id}
+        detail={data}
+        color={user.identity_color}
+        possessif={isMe ? 'Mes' : 'Ses'}
+      />
 
       <Showcase
         userId={id}
@@ -196,37 +198,158 @@ function BadgeShelf({
 }
 
 /**
- * La bibliothèque d'un membre en deux répartitions : par type et par statut.
+ * Le relevé — le seul endroit du produit où l'on chiffre.
  *
- * Les types à zéro sont tus — cinq lignes dont trois vides ne renseignent
- * personne. Les trois statuts, eux, restent toujours affichés : « rien de
- * terminé » est une information, contrairement à « aucun jeu ».
+ * L'amendement 01 de la direction lève l'interdiction des graphiques, mais
+ * **sur un profil et nulle part ailleurs**, et à des conditions de forme : des
+ * blocs d'encre réglés, aucun axe, aucune légende, aucune infobulle, et des
+ * chiffres composés en serif comme un colophon. Une barre arrondie, une grille
+ * de fond ou un dégradé rendraient ce bloc irrecevable.
+ *
+ * Ce qui n'y figure pas, et pourquoi : la maquette montre une activité **année
+ * par année**, or `/stats` découpe en semaine, mois, année et total — il n'y a
+ * pas de série annuelle à afficher. On ne la fabrique pas à partir d'autre
+ * chose.
  */
-function Breakdown({ counts }: { counts: UserDetail['counts'] }) {
+function Releve({
+  userId,
+  detail,
+  color,
+  possessif,
+}: {
+  userId: string
+  detail: UserDetail
+  color: string
+  possessif: string
+}) {
+  // Le tableau de bord d'un membre est public, comme le reste du profil. Il
+  // arrive après le profil et sans le bloquer : le relevé se dessine quand il
+  // est là, le reste de l'écran n'attend pas.
+  const { data } = useQuery({
+    queryKey: queryKeys.stats(userId),
+    queryFn: ({ signal }) => fetchStats(userId, null, signal),
+  })
+
+  const dashboard = data?.dashboard ?? null
+  const notes = dashboard?.highlights.ratings ?? null
+
+  const parRayon = MEDIA_TYPES.filter((type) => detail.counts.by_type[type] > 0).map((type) => ({
+    key: type,
+    label: typeLabelPlural(type),
+    value: detail.counts.by_type[type],
+    type,
+  }))
+
   return (
-    <div className={styles.breakdown}>
-      <ul className={styles.chips}>
-        {MEDIA_TYPES.filter((type) => counts.by_type[type] > 0).map((type) => (
-          <li key={type} className={styles.chip}>
-            <span className={styles.chipValue}>{counts.by_type[type]}</span>
-            {typeLabelPlural(type)}
-          </li>
-        ))}
-      </ul>
-      <p className={styles.statusLine}>
-        {counts.by_status.todo} à voir · {counts.by_status.doing} en cours ·{' '}
-        {counts.by_status.done} terminé{counts.by_status.done > 1 ? 's' : ''}
-      </p>
+    <Reveal className={styles.releve}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>
+          Le <em>relevé</em>
+        </h2>
+        <span className={styles.sectionNote}>ce que le fonds en a gardé</span>
+      </div>
+
+      <div className={styles.figures}>
+        <Figure n={detail.tracked_count} label="œuvres suivies" color={color} />
+        <Figure n={dashboard?.periods.all.counts.finished ?? null} label="terminées" color={color} />
+        <Figure
+          n={notes?.average ?? null}
+          label="note moyenne"
+          color={color}
+        />
+        <Figure n={detail.followers_count} label="abonnés" color={color} />
+      </div>
+
+      <div className={styles.releveBody}>
+        {parRayon.length > 0 ? (
+          <div>
+            <p className={styles.releveLabel}>Par rayon</p>
+            {/* Les barres prennent le gel de leur rayon : c'est l'un des deux
+                seuls emplacements du gel avec la nav du bandeau et les
+                étiquettes de médium. */}
+            <Barres rows={parRayon} legend="œuvres suivies" />
+          </div>
+        ) : null}
+
+        {notes && notes.distribution.length > 0 ? (
+          <div>
+            <p className={styles.releveLabel}>{possessif} notes</p>
+            <Barres
+              rows={notes.distribution.map((entry) => ({
+                key: String(entry.rating),
+                label: String(entry.rating),
+                value: entry.count,
+              }))}
+              legend="œuvres notées"
+              color={color}
+            />
+          </div>
+        ) : null}
+      </div>
+    </Reveal>
+  )
+}
+
+/**
+ * Un chiffre de colophon : composé en serif, à la taille d'un titre, dans
+ * l'encre du membre. Jamais une tuile encadrée — la direction range les « stat
+ * tiles » parmi ses critères de rejet.
+ */
+function Figure({ n, label, color }: { n: number | null; label: string; color: string }) {
+  return (
+    <div className={styles.figure}>
+      <span className={styles.figureValue} style={{ color }}>
+        {/* Une mesure absente se dit, elle ne se remplace pas par zéro : « 0 de
+            moyenne » et « personne n'a noté » ne veulent pas dire la même
+            chose. */}
+        {n === null ? '—' : n.toLocaleString('fr-FR')}
+      </span>
+      <span className={styles.figureLabel}>{label}</span>
     </div>
   )
 }
 
-function Counter({ label, value }: { label: string; value: number }) {
+/**
+ * Des blocs d'encre réglés, et rien d'autre.
+ *
+ * `--part` est une dimension calculée, et `--identity` une couleur venue du
+ * réseau : les deux seuls usages normaux du style en ligne. La croissance est
+ * une animation d'échelle, **jouée une fois** à la révélation de la section.
+ */
+function Barres({
+  rows,
+  legend,
+  color,
+}: {
+  rows: { key: string; label: string; value: number; type?: MediaType }[]
+  legend: string
+  color?: string
+}) {
+  const max = Math.max(...rows.map((row) => row.value), 0)
+
   return (
-    <div className={styles.counter}>
-      <dt className={styles.counterLabel}>{label}</dt>
-      <dd className={styles.counterValue}>{value}</dd>
-    </div>
+    <ul className={styles.barres}>
+      {rows.map((row) => (
+        <li
+          key={row.key}
+          className={styles.barre}
+          data-media-type={row.type}
+          style={
+            {
+              '--part': max > 0 ? `${(row.value / max) * 100}%` : '0%',
+              ...(color ? { '--identity': color } : {}),
+            } as CSSProperties
+          }
+        >
+          <span className={row.type ? styles.barreRayon : styles.barreNote}>{row.label}</span>
+          <span className={styles.barreTrace} aria-hidden="true" />
+          <span className={styles.barreValeur}>
+            {row.value}
+            <span className="sr-only"> {legend}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   )
 }
 

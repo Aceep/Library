@@ -41,8 +41,29 @@
   width: 100%;
 }
 
+/**
+ * La mosaïque d'un rayon : c'est la **hauteur** qui est imposée, et la largeur
+ * qui s'en déduit par le ratio. Deux tuiles de largeurs différentes gardent
+ * ainsi la même hauteur de rangée sans qu'aucune jaquette ne soit recadrée.
+ */
+.tile {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
 .ratio34 {
   aspect-ratio: 3 / 4;
+}
+
+/* Les rayons qui ne se rangent pas en 2:3 : séries et jeux en paysage, disques
+   en pochette carrée. */
+.ratio169 {
+  aspect-ratio: 16 / 9;
+}
+
+.ratio11 {
+  aspect-ratio: 1 / 1;
 }
 
 .image {

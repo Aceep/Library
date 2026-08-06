@@ -29,133 +29,251 @@
 
 .header {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
-  border-bottom: 1px solid var(--rule-soft);
-  padding-bottom: var(--space-5);
+  flex-direction: column;
+  gap: var(--s-5);
+  border-bottom: var(--rule-w) solid var(--rule);
+  padding-bottom: var(--s-6);
 }
 
-.dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  flex: none;
-  margin-top: var(--space-2);
+.headerMarks {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+/* Le filet porte l'encre du membre, comme le filet d'un rayon porte son gel. */
+.headerRule {
+  flex: 1 1 24px;
+  min-width: 24px;
+  height: 2px;
+  background: var(--identity);
+  opacity: 0.45;
 }
 
 .headerBody {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--s-3);
 }
 
 .title {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  font-size: var(--text-2xl);
+  gap: var(--s-4);
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(52px, 7.5vw, 108px);
+  line-height: 0.94;
+  letter-spacing: -0.03em;
 }
 
 .tag {
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-muted);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-2);
+  color: var(--muted);
+  border: var(--rule-w) solid var(--rule);
+  padding: 3px 7px;
 }
 
 .tagQuiet {
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--faint);
   font-style: italic;
 }
 
 .deactivated {
-  font-size: var(--text-sm);
-  color: var(--ink-muted);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  color: var(--muted);
   border-left: 2px solid var(--rule);
-  padding-left: var(--space-3);
+  padding-left: var(--s-3);
   max-width: 56ch;
 }
 
 .joined {
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
-}
-
-/* ---- Compteurs ---- */
-
-.counters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-7);
-}
-
-.counter {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.counterLabel {
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--muted);
+  white-space: nowrap;
 }
 
-.counterValue {
-  font-family: var(--font-serif);
-  font-size: var(--text-xl, var(--text-lg));
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
+/* ---- Le relevé ---- */
 
-/* ---- Répartition de la bibliothèque ---- */
-
-.breakdown {
+.releve {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--s-5);
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.chip {
+.sectionHead {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--ink-muted);
-  border: 1px solid var(--rule-soft);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3);
+  gap: var(--s-5);
+  border-bottom: var(--rule-w) solid var(--rule);
+  padding-bottom: var(--s-3);
 }
 
-.chipValue {
+.sectionTitle {
   font-family: var(--font-serif);
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
+  font-weight: 400;
+  font-size: 34px;
 }
 
-.statusLine {
-  font-size: var(--text-xs);
-  color: var(--ink-faint);
+/* La moitié italique d'un titre de section est de l'ambre : de la structure,
+   jamais une action. */
+.sectionTitle em {
+  font-style: italic;
+  color: var(--amber);
+}
+
+.sectionNote {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: var(--rule-w) solid var(--rule-soft);
+}
+
+.figure {
+  padding: var(--s-5) var(--s-5) var(--s-5) 0;
+  min-width: 0;
+}
+
+/**
+ * Un chiffre de colophon : serif, grand, dans l'encre du membre. Jamais une
+ * tuile encadrée — la direction range les « stat tiles » parmi ses rejets.
+ */
+.figureValue {
+  display: block;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 58px;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.figureLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: var(--s-3);
+}
+
+.releveBody {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-7);
+  padding-top: var(--s-5);
+}
+
+.releveLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: var(--s-4);
+}
+
+/* ---- Les barres ---- */
+
+.barre {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 52px;
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-2) 0;
+  border-bottom: var(--rule-w) solid var(--rule-soft);
+}
+
+/* Le nom d'un rayon est un aplat de son gel ; un membre serait bordé. */
+.barreRayon {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gel-ink);
+  background: var(--gel);
+  padding: 3px 6px;
+  text-align: center;
+}
+
+.barreNote {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--identity);
+}
+
+/**
+ * Le bloc lui-même : une hauteur, une couleur, une largeur. Aucun axe, aucune
+ * grille, aucun arrondi. Il grandit **une fois** — l'animation est portée par
+ * la section révélée, pas rejouée au défilement.
+ */
+.barreTrace {
+  height: 12px;
+  width: var(--part);
+  transform-origin: left;
+  animation: barGrow 0.9s var(--ease-rise) both;
+}
+
+/**
+ * La teinte se choisit **sur l'attribut**, pas par un repli `var(--gel, …)` :
+ * `--gel` a une valeur par défaut au `:root` (`--muted`), donc le repli ne se
+ * déclenche jamais et toutes les barres sortaient grises. Une barre de rayon
+ * prend son gel ; une barre de note prend l'encre du membre.
+ */
+.barre[data-media-type] .barreTrace {
+  background: var(--gel);
+}
+
+.barre:not([data-media-type]) .barreTrace {
+  background: var(--identity);
+}
+
+.barreValeur {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes barGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Sous mouvement réduit, la croissance ne se joue pas : une durée nulle
+   laisserait quand même un saut. */
+@media (prefers-reduced-motion: reduce) {
+  .barreTrace {
+    animation: none;
+  }
 }
 
 .compareLink {

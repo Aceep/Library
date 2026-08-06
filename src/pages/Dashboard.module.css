@@ -142,8 +142,16 @@
 
 /**
  * Les mots montent un à un. Les délais sont ici, en `:nth-child()`, et non en
- * style inline : le titre est en dur, son nombre de mots est connu, et React
- * réécrirait des délais posés à la main au premier rendu suivant.
+ * style inline : React réécrirait des délais posés à la main au premier rendu
+ * suivant. Le titre venant maintenant du serveur, sa longueur n'est plus connue
+ * d'avance — c'est la règle `:nth-child(n + 11)` plus bas qui rattrape les
+ * titres longs, sans quoi le onzième mot resterait à `opacity: 0`.
+ *
+ * `pre-wrap` préserve l'espace posée entre deux mots. Sans lui, une espace
+ * ordinaire entre deux `inline-block` est réduite à néant et les mots se
+ * recollent — c'est pour ça que le titre portait des espaces **insécables**,
+ * qui le rendaient introuvable par la recherche du navigateur. Le retour à la
+ * ligne se fait toujours aux espaces : `pre-wrap` préserve, il ne fige pas.
  */
 .queteTitre {
   font-family: var(--font-serif);
@@ -154,6 +162,7 @@
   margin: 0 0 var(--s-5) 0;
   max-width: 20ch;
   text-wrap: pretty;
+  white-space: pre-wrap;
 }
 
 .queteTitre span {
@@ -260,34 +269,58 @@
 }
 
 /**
- * L'artwork est un rectangle bordé à son vrai ratio, jamais recadré, jamais
- * posé en fond sous du texte. Ici c'est un cadre vide : la quête est en dur et
- * ne désigne aucune œuvre du fonds.
+ * Le badge que la quête décerne.
+ *
+ * Il occupe la place du cadre 2:3 qui annonçait « jaquette » sans jamais en
+ * porter une : une quête réunit plusieurs œuvres, aucune n'est *son* image. Le
+ * badge, lui, lui appartient en propre — c'est ce qu'elle donne.
+ *
+ * `--badge` vient du serveur, posé en style inline. Il ne remplit pas la
+ * surface : il tient le filet et l'emoji, la surface reste creuse comme partout
+ * ailleurs.
  */
-.queteJaquette {
+.queteBadge {
   width: 240px;
   aspect-ratio: 2 / 3;
   border: var(--rule-w) solid var(--rule);
-  background: linear-gradient(160deg, color-mix(in oklab, var(--amber) 12%, var(--surface)), var(--surface));
+  border-top: var(--rule-w-strong) solid var(--badge, var(--gold));
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--badge, var(--gold)) 10%, var(--surface)),
+    var(--surface)
+  );
   display: flex;
-  align-items: flex-end;
-  padding: var(--s-4);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  text-align: center;
   transition:
     transform var(--dur-4) var(--ease-rise),
     border-color var(--dur-3) var(--ease-page);
 }
 
-.queteJaquette:hover {
+.queteBadge:hover {
   transform: translateY(-6px) rotate(0.6deg);
-  border-color: var(--gold);
 }
 
-.queteJaquetteNote {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
+.queteBadgeIcone {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.queteBadgeNom {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--ink-2);
+}
+
+/* La progression réelle, dans les mots de l'écran des quêtes — « 1 sur 3 »,
+   « en cours ». Les deux écrans doivent dire la même chose de la même façon. */
+.queteAvancee {
+  margin: 0 0 var(--s-5) 0;
 }
 
 .queteArtMeta {
@@ -395,14 +428,14 @@
   max-width: 56ch;
 }
 
-/* ---- Nouvelles des signatures ---- */
+/* ---- La veille ---- */
 
 /**
  * Une fiche est une boîte : un filet discret, une chute floue, aucun rayon. Au
  * survol le filet prend le gel du rayon et la boîte monte — c'est le langage du
  * grand contenu, jamais le bloc décalé de la chrome.
  */
-.signature {
+.veille {
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr) auto;
   gap: var(--s-5);
@@ -418,21 +451,21 @@
     box-shadow var(--dur-3) var(--ease-page);
 }
 
-.signature:hover {
+.veille:hover {
   background: var(--surface);
   border-color: var(--gel);
   transform: translateY(-5px);
   box-shadow: 0 22px 46px -20px color-mix(in oklab, var(--gel) 55%, transparent);
 }
 
-.signatureArt {
+/* Une image posée sur la pierre, sans bordure — la loi de `Cover`, que les neuf
+   autres écrans suivent. Le cadre qui était ici tenait un rectangle vide ; il
+   n'a plus de raison d'être maintenant qu'il y a une image dedans. */
+.veilleArt {
   width: 92px;
-  aspect-ratio: 2 / 3;
-  border: var(--rule-w) solid var(--rule);
-  background: var(--surface);
 }
 
-.signatureKind {
+.veilleKind {
   font-family: var(--font-mono);
   font-size: 9.5px;
   letter-spacing: 0.18em;
@@ -441,7 +474,8 @@
   margin-bottom: var(--s-2);
 }
 
-.signatureTitre {
+.veilleTitre {
+  display: block;
   font-family: var(--font-serif);
   font-size: 26px;
   font-weight: 500;
@@ -449,7 +483,7 @@
   margin-bottom: 6px;
 }
 
-.signatureLigne {
+.veilleLigne {
   font-family: var(--font-serif);
   font-size: 16.5px;
   font-style: italic;
@@ -458,14 +492,6 @@
   max-width: 62ch;
 }
 
-.signatureSuivi {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: var(--s-3);
-}
 
 /* ---- L'étiquette de rayon ---- */
 
@@ -531,20 +557,22 @@
   margin-bottom: var(--s-4);
 }
 
-/* 3:4 en grille, comme l'exige la direction — l'artwork n'est jamais recadré. */
+/*
+ * 3:4 en grille, comme l'exige la direction — l'artwork n'est jamais recadré.
+ * Le ratio est porté par `Cover`, à qui on le demande : la feuille de la page
+ * ne réécrit pas l'intérieur du composant.
+ *
+ * Plus de bordure ni de fond : c'était le dessin d'un cadre vide, du temps où
+ * la tuile n'affichait pas la jaquette que `/home` lui envoyait. L'image se
+ * pose nue, comme sur les neuf autres écrans.
+ */
 .tuileArt {
-  aspect-ratio: 3 / 4;
-  border: var(--rule-w) solid var(--rule);
-  background: var(--surface);
   margin-bottom: var(--s-4);
-  transition:
-    transform var(--dur-4) var(--ease-rise),
-    border-color var(--dur-3) var(--ease-page);
+  transition: transform var(--dur-4) var(--ease-rise);
 }
 
 .tuile:hover .tuileArt {
   transform: translateY(-5px);
-  border-color: var(--identity, var(--rule));
 }
 
 .tuileTitre {
@@ -835,17 +863,17 @@
     display: none;
   }
 
-  .signature {
+  .veille {
     grid-template-columns: 64px minmax(0, 1fr);
   }
 
   /* L'étiquette passe sous le texte plutôt que de comprimer la colonne. */
-  .signature .medium {
+  .veille .medium {
     grid-column: 2;
     justify-self: start;
   }
 
-  .signatureArt {
+  .veilleArt {
     width: 64px;
   }
 

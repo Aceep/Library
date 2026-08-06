@@ -1,15 +1,45 @@
+import { Fragment } from 'react'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchHome } from '../api/endpoints'
+import { fetchHome, fetchQuests, fetchWatches } from '../api/endpoints'
 import { MEDIA_TYPES, progressRatio, typeLabel } from '../api/schema'
-import type { Account, HomeResponse, MediaType } from '../api/schema'
+import type { Account, HomeResponse, MediaType, QuestSummary, WatchItem } from '../api/schema'
+import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
 import MemberChip from '../components/MemberChip'
+import QuestProgress from '../components/QuestProgress'
 import Reveal from '../components/Reveal'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
 import styles from './Dashboard.module.css'
+
+/**
+ * L'accueil.
+ *
+ * ---------------------------------------------------------------------------
+ * Tout vient du serveur, et c'est récent
+ * ---------------------------------------------------------------------------
+ *
+ * Cet écran a longtemps mêlé du vrai et de la maquette : un bandeau de quête
+ * inventé de toutes pièces (« Nº 214 », « proposée par K.B. ») et trois fausses
+ * actualités d'auteurs, affichés comme s'ils venaient de l'API. Les deux blocs
+ * portaient un commentaire disant qu'aucune route ne les servait — ce qui les a
+ * fait survivre longtemps, puisque le défaut était documenté plutôt que corrigé.
+ *
+ * Ils viennent désormais des routes qui existent :
+ *
+ *   bandeau        `GET /quests`   — une vraie quête, celle qui appelle un geste
+ *   deuxième bloc  `GET /watches`  — la veille, ce qui remplace les « signatures »
+ *   le reste       `GET /home`     — en cours, murmures, traces
+ *
+ * **Les « nouvelles des signatures » ne reviendront pas.** L'API suit des
+ * membres et surveille des œuvres, jamais des personnes : rien ne peut dire
+ * qu'un auteur annonce un livre. La veille répond à la même envie — savoir
+ * qu'il va se passer quelque chose — avec ce que le modèle sait vraiment.
+ *
+ * Ne reste en dur sur cet écran que ce qui doit l'être : des titres de section.
+ */
 
 type InProgressEntry = HomeResponse['in_progress']['book'][number]
 type FeedEntry = HomeResponse['feed'][number]
@@ -27,66 +57,54 @@ type InProgressType = keyof HomeResponse['in_progress']
 const inProgressTypes = (inProgress: HomeResponse['in_progress']) =>
   MEDIA_TYPES.filter((type): type is InProgressType => type in inProgress)
 
-/**
- * La quête du jour — **en dur, et aucune route ne la sert**.
- *
- * `GET /quests` existe mais ne rend pas ça : ce sont des parcours composés à la
- * main par un administrateur, avec leurs œuvres, leurs classements et leurs
- * badges. Rien n'y choisit une œuvre par jour pour le cercle, rien n'y porte
- * « proposée par », et il n'existe aucune mutation « accepter ».
- *
- * Le contenu ci-dessous est donc celui de la maquette, mot pour mot, et le
- * restera tant que la sélection quotidienne n'est pas décidée côté serveur
- * (`HANDOFF.md` § 8.3 la laisse ouverte). Les deux liens visent `/quetes`, un
- * écran réel : un bouton d'action qui ne mène nulle part serait pire que le
- * texte en dur.
- */
-const QUETE = {
-  numero: 214,
-  titre: "Regardez quelque chose que K.B. a adoré et n'a jamais raconté.",
-  note:
-    "Elle l'a noté cinq étoiles en janvier 2024 et n'en a jamais écrit un mot. Trois heures et douze minutes. Personne d'autre dans le cercle ne l'a ouvert.",
-  meta: 'Film · 1979 · 3 h 12',
-  proposePar: 'K.B.',
-}
+/** Trois veilles à l'accueil : de quoi annoncer, pas de quoi remplacer l'écran. */
+const VEILLE_A_L_ACCUEIL = 3
 
 /**
- * Les nouvelles des signatures — **en dur, et rien ne les sert non plus**.
+ * Laquelle des quêtes ouvertes mérite le bandeau.
  *
- * Rien dans l'API ne suit un auteur, un réalisateur ou un groupe : on suit des
- * membres et on surveille des œuvres, jamais des personnes. `HANDOFF.md` § 3 le
- * dit lui-même — « static placeholder data for now » — et § 8.1 en fait une
- * décision à prendre.
+ * Il n'existe **pas** de « quête du jour » côté serveur : rien n'en désigne une
+ * par date, et en inventer une ici la ferait changer à chaque rechargement.
+ * Ce qu'on met en avant est donc celle où un geste compte le plus, dans cet
+ * ordre :
  *
- * Le jour où une route existe, c'est ce tableau qui disparaît ; la mise en
- * page, elle, est déjà celle des vraies données.
+ *   1. **Une échéance passe devant.** C'est la seule contrainte que le membre
+ *      ne s'est pas donnée lui-même ; la plus proche d'abord.
+ *   2. **Puis la plus près d'être achevée** — celle où il reste le moins à
+ *      faire est celle qu'une seule soirée peut clore.
+ *   3. **À égalité, la plus récemment publiée**, pour que la nouveauté se voie.
+ *
+ * Les quêtes achevées et les brouillons sont hors course : le bandeau appelle à
+ * agir, et il n'y a rien à faire sur une quête finie. Renvoie `null` quand il
+ * n'en reste aucune — l'appelant a un état pour ça.
  */
-const SIGNATURES: { kind: string; date: string; titre: string; ligne: string; suivi: string; type: MediaType }[] = [
-  {
-    kind: 'Nouveau recueil annoncé',
-    date: '3 sept.',
-    titre: 'Ted Chiang — nouvelles inédites',
-    ligne: 'Neuf textes, dont trois jamais publiés. Le cercle a lu le premier recueil quatre fois en tout.',
-    suivi: '3 personnes',
-    type: 'book',
-  },
-  {
-    kind: 'Tournage confirmé',
-    date: '28 août',
-    titre: 'Céline Sciamma — sans titre',
-    ligne: 'Retour au format long après quatre ans. A.V. suit sa filmographie depuis 2019.',
-    suivi: '2 personnes',
-    type: 'movie',
-  },
-  {
-    kind: 'Album daté',
-    date: '21 août',
-    titre: 'Godspeed You! Black Emperor',
-    ligne: "Cinquième mouvement, sortie le 14 novembre. La bande-son de deux hivers du cercle.",
-    suivi: '4 personnes',
-    type: 'music',
-  },
-]
+export function queteEnAvant(quetes: QuestSummary[]): QuestSummary | null {
+  const ouvertes = quetes.filter((q) => q.status === 'published' && !q.progress.completed)
+  if (ouvertes.length === 0) return null
+  return [...ouvertes].sort(parUrgence)[0]
+}
+
+const parUrgence = (a: QuestSummary, b: QuestSummary): number => {
+  if (a.due_at !== b.due_at) {
+    // Une quête sans échéance ne bat jamais une quête qui en a une.
+    if (a.due_at === null) return 1
+    if (b.due_at === null) return -1
+    return a.due_at < b.due_at ? -1 : 1
+  }
+
+  // `required` et non `total` : c'est le seuil qui décide de l'achèvement, donc
+  // du reste à faire. Sur une quête « cinq suffisent sur sept », il reste deux
+  // œuvres quand trois sont terminées, pas quatre.
+  const resteA = a.progress.required - a.progress.done
+  const resteB = b.progress.required - b.progress.done
+  if (resteA !== resteB) return resteA - resteB
+
+  return (b.published_at ?? '').localeCompare(a.published_at ?? '')
+}
+
+/** Le format de date de l'écran de veille — les deux doivent dire pareil. */
+const dateLongue = (iso: string) =>
+  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
 const VERBE: Record<FeedEntry['kind'], string> = {
   finished: 'a terminé',
@@ -121,14 +139,7 @@ export default function Dashboard() {
       <div className={styles.body}>
         <main className={styles.main}>
           <Reveal className={styles.section}>
-            <SectionHead
-              titre="Nouvelles des"
-              accent="signatures"
-              legende="auteurs · réalisateurs · groupes que vous suivez"
-            />
-            {SIGNATURES.map((item) => (
-              <SignatureRow key={item.titre} item={item} />
-            ))}
+            <Veille />
           </Reveal>
 
           <Reveal className={styles.section}>
@@ -217,62 +228,139 @@ function MediumLabel({ type, small = false }: { type: MediaType; small?: boolean
  * révélation y serait un clignotement.
  *
  * Les mots du titre montent un à un. Les délais s'écrivent en `:nth-child()`
- * dans la feuille, pas en style inline : le titre est en dur, son nombre de
- * mots est connu, et React réécrirait des délais posés à la main.
+ * dans la feuille, pas en style inline : React réécrirait des délais posés à la
+ * main au premier rendu suivant. Le titre étant devenu celui d'une vraie quête,
+ * sa longueur n'est plus connue d'avance — c'est la règle `:nth-child(n + 11)`
+ * qui rattrape les titres longs, sans quoi le onzième mot resterait invisible,
+ * l'animation partant de `opacity: 0`.
+ *
+ * Le bandeau ne se dessine pas tant que les quêtes ne sont pas là : un titre de
+ * remplacement, en `<h1>` et en 76 pixels, sauterait aux yeux le temps d'un
+ * aller-retour réseau.
  */
 function QuestBanner() {
+  const { data } = useQuery({
+    queryKey: queryKeys.quests,
+    queryFn: ({ signal }) => fetchQuests(signal),
+  })
+
+  if (!data) return null
+
+  const quete = queteEnAvant(data.items)
+  // Aucune quête ouverte : soit tout est achevé, soit rien n'est publié. Les
+  // deux méritent le bandeau — il tient le seul `<h1>` de l'écran — mais pas la
+  // même phrase, et surtout aucun appel à l'action qui n'aurait pas d'objet.
+  const publiees = data.items.filter((q) => q.status === 'published')
+
   return (
-    <section className={styles.quete} aria-labelledby="quete-du-jour">
+    <section className={styles.quete} aria-labelledby="quete-en-avant">
       <div className={styles.lampe} aria-hidden="true" />
       <div className={styles.queteInner}>
         <div className={styles.queteCadre}>
           <div>
             <div className={styles.queteSourcil}>
-              <span className={styles.quetePastille}>Quête du jour</span>
-              <span className={styles.queteFilet} aria-hidden="true" />
-              <span className={styles.queteMeta}>
-                Nº {QUETE.numero} · une seule par jour
+              <span className={styles.quetePastille}>
+                {quete ? 'Quête en cours' : 'Quêtes'}
               </span>
+              <span className={styles.queteFilet} aria-hidden="true" />
+              {quete ? (
+                <span className={styles.queteMeta}>
+                  {quete.item_count} œuvre{quete.item_count > 1 ? 's' : ''}
+                  {quete.due_at ? ` · à viser pour le ${dateLongue(quete.due_at)}` : ''}
+                </span>
+              ) : null}
             </div>
 
-            <h1 id="quete-du-jour" className={styles.queteTitre}>
-              {QUETE.titre.split(' ').map((mot, index) => (
-                // La clé porte l'index : un même mot peut revenir dans la
-                // phrase, et son rang est ce qui le distingue.
-                //
-                // L'espace est **insécable** et à l'intérieur du span : une
-                // espace ordinaire entre deux `inline-block` est réduite à
-                // néant par la mise en page, et les mots se recollaient.
-                <span key={`${mot}-${index}`}>{mot}&nbsp;</span>
-              ))}
+            <h1 id="quete-en-avant" className={styles.queteTitre}>
+              {titreEnMots(
+                quete?.title ??
+                  (publiees.length > 0
+                    ? 'Tu as achevé toutes les quêtes proposées.'
+                    : 'Aucune quête proposée pour l’instant.'),
+              )}
             </h1>
 
-            <p className={styles.queteNote}>{QUETE.note}</p>
+            {quete?.description ? (
+              <p className={styles.queteNote}>{quete.description}</p>
+            ) : !quete ? (
+              <p className={styles.queteNote}>
+                {publiees.length > 0
+                  ? 'Les badges sont à toi. Les prochaines arriveront quand un administrateur en composera.'
+                  : 'Une quête réunit des œuvres choisies à la main. Il n’y en a pas encore.'}
+              </p>
+            ) : null}
+
+            {quete ? <QuestProgress progress={quete.progress} className={styles.queteAvancee} /> : null}
 
             <div className={styles.queteActions}>
-              <Link to="/quetes" className={styles.queteCta}>
-                Voir les quêtes <span aria-hidden="true">→</span>
-              </Link>
-              <Link to="/quetes" className={styles.queteLien}>
-                Voir la fiche
-              </Link>
-              <span className={styles.queteAuteur}>
-                proposée par <span className={styles.queteAuteurNom}>{QUETE.proposePar}</span>
-              </span>
+              {quete ? (
+                <>
+                  <Link to={`/quetes/${quete.id}`} className={styles.queteCta}>
+                    Voir la quête <span aria-hidden="true">→</span>
+                  </Link>
+                  <Link to="/quetes" className={styles.queteLien}>
+                    Toutes les quêtes
+                  </Link>
+                </>
+              ) : (
+                <Link to="/quetes" className={styles.queteCta}>
+                  Voir les quêtes <span aria-hidden="true">→</span>
+                </Link>
+              )}
             </div>
           </div>
 
-          <div className={styles.queteArt}>
-            <div className={styles.queteJaquette}>
-              <span className={styles.queteJaquetteNote}>jaquette · 2:3</span>
+          {/*
+            À la place du cadre vide qui annonçait « jaquette · 2:3 » : le badge
+            que la quête décerne. Il est réel, il a sa couleur et son emoji, et
+            c'est ce qu'on gagne — donc ce qui donne envie.
+          */}
+          {quete ? (
+            <div className={styles.queteArt}>
+              <div
+                className={styles.queteBadge}
+                style={{ '--badge': quete.badge.color } as CSSProperties}
+              >
+                <span className={styles.queteBadgeIcone} aria-hidden="true">
+                  {quete.badge.icon}
+                </span>
+                <span className={styles.queteBadgeNom}>{quete.badge.name}</span>
+              </div>
+              <div className={styles.queteArtMeta}>badge à gagner</div>
             </div>
-            <div className={styles.queteArtMeta}>{QUETE.meta}</div>
-          </div>
+          ) : null}
         </div>
       </div>
     </section>
   )
 }
+
+/**
+ * Le titre découpé en mots animables.
+ *
+ * La clé porte l'index : un même mot peut revenir dans la phrase, et son rang
+ * est ce qui le distingue.
+ *
+ * **L'espace est une vraie espace**, posée entre les spans. Elle l'était en
+ * insécable — `{mot}&nbsp;` — parce qu'une espace ordinaire entre deux
+ * `inline-block` est réduite à néant par la mise en page. Le remède collait le
+ * texte : chaque espace du titre devenait un U+00A0, ce qui le rendait
+ * introuvable par la recherche du navigateur et le faisait recopier avec des
+ * caractères invisibles à la place des espaces. C'est
+ * `white-space: pre-wrap` sur le titre, dans la feuille, qui préserve
+ * maintenant l'espace sans la rendre insécable — le titre reste un texte
+ * ordinaire, ce qui compte d'autant plus qu'il vient désormais du serveur.
+ *
+ * Les nœuds de texte ne comptent pas dans `:nth-child()`, qui ne voit que les
+ * éléments : les délais d'animation par rang restent alignés sur les mots.
+ */
+const titreEnMots = (titre: string) =>
+  titre.split(' ').map((mot, index) => (
+    <Fragment key={`${mot}-${index}`}>
+      {index > 0 ? ' ' : null}
+      <span>{mot}</span>
+    </Fragment>
+  ))
 
 /**
  * La bande défilante. Elle se compose du fil, et **rend `null` s'il est vide** :
@@ -316,19 +404,93 @@ function SectionHead({
   )
 }
 
-function SignatureRow({ item }: { item: (typeof SIGNATURES)[number] }) {
+/**
+ * La veille — ce qui remplace les « nouvelles des signatures ».
+ *
+ * Même envie, source réelle : au lieu d'annoncer qu'un auteur prépare un livre,
+ * on rappelle les œuvres et les sagas dont on a demandé à être prévenu. C'est
+ * la seule chose que le modèle sache d'un futur — on surveille des œuvres, pas
+ * des personnes.
+ *
+ * Trois entrées au plus, les plus récentes : l'accueil annonce, il ne remplace
+ * pas `/veille`.
+ */
+function Veille() {
+  const { data, error } = useQuery({
+    queryKey: queryKeys.watches,
+    queryFn: ({ signal }) => fetchWatches(null, signal),
+  })
+
+  const items = data?.items.slice(0, VEILLE_A_L_ACCUEIL) ?? []
+
   return (
-    <article className={styles.signature} data-media-type={item.type}>
-      <div className={styles.signatureArt} aria-hidden="true" />
-      <div>
-        <div className={styles.signatureKind}>
-          {item.kind} · {item.date}
-        </div>
-        <div className={styles.signatureTitre}>{item.titre}</div>
-        <div className={styles.signatureLigne}>{item.ligne}</div>
-        <div className={styles.signatureSuivi}>suivi par {item.suivi} du cercle</div>
+    <>
+      <SectionHead
+        titre="Ce que tu"
+        accent="surveilles"
+        legende="on te prévient dès que du nouveau paraît"
+      />
+
+      {error ? (
+        // Un bloc secondaire ne fait pas tomber l'accueil : il dit qu'il n'a
+        // pas pu, et le reste de l'écran continue de servir.
+        <p className={styles.vide}>La veille n’a pas pu être chargée.</p>
+      ) : items.length === 0 ? (
+        <p className={styles.vide}>
+          Aucune veille. Ouvre la fiche d’une série, d’un manga ou d’une saga et choisis
+          « Surveiller » pour être prévenu de la suite.
+        </p>
+      ) : (
+        <>
+          {items.map((watch) => (
+            <VeilleRow key={watch.id} watch={watch} />
+          ))}
+          {data && data.items.length > items.length ? (
+            <Link to="/veille" className={styles.journal}>
+              Toute la veille →
+            </Link>
+          ) : null}
+        </>
+      )}
+    </>
+  )
+}
+
+function VeilleRow({ watch }: { watch: WatchItem }) {
+  const saga = watch.target === 'saga' ? watch.saga : null
+  const media = watch.target === 'media' ? watch.media : null
+
+  const titre = saga?.title ?? media?.title ?? 'Sans titre'
+  const lien = saga ? `/sagas/${saga.id}` : media ? `/media/${media.id}` : null
+  // Une saga n'a pas de type de rayon à elle : elle en mêle plusieurs. On prend
+  // celui de l'œuvre quand il y en a une, et la teinte reste neutre sinon.
+  const type = media?.type ?? null
+
+  return (
+    <article className={styles.veille} data-media-type={type ?? undefined}>
+      <div className={styles.veilleArt}>
+        <Cover url={media?.cover_url ?? null} title={titre} type={type ?? 'movie'} />
       </div>
-      <MediumLabel type={item.type} />
+      <div>
+        <div className={styles.veilleKind}>
+          {saga ? 'Saga' : 'Œuvre'} · surveillée depuis le {dateLongue(watch.since)}
+        </div>
+        {lien ? (
+          <Link to={lien} className={styles.veilleTitre}>
+            {titre}
+          </Link>
+        ) : (
+          <div className={styles.veilleTitre}>{titre}</div>
+        )}
+        {/* La réponse à « c'est sorti ce matin, pourquoi je n'ai rien ? » —
+            l'écran de veille la donne aussi, dans les mêmes mots. */}
+        {watch.next_check_at ? (
+          <div className={styles.veilleLigne}>
+            Prochaine vérification le {dateLongue(watch.next_check_at)}.
+          </div>
+        ) : null}
+      </div>
+      {type ? <MediumLabel type={type} /> : null}
     </article>
   )
 }
@@ -363,7 +525,15 @@ function EnCoursTile({
         <MediumLabel type={type} small />
         <MemberChip account={me} size="sm" />
       </div>
-      <div className={styles.tuileArt} aria-hidden="true" />
+      {/*
+        `/home` sert `cover_url` sur chaque en-cours. Cet écran était le seul du
+        dépôt à ne pas s'en servir : la tuile dessinait un cadre vide pendant que
+        les neuf autres écrans montraient l'image. `Cover` gère à la fois
+        l'absence de jaquette et l'URL qui ne charge pas.
+      */}
+      <div className={styles.tuileArt}>
+        <Cover url={entry.media.cover_url} title={entry.media.title} type={type} ratio="3/4" size="lg" />
+      </div>
       <div className={styles.tuileTitre}>{entry.media.title}</div>
       {entry.progress && ratio !== null ? (
         <>

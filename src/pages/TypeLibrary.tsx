@@ -300,10 +300,17 @@ function EnCours({
   ratio: Rayonnage['ratio']
   me: Account
 }) {
+  const { statusesOf } = useReference()
+  // Tous les rayons n'ont pas d'état intermédiaire : un album s'écoute ou ne
+  // s'écoute pas, et la référence le dit. Interroger `doing` sur la musique
+  // ramènerait toujours une liste vide — on ne pose pas la question.
+  const aUnEnCours = statusesOf(type).some((statut) => statut.value === 'doing')
+
   const filters: LibraryFilters = { type, status: 'doing', limit: 3 }
   const { data } = useQuery({
     queryKey: queryKeys.libraryPage(filters, 1),
     queryFn: ({ signal }) => fetchLibraryPage(filters, 1, signal),
+    enabled: aUnEnCours,
   })
 
   const items = data?.items ?? []

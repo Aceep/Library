@@ -59,7 +59,9 @@ describe('MediaDetail — la fiche', () => {
     fetchMediaDetail.mockResolvedValue(FILM)
     renderDetail()
 
-    expect(await screen.findByRole('heading', { name: 'Matrix' })).toBeInTheDocument()
+    // Le titre porte l'année : deux œuvres du même nom sont fréquentes, et un
+    // en-tête qui ne dit que « Matrix » ne les distingue pas à l'oreille.
+    expect(await screen.findByRole('heading', { name: 'Matrix 1999' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Statut' })).toBeInTheDocument()
   })
 
@@ -72,7 +74,7 @@ describe('MediaDetail — la fiche', () => {
     fetchMediaDetail.mockResolvedValue(FILM)
     renderDetail()
 
-    await screen.findByRole('heading', { name: 'Matrix' })
+    await screen.findByRole('heading', { name: 'Matrix 1999' })
     expect(screen.queryByRole('heading', { name: /^Sagas?$/ })).not.toBeInTheDocument()
   })
 
@@ -111,7 +113,7 @@ describe('MediaDetail — la fiche', () => {
     fetchMediaDetail.mockResolvedValue(FILM)
     renderDetail()
 
-    await screen.findByRole('heading', { name: 'Matrix' })
+    await screen.findByRole('heading', { name: 'Matrix 1999' })
     expect(screen.queryByRole('heading', { name: 'Veille' })).not.toBeInTheDocument()
   })
 

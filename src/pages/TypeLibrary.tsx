@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import type { CSSProperties } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -14,6 +14,7 @@ import ErrorNotice from '../components/ErrorNotice'
 import MemberChip from '../components/MemberChip'
 import Pagination from '../components/Pagination'
 import Reveal from '../components/Reveal'
+import { champ, useFiltersInUrl } from '../components/useFiltersInUrl'
 import { usePageInUrl } from '../components/usePageInUrl'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
@@ -66,14 +67,34 @@ function Library({ type }: { type: MediaType }) {
   useDocumentTitle(typeLabelPlural(type))
   const { user } = useSession()
   const { statusesOf } = useReference()
-  const [status, setStatus] = useState<TrackingStatus | null>(null)
-  const [ownedOnly, setOwnedOnly] = useState(false)
-  const [favoritesOnly, setFavoritesOnly] = useState(false)
-  const [sort, setSort] = useState<LibrarySort>('added')
+  /*
+    Les filtres vivent dans l'adresse, comme la page.
+
+    Le domaine de `status` vient de la référence, et ce n'est pas un détail :
+    un `?status=doing` recopié sur un rayon qui n'a pas d'état intermédiaire
+    retombe sur « tout » au lieu d'interroger un statut que le back refuse.
+    C'est la règle « ce que le back refuse ne se propose pas », appliquée à la
+    barre d'adresse.
+
+    Le hook supprime `page` lui-même : deux écritures dans un même
+    gestionnaire, chacune fermée sur les paramètres de son rendu, se
+    recouvriraient.
+  */
+  const [filtres, poser] = useFiltersInUrl({
+    status: champ('', ['', ...statusesOf(type).map((s) => s.value)]),
+    possede: champ('', ['', '1']),
+    aime: champ('', ['', '1']),
+    sort: champ<LibrarySort>('added', ['added', 'title']),
+  })
+  const status = (filtres.status === '' ? null : filtres.status) as TrackingStatus | null
+  const ownedOnly = filtres.possede === '1'
+  const favoritesOnly = filtres.aime === '1'
+  const sort = filtres.sort
+
   // Le comportement de l'adresse est partagé avec la bibliothèque d'un membre :
   // deux listes qui se ressemblent doivent se comporter pareil, et c'est plus
   // solide de le faire exécuter le même code que de le relire.
-  const { page, adresseDe, allerA, remettreALaPremiere } = usePageInUrl()
+  const { page, adresseDe, allerA } = usePageInUrl()
 
   const rayon = RAYONNAGES[type]
 
@@ -149,8 +170,7 @@ function Library({ type }: { type: MediaType }) {
                   className={styles.chip}
                   aria-pressed={status === filter.value}
                   onClick={() => {
-                    setStatus(filter.value)
-                    remettreALaPremiere()
+                    poser({ status: filter.value ?? '' })
                   }}
                 >
                   {filter.label}
@@ -163,8 +183,7 @@ function Library({ type }: { type: MediaType }) {
                 type="checkbox"
                 checked={ownedOnly}
                 onChange={(event) => {
-                  setOwnedOnly(event.target.checked)
-                  remettreALaPremiere()
+                  poser({ possede: event.target.checked ? '1' : '' })
                 }}
               />
               Possédés seulement
@@ -175,8 +194,7 @@ function Library({ type }: { type: MediaType }) {
                 type="checkbox"
                 checked={favoritesOnly}
                 onChange={(event) => {
-                  setFavoritesOnly(event.target.checked)
-                  remettreALaPremiere()
+                  poser({ aime: event.target.checked ? '1' : '' })
                 }}
               />
               Mes coups de cœur
@@ -187,8 +205,7 @@ function Library({ type }: { type: MediaType }) {
               <select
                 value={sort}
                 onChange={(event) => {
-                  setSort(event.target.value as LibrarySort)
-                  remettreALaPremiere()
+                  poser({ sort: event.target.value as LibrarySort })
                 }}
               >
                 {SORTS.map((option) => (

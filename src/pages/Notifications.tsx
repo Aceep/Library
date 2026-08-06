@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -12,6 +11,7 @@ import { useAnnounce } from '../components/Announcer'
 import EmptyState from '../components/EmptyState'
 import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
+import { champ, useFiltersInUrl } from '../components/useFiltersInUrl'
 import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Notifications.module.css'
 
@@ -50,7 +50,10 @@ const formatDate = (iso: string) =>
 export default function Notifications() {
   const queryClient = useQueryClient()
   const annoncer = useAnnounce()
-  const [unreadOnly, setUnreadOnly] = useState(false)
+  // Dans l'adresse : « ce qu'il me reste à lire » est une vue qu'on garde
+  // ouverte, et un rechargement la faisait retomber sur « toutes ».
+  const [filtres, poser] = useFiltersInUrl({ vue: champ('', ['', 'non-lues']) })
+  const unreadOnly = filtres.vue === 'non-lues'
 
   const filters = { unread: unreadOnly }
 
@@ -111,7 +114,7 @@ export default function Notifications() {
             type="button"
             className={styles.chip}
             aria-pressed={!unreadOnly}
-            onClick={() => setUnreadOnly(false)}
+            onClick={() => poser({ vue: '' })}
           >
             Toutes
           </button>
@@ -119,7 +122,7 @@ export default function Notifications() {
             type="button"
             className={styles.chip}
             aria-pressed={unreadOnly}
-            onClick={() => setUnreadOnly(true)}
+            onClick={() => poser({ vue: 'non-lues' })}
           >
             Non lues
           </button>

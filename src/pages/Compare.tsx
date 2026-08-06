@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCompare, fetchFollowing } from '../api/endpoints'
@@ -9,6 +8,7 @@ import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
+import { useSearchParams } from 'react-router-dom'
 import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Compare.module.css'
 
@@ -27,7 +27,19 @@ export default function Compare() {
     queryFn: ({ signal }) => fetchFollowing(user.id, null, signal),
   })
 
-  const [withId, setWithId] = useState<string | null>(null)
+  /*
+    Avec qui l'on compare vit dans l'adresse.
+
+    Le domaine est une liste d'identifiants, pas un ensemble fixe : le hook à
+    domaine ne s'applique pas, mais la doctrine si — on remplace au lieu
+    d'empiler (une comparaison n'est pas un lieu où l'on revient), et le défaut
+    ne s'écrit pas. Ce que ça change vraiment : `/comparer` partagé montrait à
+    chacun une comparaison différente, puisque le choix retombait sur le
+    premier de *sa* liste d'abonnements.
+  */
+  const [params, setParams] = useSearchParams()
+  const withId = params.get('avec')
+  const setWithId = (id: string) => setParams({ avec: id }, { replace: true })
   const candidates = following.data?.items ?? []
   const targetId = withId ?? candidates[0]?.user.id ?? null
 

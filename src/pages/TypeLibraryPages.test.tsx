@@ -144,7 +144,13 @@ describe('Rayon — la page dans l’adresse', () => {
 
     // Rester sur la 3 en changeant de tri afficherait un écran qui n'a rien à
     // voir avec le geste qu'on vient de faire.
-    await waitFor(() => expect(adresse()).toBe(''))
+    //
+    // Le tri est désormais dans l'adresse, et c'est ce que dit cette
+    // assertion : `page` disparaît, `sort` apparaît, **en une seule écriture**.
+    // Deux `setSearchParams` dans le même gestionnaire se recouvriraient — et
+    // c'est exactement ce qui se verrait ici, sous la forme d'un `?page=3` qui
+    // survit ou d'un `?sort=` qui manque.
+    await waitFor(() => expect(adresse()).toBe('?sort=title'))
   })
 
   it('borne une adresse déraisonnable au lieu de laisser passer un 400', async () => {

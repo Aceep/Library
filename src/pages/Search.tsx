@@ -65,38 +65,56 @@ const noterRecente = (q: string) => {
  */
 export default function Search() {
   const [params, setParams] = useSearchParams()
+
+  /*
+    Deux clés exclusives, `?q=` **ou** `?isbn=`, et le mode se **lit** dans
+    l'adresse au lieu d'être un état local.
+
+    Le mode ISBN était un `useState`, donc absent de l'adresse : partager
+    `?q=9782070360024` rouvrait la recherche en éventail sur les six rayons,
+    dont cinq répondent 400 sur un ISBN. Ce n'est pas un filtre avec une valeur
+    par défaut — c'est *quelle clé est présente*, et l'adresse est le seul
+    endroit où cette question a une réponse partageable.
+  */
   const q = params.get('q')?.trim() ?? ''
-  useDocumentTitle(q === '' ? 'Recherche' : `Recherche : ${q}`)
-  const [draft, setDraft] = useState(q)
-  // L'ISBN est une recherche exacte, et seuls les livres en ont un : elle sort
-  // de l'éventail plutôt que de lancer cinq requêtes qui répondront 400.
-  const [byIsbn, setByIsbn] = useState(false)
+  const isbn = params.get('isbn')?.trim() ?? ''
+  const byIsbn = isbn !== ''
+  const terme = byIsbn ? isbn : q
+
+  useDocumentTitle(terme === '' ? 'Recherche' : `Recherche : ${terme}`)
+  const [draft, setDraft] = useState(terme)
+  // Ce que **cochera** la prochaine soumission : l'affichage suit l'adresse,
+  // la case suit la main.
+  const [modeIsbn, setModeIsbn] = useState(byIsbn)
   const [recentes, setRecentes] = useState<string[]>(lireRecentes)
 
   useEffect(() => {
-    setDraft(q)
-    if (q === '') return
-    noterRecente(q)
+    setDraft(terme)
+    setModeIsbn(byIsbn)
+    // Les ISBN ne se retiennent pas : c'est une recherche exacte, faite une
+    // fois, sur un code qu'on a sous les yeux — pas un terme qu'on relance.
+    if (terme === '' || byIsbn) return
+    noterRecente(terme)
     setRecentes(lireRecentes())
-  }, [q])
+  }, [terme, byIsbn])
 
   const soumettre = (event: FormEvent) => {
     event.preventDefault()
     const valeur = draft.trim()
     if (valeur === '') return
-    setParams(valeur ? { q: valeur } : {})
+    setParams(modeIsbn ? { isbn: valeur } : { q: valeur })
   }
 
   const rayons = byIsbn ? (['book'] as const) : MEDIA_TYPES
 
   const requetes = useQueries({
     queries: rayons.map((type) => {
-      const critere = byIsbn ? { isbn: q } : { q }
+      const critere = byIsbn ? { isbn } : { q }
       return {
         queryKey: queryKeys.search(type, critere),
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           searchExternal({ type, ...critere }, null, signal),
-        enabled: q !== '',
+        enabled: terme !== '',
         // Une recherche externe coûte cher et bouge peu : inutile de la
         // relancer au moindre retour sur l'écran.
         staleTime: 5 * 60 * 1000,
@@ -105,9 +123,9 @@ export default function Search() {
   })
 
   const groupes = rayons.map((type, i) => ({ type, requete: requetes[i] }))
-  const enCours = groupes.some((g) => g.requete.isPending && q !== '')
+  const enCours = groupes.some((g) => g.requete.isPending && terme !== '')
   const total = groupes.reduce((n, g) => n + (g.requete.data?.items.length ?? 0), 0)
-  const aucunResultat = q !== '' && !enCours && total === 0
+  const aucunResultat = terme !== '' && !enCours && total === 0
 
   /*
     Ce que la recherche dit à voix haute.
@@ -126,12 +144,12 @@ export default function Search() {
   const derniere = useRef('')
 
   useEffect(() => {
-    if (q === '' || enCours) return
+    if (terme === '' || enCours) return
 
     const trouve =
       total === 0
-        ? `Aucun résultat pour ${q}.`
-        : `${total} résultat${total > 1 ? 's' : ''} pour ${q}.`
+        ? `Aucun résultat pour ${terme}.`
+        : `${total} résultat${total > 1 ? 's' : ''} pour ${terme}.`
     const pannes =
       muets > 0
         ? ` ${muets} source${muets > 1 ? 's' : ''} injoignable${muets > 1 ? 's' : ''}.`
@@ -142,7 +160,7 @@ export default function Search() {
     if (derniere.current === phrase) return
     derniere.current = phrase
     annoncer(phrase)
-  }, [q, enCours, total, muets, annoncer])
+  }, [terme, enCours, total, muets, annoncer])
 
   return (
     <div className={styles.page}>
@@ -155,8 +173,8 @@ export default function Search() {
             className={styles.input}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder={byIsbn ? '978…' : 'un titre, un auteur…'}
-            inputMode={byIsbn ? 'numeric' : 'search'}
+            placeholder={modeIsbn ? '978…' : 'un titre, un auteur…'}
+            inputMode={modeIsbn ? 'numeric' : 'search'}
             aria-label="Termes de recherche"
           />
           <button type="submit" className={styles.submit} disabled={draft.trim() === ''}>
@@ -170,8 +188,8 @@ export default function Search() {
           <label className={styles.isbnToggle}>
             <input
               type="checkbox"
-              checked={byIsbn}
-              onChange={(event) => setByIsbn(event.target.checked)}
+              checked={modeIsbn}
+              onChange={(event) => setModeIsbn(event.target.checked)}
             />
             Chercher un livre par ISBN
           </label>
@@ -194,7 +212,7 @@ export default function Search() {
         </div>
       </header>
 
-      {q === '' ? (
+      {terme === '' ? (
         <p className={styles.hint}>
           Les fiches viennent de sources extérieures — une par rayon. La première réponse peut
           demander quelques secondes.
@@ -216,7 +234,7 @@ export default function Search() {
             <div className={styles.vide}>
               <p className={styles.videEyebrow}>Rien au fonds</p>
               <h2 className={styles.videTitle}>
-                Personne du cercle n’a encore versé «&nbsp;{q}&nbsp;».
+                Personne du cercle n’a encore versé «&nbsp;{terme}&nbsp;».
               </h2>
               <p className={styles.videNote}>
                 Ce n’est pas une absence, c’est une place libre. Si vous l’avez traversée, vous êtes

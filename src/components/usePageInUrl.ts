@@ -46,8 +46,8 @@ export function usePageInUrl(): PageDansAdresse {
   const brut = Number(params.get('page'))
   const page = Number.isInteger(brut) && brut >= 1 ? Math.min(brut, PAGE_MAX) : 1
 
-  const avec = (numero: number): URLSearchParams => {
-    const suite = new URLSearchParams(params)
+  const avec = (base: URLSearchParams, numero: number): URLSearchParams => {
+    const suite = new URLSearchParams(base)
     if (numero > 1) suite.set('page', String(numero))
     else suite.delete('page')
     return suite
@@ -56,13 +56,17 @@ export function usePageInUrl(): PageDansAdresse {
   return {
     page,
     adresseDe: (numero) => {
-      const requete = avec(numero).toString()
+      const requete = avec(params, numero).toString()
       return requete ? `?${requete}` : window.location.pathname
     },
-    allerA: (numero) => setParams(avec(numero)),
+    // Forme fonctionnelle : depuis que les filtres vivent eux aussi dans
+    // l'adresse, deux écritures peuvent se suivre dans un même gestionnaire.
+    // Chacune fermée sur les paramètres de son rendu, la seconde écraserait la
+    // première ; en lisant l'état courant, elles se composent.
+    allerA: (numero) => setParams((courants) => avec(courants, numero)),
     remettreALaPremiere: () => {
       if (page === 1) return
-      setParams(avec(1), { replace: true })
+      setParams((courants) => avec(courants, 1), { replace: true })
     },
   }
 }

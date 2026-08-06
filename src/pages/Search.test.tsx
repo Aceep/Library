@@ -122,3 +122,42 @@ describe('Recherche — l’éventail sur les six rayons', () => {
     expect(screen.getByText(/une par rayon/)).toBeInTheDocument()
   })
 })
+
+/**
+ * Le mode ISBN était un `useState`, donc absent de l'adresse. Une recherche
+ * partagée rouvrait donc toujours en éventail — et un ISBN envoyé aux six
+ * rayons fait répondre 400 aux cinq qui n'en ont pas.
+ */
+describe('Recherche — l’adresse dit dans quel mode on cherche', () => {
+  beforeEach(() => {
+    searchExternal.mockReset()
+    searchExternal.mockResolvedValue({ items: [], next_cursor: null, total: 0 })
+    window.localStorage.clear()
+  })
+
+  it('n’interroge que les livres sur un lien ?isbn= partagé', async () => {
+    render('/recherche?isbn=9782070360024')
+
+    await waitFor(() => expect(searchExternal).toHaveBeenCalled())
+
+    const types = searchExternal.mock.calls.map((appel) => (appel[0] as { type: string }).type)
+    expect(types).toEqual(['book'])
+    expect(searchExternal.mock.calls[0][0]).toMatchObject({ isbn: '9782070360024' })
+  })
+
+  it('interroge bien les six rayons sur un ?q= ordinaire', async () => {
+    render('/recherche?q=stalker')
+
+    await waitFor(() => expect(searchExternal).toHaveBeenCalledTimes(6))
+    expect(searchExternal.mock.calls[0][0]).toMatchObject({ q: 'stalker' })
+  })
+
+  /** Une recherche exacte faite une fois sur un code qu'on a sous les yeux ne
+      se range pas parmi les termes qu'on relance. */
+  it('ne retient pas un ISBN dans les dernières recherches', async () => {
+    render('/recherche?isbn=9782070360024')
+
+    await waitFor(() => expect(searchExternal).toHaveBeenCalled())
+    expect(screen.queryByText('Dernières recherches')).not.toBeInTheDocument()
+  })
+})

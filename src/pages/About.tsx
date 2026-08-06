@@ -1,3 +1,4 @@
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './About.module.css'
 
 /**
@@ -18,6 +19,7 @@ import styles from './About.module.css'
  * bloc de disponibilité, sur la fiche.
  */
 export default function About() {
+  useDocumentTitle('D’où viennent ces fiches')
   return (
     <div className={styles.page}>
       <header className={styles.intro}>

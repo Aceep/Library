@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef } from 'react'
 import type { CSSProperties } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -9,15 +9,18 @@ import { useReference } from '../reference/ReferenceContext'
 import type { Account, LibraryItem, MediaType, StatusOption, TrackingStatus } from '../api/schema'
 import Cover from '../components/Cover'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import MemberChip from '../components/MemberChip'
 import Pagination from '../components/Pagination'
 import Reveal from '../components/Reveal'
+import { champ, useFiltersInUrl } from '../components/useFiltersInUrl'
 import { usePageInUrl } from '../components/usePageInUrl'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
 import { RAYONNAGES } from '../rayons'
 import type { Rayonnage } from '../rayons'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './TypeLibrary.module.css'
 
 /**
@@ -57,16 +60,41 @@ export default function TypeLibrary() {
 }
 
 function Library({ type }: { type: MediaType }) {
+  // Le haut de la mosaïque : c'est *elle* qu'on ramène sous les yeux en
+  // changeant de page, pas le haut du document — sans quoi on retraverserait
+  // l'en-tête du rayon à chaque fois.
+  const liste = useRef<HTMLUListElement>(null)
+  useDocumentTitle(typeLabelPlural(type))
   const { user } = useSession()
   const { statusesOf } = useReference()
-  const [status, setStatus] = useState<TrackingStatus | null>(null)
-  const [ownedOnly, setOwnedOnly] = useState(false)
-  const [favoritesOnly, setFavoritesOnly] = useState(false)
-  const [sort, setSort] = useState<LibrarySort>('added')
+  /*
+    Les filtres vivent dans l'adresse, comme la page.
+
+    Le domaine de `status` vient de la référence, et ce n'est pas un détail :
+    un `?status=doing` recopié sur un rayon qui n'a pas d'état intermédiaire
+    retombe sur « tout » au lieu d'interroger un statut que le back refuse.
+    C'est la règle « ce que le back refuse ne se propose pas », appliquée à la
+    barre d'adresse.
+
+    Le hook supprime `page` lui-même : deux écritures dans un même
+    gestionnaire, chacune fermée sur les paramètres de son rendu, se
+    recouvriraient.
+  */
+  const [filtres, poser] = useFiltersInUrl({
+    status: champ('', ['', ...statusesOf(type).map((s) => s.value)]),
+    possede: champ('', ['', '1']),
+    aime: champ('', ['', '1']),
+    sort: champ<LibrarySort>('added', ['added', 'title']),
+  })
+  const status = (filtres.status === '' ? null : filtres.status) as TrackingStatus | null
+  const ownedOnly = filtres.possede === '1'
+  const favoritesOnly = filtres.aime === '1'
+  const sort = filtres.sort
+
   // Le comportement de l'adresse est partagé avec la bibliothèque d'un membre :
   // deux listes qui se ressemblent doivent se comporter pareil, et c'est plus
   // solide de le faire exécuter le même code que de le relire.
-  const { page, adresseDe, allerA, remettreALaPremiere } = usePageInUrl()
+  const { page, adresseDe, allerA } = usePageInUrl()
 
   const rayon = RAYONNAGES[type]
 
@@ -142,8 +170,7 @@ function Library({ type }: { type: MediaType }) {
                   className={styles.chip}
                   aria-pressed={status === filter.value}
                   onClick={() => {
-                    setStatus(filter.value)
-                    remettreALaPremiere()
+                    poser({ status: filter.value ?? '' })
                   }}
                 >
                   {filter.label}
@@ -156,8 +183,7 @@ function Library({ type }: { type: MediaType }) {
                 type="checkbox"
                 checked={ownedOnly}
                 onChange={(event) => {
-                  setOwnedOnly(event.target.checked)
-                  remettreALaPremiere()
+                  poser({ possede: event.target.checked ? '1' : '' })
                 }}
               />
               Possédés seulement
@@ -168,8 +194,7 @@ function Library({ type }: { type: MediaType }) {
                 type="checkbox"
                 checked={favoritesOnly}
                 onChange={(event) => {
-                  setFavoritesOnly(event.target.checked)
-                  remettreALaPremiere()
+                  poser({ aime: event.target.checked ? '1' : '' })
                 }}
               />
               Mes coups de cœur
@@ -180,8 +205,7 @@ function Library({ type }: { type: MediaType }) {
               <select
                 value={sort}
                 onChange={(event) => {
-                  setSort(event.target.value as LibrarySort)
-                  remettreALaPremiere()
+                  poser({ sort: event.target.value as LibrarySort })
                 }}
               >
                 {SORTS.map((option) => (
@@ -194,7 +218,7 @@ function Library({ type }: { type: MediaType }) {
           </div>
 
           {isPending ? (
-            <p className={styles.loading}>Chargement…</p>
+            <LoadingNotice />
           ) : error ? (
             <ErrorNotice error={error} onRetry={() => void refetch()} />
           ) : items.length === 0 ? (
@@ -238,7 +262,7 @@ function Library({ type }: { type: MediaType }) {
                 saute pas, et un lecteur d'écran doit savoir qu'elles ne sont plus
                 à jour.
               */}
-              <ul className={styles.shelf} aria-busy={isFetching}>
+              <ul ref={liste} className={styles.shelf} aria-busy={isFetching}>
                 {items.map((item, rang) => (
                   <Tuile
                     key={item.id}
@@ -263,6 +287,7 @@ function Library({ type }: { type: MediaType }) {
                   hrefOf={adresseDe}
                   onNavigate={allerA}
                   label={`Pages du rayon ${typeLabelPlural(type).toLowerCase()}`}
+                  ancre={liste}
                 />
               ) : (
                 <p className={styles.end}>
@@ -307,29 +332,45 @@ function EnCours({
   const aUnEnCours = statusesOf(type).some((statut) => statut.value === 'doing')
 
   const filters: LibraryFilters = { type, status: 'doing', limit: 3 }
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: queryKeys.libraryPage(filters, 1),
     queryFn: ({ signal }) => fetchLibraryPage(filters, 1, signal),
     enabled: aUnEnCours,
   })
 
   const items = data?.items ?? []
-  // Rien en cours n'est pas un incident : la section disparaît, elle n'affiche
-  // pas un vide décoré.
-  if (items.length === 0) return null
 
   // Le titre se compose en deux voix — le premier mot droit, la suite en
   // italique — comme tous les titres de section de la direction.
   const [premier, ...suite] = titre.split(' ')
+  const entete = (
+    <div className={styles.sectionHead}>
+      <h2 className={styles.sectionTitle}>
+        {premier} <em>{suite.join(' ')}</em>
+      </h2>
+      <span className={styles.sectionNote}>ce que je traverse</span>
+    </div>
+  )
+
+  // Une panne se dit. Sans cette branche, la section disparaissait comme si de
+  // rien n'était et « on n'a pas pu regarder » se lisait « tu n'as rien en
+  // cours » — la seule des deux phrases qu'on ne peut pas laisser croire.
+  if (error) {
+    return (
+      <Reveal>
+        {entete}
+        <p className={styles.panne}>Ce que tu traverses n’a pas pu être chargé.</p>
+      </Reveal>
+    )
+  }
+
+  // Rien en cours n'est pas un incident : la section disparaît, elle n'affiche
+  // pas un vide décoré.
+  if (items.length === 0) return null
 
   return (
     <Reveal>
-      <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>
-          {premier} <em>{suite.join(' ')}</em>
-        </h2>
-        <span className={styles.sectionNote}>ce que je traverse</span>
-      </div>
+      {entete}
       <ul className={styles.encours}>
         {items.map((item) => (
           <li key={item.id} className={styles.encoursTile}>

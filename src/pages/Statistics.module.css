@@ -224,11 +224,6 @@
   max-width: var(--measure);
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}
-
 /* ---- Comparaison ---- */
 
 .picker {

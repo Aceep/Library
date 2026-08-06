@@ -129,6 +129,11 @@ jamais par comparaison de chaîne sur le message.
   confondre rend l'étiquette illisible en jour.
   Attention : `--gel` a une **valeur par défaut** au `:root`. Un `var(--gel, …)` ne se
   replie donc jamais — c'est sur la présence de `data-media-type` qu'on sélectionne.
+- **Un `var(--x, repli)` sur un jeton déclaré au `:root` est du code mort**, et c'est vrai
+  de tous, pas seulement de `--gel` : `--identity` vaut `currentColor` par défaut, si bien
+  qu'un `var(--identity, var(--rule))` donnait une bordure `currentColor` à un membre sans
+  couleur. Un repli ne se déclenche que si la variable n'est **nulle part** déclarée —
+  vérifier dans `tokens.css` avant d'en écrire un, et sélectionner sur l'attribut sinon.
 - **Un rayon est un aplat à texte quasi noir ; un membre est une pastille bordée à sa
   propre encre.** C'est une différence de *forme*, pas de teinte, et c'est elle qui garde
   les deux systèmes lisibles sur une même ligne. Ne jamais l'inverser.

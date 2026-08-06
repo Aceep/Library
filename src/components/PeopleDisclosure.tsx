@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { Account, Page } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
 import IdentityDot from './IdentityDot'
+import LoadingNotice from './LoadingNotice'
 import styles from './PeopleDisclosure.module.css'
 
 /** Une personne, et éventuellement ce qu'elle fait de l'œuvre. */
@@ -79,7 +80,7 @@ export default function PeopleDisclosure({
           <p className={styles.panelTitle}>{panelTitle}</p>
 
           {people.isPending ? (
-            <p className={styles.quiet}>Chargement…</p>
+            <LoadingNotice />
           ) : people.error ? (
             <ErrorNotice error={people.error} onRetry={() => void people.refetch()} />
           ) : items.length === 0 ? (

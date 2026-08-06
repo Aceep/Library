@@ -6,7 +6,9 @@ import { queryKeys } from '../api/keys'
 import { useSession } from '../session/SessionContext'
 import BadgeMedal from '../components/BadgeMedal'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Badges.module.css'
 
 const formatDate = (iso: string) =>
@@ -26,6 +28,7 @@ const formatDate = (iso: string) =>
  * quand même du bon côté le jour où il existera.
  */
 export default function Badges() {
+  useDocumentTitle('Badges')
   const { user, isAdmin } = useSession()
 
   const profil = useQuery({
@@ -41,10 +44,35 @@ export default function Badges() {
   // Quatre gardes plutôt que deux : c'est ce qui permet au compilateur de
   // conclure que les deux réponses sont là, et à chaque panne de proposer le
   // rappel de la requête qui a échoué.
-  if (profil.isPending) return <p className={styles.loading}>Chargement…</p>
-  if (profil.error) return <ErrorNotice error={profil.error} onRetry={() => void profil.refetch()} />
-  if (quetes.isPending) return <p className={styles.loading}>Chargement…</p>
-  if (quetes.error) return <ErrorNotice error={quetes.error} onRetry={() => void quetes.refetch()} />
+  /*
+    Le cadre ne dépend d'aucune requête : il est là dès la première peinture.
+    Avant, ces écrans se réduisaient à une ligne de texte pendant le chargement
+    — l'en-tête, le repère de contenu et la position de défilement partaient
+    avec, pour revenir une fraction de seconde plus tard.
+  */
+  const enAttente = profil.isPending || quetes.isPending
+  const panne = profil.error ?? quetes.error
+  if (enAttente || panne) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.intro}>
+          <p className={styles.eyebrow}>Mes badges</p>
+        </header>
+        {panne ? (
+          <ErrorNotice
+            error={panne}
+            onRetry={() => void (profil.error ? profil.refetch() : quetes.refetch())}
+          />
+        ) : (
+          <LoadingNotice />
+        )}
+      </div>
+    )
+  }
+  // Inatteignable — ni en attente, ni en panne — mais c'est ce qui permet au
+  // compilateur de conclure que les deux réponses sont là : la condition
+  // ci-dessus mêle quatre états et il ne sait pas la démêler.
+  if (!profil.data || !quetes.data) return null
 
   const obtenus: AwardedBadge[] = profil.data.badges
   const acquis = new Set(obtenus.map((badge) => badge.id))

@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createInvitation, fetchInvitations, revokeInvitation } from '../api/endpoints'
 import type { Invitation, InvitationStatus } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
+import AccessDenied from '../components/AccessDenied'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './AdminInvitations.module.css'
 
 const FILTERS: Array<{ value: InvitationStatus | null; label: string }> = [
@@ -31,10 +34,14 @@ const STATUS_LABEL: Record<InvitationStatus, string> = {
 }
 
 export default function AdminInvitations() {
+  useDocumentTitle('Invitations')
   const { isAdmin } = useSession()
   // Le back revérifie de son côté (403) : cette garde évite d'afficher un
   // écran qui ne répondrait rien, elle ne tient pas lieu de sécurité.
-  if (!isAdmin) return <Navigate to="/" replace />
+  //
+  // Elle redirigeait vers l'accueil sans un mot — un refus et un lien cassé se
+  // ressemblaient trait pour trait. On le dit.
+  if (!isAdmin) return <AccessDenied />
   return <Panel />
 }
 
@@ -108,7 +115,7 @@ function Panel() {
       </div>
 
       {list.isPending ? (
-        <p className={styles.quiet}>Chargement…</p>
+        <LoadingNotice />
       ) : list.error ? (
         <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />
       ) : items.length === 0 ? (

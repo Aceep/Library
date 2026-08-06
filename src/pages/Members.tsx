@@ -1,13 +1,15 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchUsers } from '../api/endpoints'
 import type { UserSummary } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
 import { useSession } from '../session/SessionContext'
+import { champ, useFiltersInUrl } from '../components/useFiltersInUrl'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Members.module.css'
 
 type Sort = 'pseudo' | 'joined'
@@ -18,11 +20,16 @@ const SORTS: Array<{ value: Sort; label: string }> = [
 ]
 
 export default function Members() {
+  useDocumentTitle('Le cercle')
   const { user } = useSession()
-  const [sort, setSort] = useState<Sort>('pseudo')
-  const [includeDeactivated, setIncludeDeactivated] = useState(false)
+  // Tri et périmètre vivent dans l'adresse : une liste triée par arrivée se
+  // partage, et un rechargement ne remet plus tout à zéro.
+  const [filtres, poser] = useFiltersInUrl({
+    sort: champ<Sort>('pseudo', ['pseudo', 'joined']),
+    desactives: champ('', ['', '1']),
+  })
 
-  const params = { sort, includeDeactivated }
+  const params = { sort: filtres.sort, includeDeactivated: filtres.desactives === '1' }
   const { data, isPending, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: queryKeys.users(params),
@@ -48,7 +55,10 @@ export default function Members() {
       <div className={styles.filters}>
         <label className={styles.sort}>
           Trier par
-          <select value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
+          <select
+            value={filtres.sort}
+            onChange={(event) => poser({ sort: event.target.value as Sort })}
+          >
             {SORTS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -62,15 +72,15 @@ export default function Members() {
         <label className={styles.toggle}>
           <input
             type="checkbox"
-            checked={includeDeactivated}
-            onChange={(event) => setIncludeDeactivated(event.target.checked)}
+            checked={filtres.desactives === '1'}
+            onChange={(event) => poser({ desactives: event.target.checked ? '1' : '' })}
           />
           Montrer les comptes désactivés
         </label>
       </div>
 
       {isPending ? (
-        <p className={styles.loading}>Chargement…</p>
+        <LoadingNotice />
       ) : error ? (
         <ErrorNotice error={error} onRetry={() => void refetch()} />
       ) : items.length === 0 ? (

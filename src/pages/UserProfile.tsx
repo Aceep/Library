@@ -8,6 +8,7 @@ import { queryKeys } from '../api/keys'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import type { MediaType, UserDetail } from '../api/schema'
 import BadgeMedal from '../components/BadgeMedal'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
 import MemberChip from '../components/MemberChip'
@@ -15,6 +16,7 @@ import MemberLibrary from '../components/MemberLibrary'
 import Reveal from '../components/Reveal'
 import Showcase from '../components/Showcase'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './UserProfile.module.css'
 
 type Tab = 'following' | 'followers'
@@ -35,8 +37,24 @@ function Profile({ id }: { id: string }) {
     queryFn: ({ signal }) => fetchUser(id, signal),
   })
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
-  if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
+  useDocumentTitle(data?.user.pseudo ?? null)
+
+  /*
+    Le cadre ne dépend d'aucune requête : il est là dès la première peinture.
+    Avant, ces écrans se réduisaient à une ligne de texte pendant le chargement
+    — l'en-tête, le repère de contenu et la position de défilement partaient
+    avec, pour revenir une fraction de seconde plus tard.
+  */
+  if (isPending || error) {
+    return (
+      <div className={styles.page}>
+        <p className={styles.breadcrumb}>
+          <Link to="/membres">Les membres</Link>
+        </p>
+        {isPending ? <LoadingNotice /> : <ErrorNotice error={error} onRetry={() => void refetch()} />}
+      </div>
+    )
+  }
 
   const { user } = data
 
@@ -225,10 +243,32 @@ function Releve({
   // Le tableau de bord d'un membre est public, comme le reste du profil. Il
   // arrive après le profil et sans le bloquer : le relevé se dessine quand il
   // est là, le reste de l'écran n'attend pas.
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: queryKeys.stats(userId),
     queryFn: ({ signal }) => fetchStats(userId, null, signal),
   })
+
+  /*
+    Le relevé se tait quand il n'a pas pu être lu.
+
+    Sans cette branche, `dashboard` restait `null` et chaque `Figure` affichait
+    son tiret : « note moyenne — », « terminées — ». Or le tiret dit *rien de
+    noté*, pas *rien de su*. C'est exactement la distinction que le reste du
+    dépôt défend (« zéro d'ignorance » contre « zéro d'inaction »), et la
+    laisser filer ici ferait mentir le profil sur ce que le membre a fait.
+  */
+  if (error) {
+    return (
+      <Reveal className={styles.releve}>
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle}>
+            Le <em>relevé</em>
+          </h2>
+        </div>
+        <p className={styles.panne}>Le relevé n’a pas pu être chargé.</p>
+      </Reveal>
+    )
+  }
 
   const dashboard = data?.dashboard ?? null
   const notes = dashboard?.highlights.ratings ?? null
@@ -362,7 +402,7 @@ function RelationList({ userId, tab, meId }: { userId: string; tab: Tab; meId: s
         : fetchFollowers(userId, null, signal),
   })
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
+  if (isPending) return <LoadingNotice />
   if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
 
   if (data.items.length === 0) {

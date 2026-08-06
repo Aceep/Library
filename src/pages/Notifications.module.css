@@ -172,11 +172,6 @@ a.rowLink:hover .rowLabel {
   flex: none;
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}
-
 .more {
   margin-top: var(--space-5);
 }

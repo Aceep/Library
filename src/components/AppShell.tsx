@@ -1,6 +1,8 @@
+import { useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { useThemeMode } from '../theme/useThemeMode'
+import { useNewScreen } from './useNewScreen'
 import AppFooter from './AppFooter'
 import BackupAlert from './BackupAlert'
 import NotificationsLink from './NotificationsLink'
@@ -70,9 +72,23 @@ function SearchLink() {
  */
 export default function AppShell() {
   const { pathname } = useLocation()
+  const contenu = useRef<HTMLElement>(null)
+  useNewScreen(contenu)
 
   return (
     <div className={styles.shell}>
+      {/*
+        Le premier nœud focalisable du document. Un vrai lien de fragment, sans
+        JavaScript : c'est `tabIndex={-1}` sur la cible qui fait que le focus y
+        atterrit vraiment, pas un gestionnaire de clic.
+
+        Sans lui, atteindre le contenu au clavier demandait de traverser les
+        huit destinations du bandeau, à chaque écran.
+      */}
+      <a href="#contenu" className={styles.skip}>
+        Aller au contenu
+      </a>
+
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <NavLink to="/" className={styles.brand}>
@@ -125,7 +141,13 @@ export default function AppShell() {
         1360px ne peut pas rendre. Chaque section de l'accueil reprend son
         conteneur — la contrainte descend d'un cran, elle ne disparaît pas.
       */}
-      <main className={styles.main} data-bleed={pathname === '/' ? '' : undefined}>
+      <main
+        id="contenu"
+        ref={contenu}
+        tabIndex={-1}
+        className={styles.main}
+        data-bleed={pathname === '/' ? '' : undefined}
+      >
         {/* En tête du contenu et non dans le bandeau : une alerte de sauvegarde
             se lit une fois et demande une action, elle n'accompagne pas la
             navigation. Elle ne s'affiche qu'aux administrateurs, et qu'en cas

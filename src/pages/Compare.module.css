@@ -4,11 +4,6 @@
   gap: var(--space-7);
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}
-
 .intro {
   border-bottom: 1px solid var(--rule-soft);
   padding-bottom: var(--space-4);

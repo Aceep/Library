@@ -1,19 +1,22 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCompare, fetchFollowing } from '../api/endpoints'
 import type { CompareResponse } from '../api/schema'
 import Cover from '../components/Cover'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
+import { useSearchParams } from 'react-router-dom'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Compare.module.css'
 
 type BothFinished = CompareResponse['both_finished'][number]
 type Loved = CompareResponse['loved_by_them'][number]
 
 export default function Compare() {
+  useDocumentTitle('Comparer')
   const { user } = useSession()
 
   // `/compare` exige désormais un `user_id` : il n'y a plus de partenaire
@@ -24,7 +27,19 @@ export default function Compare() {
     queryFn: ({ signal }) => fetchFollowing(user.id, null, signal),
   })
 
-  const [withId, setWithId] = useState<string | null>(null)
+  /*
+    Avec qui l'on compare vit dans l'adresse.
+
+    Le domaine est une liste d'identifiants, pas un ensemble fixe : le hook à
+    domaine ne s'applique pas, mais la doctrine si — on remplace au lieu
+    d'empiler (une comparaison n'est pas un lieu où l'on revient), et le défaut
+    ne s'écrit pas. Ce que ça change vraiment : `/comparer` partagé montrait à
+    chacun une comparaison différente, puisque le choix retombait sur le
+    premier de *sa* liste d'abonnements.
+  */
+  const [params, setParams] = useSearchParams()
+  const withId = params.get('avec')
+  const setWithId = (id: string) => setParams({ avec: id }, { replace: true })
   const candidates = following.data?.items ?? []
   const targetId = withId ?? candidates[0]?.user.id ?? null
 
@@ -34,9 +49,23 @@ export default function Compare() {
     enabled: targetId !== null,
   })
 
-  if (following.isPending) return <p className={styles.loading}>Chargement…</p>
-  if (following.error) {
-    return <ErrorNotice error={following.error} onRetry={() => void following.refetch()} />
+  /*
+    Le cadre ne dépend d'aucune requête : il est là dès la première peinture.
+    Avant, ces écrans se réduisaient à une ligne de texte pendant le chargement
+    — l'en-tête, le repère de contenu et la position de défilement partaient
+    avec, pour revenir une fraction de seconde plus tard.
+  */
+  if (following.isPending || following.error) {
+    return (
+      <div className={styles.page}>
+        <Intro />
+        {following.isPending ? (
+          <LoadingNotice />
+        ) : (
+          <ErrorNotice error={following.error} onRetry={() => void following.refetch()} />
+        )}
+      </div>
+    )
   }
 
   // Ne suivre personne n'est pas une erreur : c'est un état de départ.
@@ -74,7 +103,7 @@ export default function Compare() {
       <div className={styles.page}>
         <Intro />
         {picker}
-        <p className={styles.loading}>Chargement…</p>
+        <LoadingNotice />
       </div>
     )
   }

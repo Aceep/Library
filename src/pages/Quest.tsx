@@ -15,9 +15,11 @@ import { queryKeys } from '../api/keys'
 import { useSession } from '../session/SessionContext'
 import Cover from '../components/Cover'
 import BadgeMedal from '../components/BadgeMedal'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import IdentityDot from '../components/IdentityDot'
 import QuestProgress from '../components/QuestProgress'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Quest.module.css'
 
 const formatDate = (iso: string) =>
@@ -36,8 +38,28 @@ function QuestDetail({ id }: { id: string }) {
     queryFn: ({ signal }) => fetchQuest(id, signal),
   })
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
-  if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
+  useDocumentTitle(data?.quest.title ?? null)
+
+  /*
+    Le cadre ne dépend d'aucune requête : il est là dès la première peinture.
+    Avant, ces écrans se réduisaient à une ligne de texte pendant le chargement
+    — l'en-tête, le repère de contenu et la position de défilement partaient
+    avec, pour revenir une fraction de seconde plus tard.
+  */
+  if (isPending || error) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.intro}>
+          <p className={styles.eyebrow}>
+            <Link to="/quetes" className={styles.back}>
+              Quêtes
+            </Link>
+          </p>
+        </header>
+        {isPending ? <LoadingNotice /> : <ErrorNotice error={error} onRetry={() => void refetch()} />}
+      </div>
+    )
+  }
 
   const { quest } = data
 
@@ -364,7 +386,7 @@ function AjoutOeuvre({ questId }: { questId: string }) {
         </button>
       </form>
 
-      {recherche.isFetching ? <p className={styles.loading}>Interrogation de la source…</p> : null}
+      {recherche.isFetching ? <LoadingNotice label="Interrogation de la source…" /> : null}
       {recherche.error ? <ErrorNotice error={recherche.error} /> : null}
       {ajouter.error ? <ErrorNotice error={ajouter.error} /> : null}
 

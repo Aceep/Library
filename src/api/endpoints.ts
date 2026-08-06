@@ -62,7 +62,7 @@ export const fetchSession = async (): Promise<Session | null> => {
  * Écran d'accueil. Volontairement borné côté back — trois en-cours par type,
  * fil des comptes suivis sur 30 jours et 10 entrées — et donc jamais paginé.
  */
-export const fetchHome = () => api.get<HomeResponse>('/home')
+export const fetchHome = (signal?: AbortSignal) => api.get<HomeResponse>('/home', undefined, signal)
 
 export type LibrarySort = 'added' | 'title'
 

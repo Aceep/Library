@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
@@ -9,8 +9,10 @@ import type { MediaType, SearchResult } from '../api/schema'
 import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
 import Reveal from '../components/Reveal'
+import { useAnnounce } from '../components/Announcer'
 import { RAYONNAGES } from '../rayons'
 import { queryKeys } from '../api/keys'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Search.module.css'
 
 /** Combien de recherches passées la page garde sous la main. */
@@ -63,37 +65,56 @@ const noterRecente = (q: string) => {
  */
 export default function Search() {
   const [params, setParams] = useSearchParams()
+
+  /*
+    Deux clés exclusives, `?q=` **ou** `?isbn=`, et le mode se **lit** dans
+    l'adresse au lieu d'être un état local.
+
+    Le mode ISBN était un `useState`, donc absent de l'adresse : partager
+    `?q=9782070360024` rouvrait la recherche en éventail sur les six rayons,
+    dont cinq répondent 400 sur un ISBN. Ce n'est pas un filtre avec une valeur
+    par défaut — c'est *quelle clé est présente*, et l'adresse est le seul
+    endroit où cette question a une réponse partageable.
+  */
   const q = params.get('q')?.trim() ?? ''
-  const [draft, setDraft] = useState(q)
-  // L'ISBN est une recherche exacte, et seuls les livres en ont un : elle sort
-  // de l'éventail plutôt que de lancer cinq requêtes qui répondront 400.
-  const [byIsbn, setByIsbn] = useState(false)
+  const isbn = params.get('isbn')?.trim() ?? ''
+  const byIsbn = isbn !== ''
+  const terme = byIsbn ? isbn : q
+
+  useDocumentTitle(terme === '' ? 'Recherche' : `Recherche : ${terme}`)
+  const [draft, setDraft] = useState(terme)
+  // Ce que **cochera** la prochaine soumission : l'affichage suit l'adresse,
+  // la case suit la main.
+  const [modeIsbn, setModeIsbn] = useState(byIsbn)
   const [recentes, setRecentes] = useState<string[]>(lireRecentes)
 
   useEffect(() => {
-    setDraft(q)
-    if (q === '') return
-    noterRecente(q)
+    setDraft(terme)
+    setModeIsbn(byIsbn)
+    // Les ISBN ne se retiennent pas : c'est une recherche exacte, faite une
+    // fois, sur un code qu'on a sous les yeux — pas un terme qu'on relance.
+    if (terme === '' || byIsbn) return
+    noterRecente(terme)
     setRecentes(lireRecentes())
-  }, [q])
+  }, [terme, byIsbn])
 
   const soumettre = (event: FormEvent) => {
     event.preventDefault()
     const valeur = draft.trim()
     if (valeur === '') return
-    setParams(valeur ? { q: valeur } : {})
+    setParams(modeIsbn ? { isbn: valeur } : { q: valeur })
   }
 
   const rayons = byIsbn ? (['book'] as const) : MEDIA_TYPES
 
   const requetes = useQueries({
     queries: rayons.map((type) => {
-      const critere = byIsbn ? { isbn: q } : { q }
+      const critere = byIsbn ? { isbn } : { q }
       return {
         queryKey: queryKeys.search(type, critere),
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           searchExternal({ type, ...critere }, null, signal),
-        enabled: q !== '',
+        enabled: terme !== '',
         // Une recherche externe coûte cher et bouge peu : inutile de la
         // relancer au moindre retour sur l'écran.
         staleTime: 5 * 60 * 1000,
@@ -102,9 +123,44 @@ export default function Search() {
   })
 
   const groupes = rayons.map((type, i) => ({ type, requete: requetes[i] }))
-  const enCours = groupes.some((g) => g.requete.isPending && q !== '')
+  const enCours = groupes.some((g) => g.requete.isPending && terme !== '')
   const total = groupes.reduce((n, g) => n + (g.requete.data?.items.length ?? 0), 0)
-  const aucunResultat = q !== '' && !enCours && total === 0
+  const aucunResultat = terme !== '' && !enCours && total === 0
+
+  /*
+    Ce que la recherche dit à voix haute.
+
+    **Une** phrase, et seulement quand les six rayons sont revenus. L'écran a
+    déjà pris cette décision pour son état vide — « sans quoi il clignoterait
+    entre deux réponses » — et l'oreille mérite la même loi : six annonces dont
+    l'ordre dépendrait de la latence de TMDB seraient un brouhaha.
+
+    Elle compte les sources muettes en plus des résultats : une source
+    injoignable n'est pas une absence d'œuvre. L'écran le dit à l'œil depuis
+    toujours, il fallait aussi le dire à l'oreille.
+  */
+  const annoncer = useAnnounce()
+  const muets = groupes.filter((g) => g.requete.error).length
+  const derniere = useRef('')
+
+  useEffect(() => {
+    if (terme === '' || enCours) return
+
+    const trouve =
+      total === 0
+        ? `Aucun résultat pour ${terme}.`
+        : `${total} résultat${total > 1 ? 's' : ''} pour ${terme}.`
+    const pannes =
+      muets > 0
+        ? ` ${muets} source${muets > 1 ? 's' : ''} injoignable${muets > 1 ? 's' : ''}.`
+        : ''
+    const phrase = trouve + pannes
+
+    // Revenir sur l'écran sert le même cache et rejouerait la même phrase.
+    if (derniere.current === phrase) return
+    derniere.current = phrase
+    annoncer(phrase)
+  }, [terme, enCours, total, muets, annoncer])
 
   return (
     <div className={styles.page}>
@@ -117,8 +173,8 @@ export default function Search() {
             className={styles.input}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder={byIsbn ? '978…' : 'un titre, un auteur…'}
-            inputMode={byIsbn ? 'numeric' : 'search'}
+            placeholder={modeIsbn ? '978…' : 'un titre, un auteur…'}
+            inputMode={modeIsbn ? 'numeric' : 'search'}
             aria-label="Termes de recherche"
           />
           <button type="submit" className={styles.submit} disabled={draft.trim() === ''}>
@@ -132,8 +188,8 @@ export default function Search() {
           <label className={styles.isbnToggle}>
             <input
               type="checkbox"
-              checked={byIsbn}
-              onChange={(event) => setByIsbn(event.target.checked)}
+              checked={modeIsbn}
+              onChange={(event) => setModeIsbn(event.target.checked)}
             />
             Chercher un livre par ISBN
           </label>
@@ -156,7 +212,7 @@ export default function Search() {
         </div>
       </header>
 
-      {q === '' ? (
+      {terme === '' ? (
         <p className={styles.hint}>
           Les fiches viennent de sources extérieures — une par rayon. La première réponse peut
           demander quelques secondes.
@@ -178,7 +234,7 @@ export default function Search() {
             <div className={styles.vide}>
               <p className={styles.videEyebrow}>Rien au fonds</p>
               <h2 className={styles.videTitle}>
-                Personne du cercle n’a encore versé «&nbsp;{q}&nbsp;».
+                Personne du cercle n’a encore versé «&nbsp;{terme}&nbsp;».
               </h2>
               <p className={styles.videNote}>
                 Ce n’est pas une absence, c’est une place libre. Si vous l’avez traversée, vous êtes

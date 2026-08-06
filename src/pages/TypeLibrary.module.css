@@ -121,6 +121,23 @@
   text-align: right;
 }
 
+/**
+ * Un bloc secondaire qui n'a pas pu se charger le dit, et le reste de l'écran
+ * continue de servir. Même forme que la source muette de la recherche — un
+ * filet à gauche, la voix en italique : c'est le même propos, « je n'ai pas
+ * pu regarder », qui ne doit jamais se lire « il n'y a rien ».
+ */
+.panne {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--voice);
+  border-left: 2px solid var(--rule-soft);
+  padding-left: var(--s-4);
+  margin-top: var(--s-4);
+  max-width: 60ch;
+}
+
 /* ---- En cours ---- */
 
 .encours {
@@ -306,6 +323,9 @@
   grid-template-columns: repeat(var(--rayon-cols), minmax(0, 1fr));
   grid-auto-rows: var(--rayon-row);
   gap: var(--s-5);
+  /* La mosaïque est l'ancre du changement de page : sans cette marge, le
+     bandeau collant recouvrirait sa première rangée à l'arrivée. */
+  scroll-margin-top: calc(var(--masthead-h) + var(--s-4));
 }
 
 .tile,
@@ -509,16 +529,6 @@
   font-size: 16px;
   color: var(--muted);
   margin-top: var(--s-2);
-}
-
-/* ---- Pagination et vides ---- */
-
-.loading {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .end {

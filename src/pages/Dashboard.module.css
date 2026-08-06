@@ -16,17 +16,6 @@
   min-height: 100vh;
 }
 
-.loading {
-  max-width: var(--max-content);
-  margin: 0 auto;
-  padding: var(--s-8) var(--page-margin);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 /* Le faisceau : décoratif, sous tout, et transparent aux clics. */
 .beam {
   position: absolute;
@@ -603,7 +592,8 @@
 .tuileFiletPlein {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--identity, var(--ink-2));
+  /* Repli mort : `--identity` est déclaré au `:root`. */
+  background: var(--identity);
 }
 
 .tuileSansMesure {

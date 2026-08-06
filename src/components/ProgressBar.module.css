@@ -5,6 +5,12 @@
   min-width: 0;
 }
 
+/* Demandé par `grow` : la barre prend la place restante de la rangée qui
+   l'accueille. C'est au composant de l'offrir, pas à l'écran de l'arracher. */
+.grow {
+  flex: 1;
+}
+
 /* « Barre 2px, jamais arrondie » — la progression est un filet, pas une gélule. */
 .track {
   flex: 1;

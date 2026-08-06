@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchMemberLibraryPage } from '../api/endpoints'
@@ -9,7 +9,9 @@ import type { Account, MediaType, TrackingStatus } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
 import MediaCard from './MediaCard'
 import Pagination from './Pagination'
+import { champ, useFiltersInUrl } from './useFiltersInUrl'
 import { usePageInUrl } from './usePageInUrl'
+import LoadingNotice from './LoadingNotice'
 import styles from './MemberLibrary.module.css'
 
 const STATUS_FILTERS: Array<{ value: TrackingStatus | null; label: string }> = [
@@ -48,15 +50,26 @@ export default function MemberLibrary({
   me: Account
   trackedCount: number
 }) {
-  const [type, setType] = useState<MediaType | null>(null)
-  const [status, setStatus] = useState<TrackingStatus | null>(null)
-  const [favoriteOnly, setFavoriteOnly] = useState(false)
-  // Le défaut est celui de l'API, et il n'est pas le même qu'en rayon : on
-  // vient ici voir ce qu'il a préféré, pas ce qu'il vient d'ajouter.
-  const [sort, setSort] = useState<MemberLibrarySort>('rating')
-  // Le même hook que le rayon d'un type : deux listes qui se ressemblent
-  // doivent se comporter pareil, et le partage vaut mieux que la relecture.
-  const { page, adresseDe, allerA, remettreALaPremiere } = usePageInUrl()
+  // Le haut de la grille : c'est elle qu'on ramène sous les yeux en changeant
+  // de page, pas le haut du profil.
+  const liste = useRef<HTMLUListElement>(null)
+  // Les mêmes hooks que le rayon d'un type — pour les filtres comme pour la
+  // page : deux listes qui se ressemblent doivent se comporter pareil, et le
+  // partage vaut mieux que la relecture.
+  const [filtres, poser] = useFiltersInUrl({
+    type: champ('', ['', ...MEDIA_TYPES]),
+    status: champ('', ['', 'todo', 'doing', 'done']),
+    aime: champ('', ['', '1']),
+    // Le défaut est celui de l'API, et il n'est pas le même qu'en rayon : on
+    // vient ici voir ce qu'il a préféré, pas ce qu'il vient d'ajouter.
+    sort: champ<MemberLibrarySort>('rating', ['rating', 'added', 'title']),
+  })
+  const type = (filtres.type === '' ? null : filtres.type) as MediaType | null
+  const status = (filtres.status === '' ? null : filtres.status) as TrackingStatus | null
+  const favoriteOnly = filtres.aime === '1'
+  const sort = filtres.sort
+
+  const { page, adresseDe, allerA } = usePageInUrl()
 
   const filters: MemberLibraryFilters = {
     type: type ?? undefined,
@@ -100,10 +113,7 @@ export default function MemberLibrary({
             type="button"
             className={styles.chip}
             aria-pressed={type === null}
-            onClick={() => {
-              setType(null)
-              remettreALaPremiere()
-            }}
+            onClick={() => poser({ type: '' })}
           >
             Tout
           </button>
@@ -113,10 +123,7 @@ export default function MemberLibrary({
               type="button"
               className={styles.chip}
               aria-pressed={type === value}
-              onClick={() => {
-                setType(value)
-                remettreALaPremiere()
-              }}
+              onClick={() => poser({ type: value })}
             >
               {typeLabelPlural(value)}
             </button>
@@ -134,10 +141,7 @@ export default function MemberLibrary({
               type="button"
               className={styles.chip}
               aria-pressed={status === filter.value}
-              onClick={() => {
-                setStatus(filter.value)
-                remettreALaPremiere()
-              }}
+              onClick={() => poser({ status: filter.value ?? '' })}
             >
               {filter.label}
             </button>
@@ -148,10 +152,7 @@ export default function MemberLibrary({
           <input
             type="checkbox"
             checked={favoriteOnly}
-            onChange={(event) => {
-              setFavoriteOnly(event.target.checked)
-              remettreALaPremiere()
-            }}
+            onChange={(event) => poser({ aime: event.target.checked ? '1' : '' })}
           />
           {isMe ? 'Mes coups de cœur' : 'Ses coups de cœur'}
         </label>
@@ -160,10 +161,7 @@ export default function MemberLibrary({
           Trier par
           <select
             value={sort}
-            onChange={(event) => {
-              setSort(event.target.value as MemberLibrarySort)
-              remettreALaPremiere()
-            }}
+            onChange={(event) => poser({ sort: event.target.value as MemberLibrarySort })}
           >
             {SORTS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -183,7 +181,7 @@ export default function MemberLibrary({
       </p>
 
       {list.isPending ? (
-        <p className={styles.quiet}>Chargement…</p>
+        <LoadingNotice />
       ) : list.error ? (
         <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />
       ) : items.length === 0 ? (
@@ -202,7 +200,7 @@ export default function MemberLibrary({
         )
       ) : (
         <>
-          <ul className={styles.grid} aria-busy={list.isFetching}>
+          <ul ref={liste} className={styles.grid} aria-busy={list.isFetching}>
             {items.map((item) => (
               <MediaCard key={item.id} item={item} me={me} />
             ))}
@@ -217,6 +215,7 @@ export default function MemberLibrary({
               // ne dirait pas de quoi il s'agit, et la page en contient déjà une
               // autre navigation.
               label={isMe ? 'Pages de ma bibliothèque' : `Pages de la bibliothèque de ${pseudo}`}
+              ancre={liste}
             />
           ) : null}
         </>

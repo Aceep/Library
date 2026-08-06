@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 import Invitation from './pages/Invitation'
 import Login from './pages/Login'
 import Members from './pages/Members'
+import NotFound from './pages/NotFound'
 import Notifications from './pages/Notifications'
 import Quest from './pages/Quest'
 import Quests from './pages/Quests'
@@ -100,7 +101,11 @@ function GatedApp() {
           <Route path="statistiques" element={<Statistics />} />
           <Route path="quetes" element={<Quests />} />
           <Route path="quetes/:id" element={<Quest />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Une adresse inconnue se dit. Elle redirigeait vers l'accueil en
+              silence : un lien périmé, une faute de frappe et un accès refusé
+              produisaient le même geste, et on ne savait pas qu'on s'était
+              trompé. */}
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
       </ReferenceProvider>

@@ -12,6 +12,7 @@ import { timesNoun } from '../api/schema'
 import { useReference } from '../reference/ReferenceContext'
 import type { LogEntry, MediaType, UserTracking } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
+import LoadingNotice from './LoadingNotice'
 import styles from './MediaLog.module.css'
 
 const RATINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -83,7 +84,7 @@ export default function MediaLog({
       </p>
 
       {log.isPending ? (
-        <p className={styles.quiet}>Chargement…</p>
+        <LoadingNotice />
       ) : log.error ? (
         <ErrorNotice error={log.error} onRetry={() => void log.refetch()} />
       ) : (

@@ -1,0 +1,103 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/**
+ * Le tireté, jamais une illustration : la direction range les états vides
+ * illustrés parmi ses critères de rejet, et un « 404 » en chiffres géants est
+ * la même promesse décorative. Même bloc que « Rien au fonds » sur la
+ * recherche — c'est le même propos.
+ */
+.bloc {
+  border: var(--rule-w) dashed var(--rule);
+  padding: var(--s-8) var(--s-7);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(30px, 3.6vw, 46px);
+  line-height: 1.1;
+  max-width: 26ch;
+}
+
+/* L'adresse se lit en mono : c'est une chaîne à relire caractère par
+   caractère, pas une phrase. */
+.adresse {
+  margin-top: var(--s-4);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  word-break: break-all;
+  border-left: 2px solid var(--rule-soft);
+  padding-left: var(--s-3);
+}
+
+.note {
+  margin-top: var(--s-4);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 19px;
+  color: var(--voice);
+  max-width: 52ch;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-5);
+  margin-top: var(--s-6);
+}
+
+/* Doré et plein : c'est la sortie, et c'est ce qui se clique. */
+.cta {
+  background: var(--gold);
+  color: var(--gold-ink);
+  border: var(--rule-w) solid var(--gold);
+  padding: var(--s-3) var(--s-5);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: var(--block);
+  transition:
+    transform var(--dur-3) var(--ease-rise),
+    box-shadow var(--dur-3) var(--ease-rise);
+}
+
+.cta:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--rule);
+}
+
+.lien {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  padding-bottom: 2px;
+  border-bottom: var(--rule-w) solid var(--rule);
+  transition:
+    color var(--dur-2) var(--ease-page),
+    border-color var(--dur-2) var(--ease-page);
+}
+
+.lien:hover {
+  color: var(--gold-text);
+  border-color: var(--gold);
+}

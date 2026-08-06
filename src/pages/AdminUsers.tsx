@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   createPasswordReset,
@@ -12,16 +12,24 @@ import {
 import type { UserSummary } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import type { UserRole } from '../api/schema'
+import AccessDenied from '../components/AccessDenied'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import IdentityDot from '../components/IdentityDot'
 import { useSession } from '../session/SessionContext'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './AdminUsers.module.css'
 
 export default function AdminUsers() {
+  useDocumentTitle('Les comptes')
   const { isAdmin } = useSession()
   // Le back revérifie et répond 403 : cette garde évite d'afficher un écran
   // muet, elle ne tient pas lieu de sécurité.
-  if (!isAdmin) return <Navigate to="/" replace />
+  //
+  // Elle redirigeait vers l'accueil sans un mot. Un membre qui suit le lien
+  // d'un administrateur se retrouvait ailleurs sans comprendre, et ne pouvait
+  // pas distinguer un refus d'un lien cassé. On le lui dit.
+  if (!isAdmin) return <AccessDenied />
   return <Panel />
 }
 
@@ -66,7 +74,7 @@ function Panel() {
       ) : null}
 
       {list.isPending ? (
-        <p className={styles.quiet}>Chargement…</p>
+        <LoadingNotice />
       ) : list.error ? (
         <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />
       ) : (

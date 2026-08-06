@@ -108,7 +108,11 @@ describe('MemberLibrary — pagination numérotée', () => {
 
     // Rester sur la 3 en changeant de type montrerait un écran vide et ferait
     // croire que le filtre ne ramène rien.
-    await waitFor(() => expect(adresse()).toBe(''))
+    //
+    // Le filtre vit maintenant dans l'adresse : `page` s'en va, `type` s'y
+    // met, en une seule écriture. Deux écritures séparées se recouvriraient,
+    // et ça se lirait ici.
+    await waitFor(() => expect(adresse()).toBe('?type=movie'))
   })
 
   it('ne dessine pas de barre pour une seule page', async () => {

@@ -29,11 +29,6 @@
   line-height: 1.6;
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}
-
 .filters {
   display: flex;
   flex-wrap: wrap;

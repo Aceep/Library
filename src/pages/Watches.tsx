@@ -5,8 +5,10 @@ import type { WatchItem } from '../api/schema'
 import { queryKeys } from '../api/keys'
 import Cover from '../components/Cover'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import WatchToggle from '../components/WatchToggle'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Watches.module.css'
 
 const formatDate = (iso: string) =>
@@ -27,6 +29,7 @@ const formatDate = (iso: string) =>
  *   ce matin, pourquoi je n'ai rien ? ».
  */
 export default function Watches() {
+  useDocumentTitle('Veille')
   const { data, isPending, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: queryKeys.watches,
@@ -50,7 +53,7 @@ export default function Watches() {
       </header>
 
       {isPending ? (
-        <p className={styles.loading}>Chargement…</p>
+        <LoadingNotice />
       ) : error ? (
         <ErrorNotice error={error} onRetry={() => void refetch()} />
       ) : items.length === 0 ? (

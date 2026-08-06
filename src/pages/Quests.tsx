@@ -5,10 +5,13 @@ import { createQuest, fetchQuests } from '../api/endpoints'
 import type { QuestSummary } from '../api/schema'
 import { queryKeys } from '../api/keys'
 import { useSession } from '../session/SessionContext'
+import { useAnnounce } from '../components/Announcer'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import QuestProgress from '../components/QuestProgress'
 import Reveal from '../components/Reveal'
+import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Quests.module.css'
 
 const formatDate = (iso: string) =>
@@ -25,6 +28,7 @@ const formatDate = (iso: string) =>
  * autres, l'écran n'a pas à filtrer.
  */
 export default function Quests() {
+  useDocumentTitle('Quêtes')
   const { isAdmin } = useSession()
   const { data, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.quests,
@@ -60,7 +64,7 @@ export default function Quests() {
       {isAdmin ? <NouvelleQuete /> : null}
 
       {isPending ? (
-        <p className={styles.loading}>Chargement…</p>
+        <LoadingNotice />
       ) : error ? (
         <ErrorNotice error={error} onRetry={() => void refetch()} />
       ) : items.length === 0 ? (
@@ -112,11 +116,15 @@ function Row({ quest }: { quest: QuestSummary }) {
 /** Création : le titre suffit, tout le reste s'ajoute ensuite sur la fiche. */
 function NouvelleQuete() {
   const queryClient = useQueryClient()
+  const annoncer = useAnnounce()
   const [titre, setTitre] = useState('')
 
   const creer = useMutation({
     mutationFn: () => createQuest({ title: titre.trim() }),
-    onSuccess: () => {
+    onSuccess: (creee) => {
+      // La quête naît en brouillon et apparaît plus bas dans la liste : rien à
+      // l'écran ne bouge près du champ qu'on vient de quitter.
+      annoncer(`Quête « ${creee.quest.title} » créée, en brouillon.`)
       setTitre('')
       void queryClient.invalidateQueries({ queryKey: queryKeys.quests })
     },

@@ -184,7 +184,8 @@
   font-family: var(--font-serif);
   font-size: 17px;
   font-variant-numeric: tabular-nums;
-  color: var(--identity, var(--ink-soft));
+  /* Repli mort : `--identity` est déclaré au `:root`. */
+  color: var(--identity);
 }
 
 .owned {
@@ -222,5 +223,6 @@
   font: var(--eyebrow);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--identity, var(--ink-soft));
+  /* Repli mort : `--identity` est déclaré au `:root`. */
+  color: var(--identity);
 }

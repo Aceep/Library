@@ -8,6 +8,7 @@ import { useSession } from '../session/SessionContext'
 import EmptyState from '../components/EmptyState'
 import ErrorNotice from '../components/ErrorNotice'
 import QuestProgress from '../components/QuestProgress'
+import Reveal from '../components/Reveal'
 import styles from './Quests.module.css'
 
 const formatDate = (iso: string) =>
@@ -34,12 +35,25 @@ export default function Quests() {
 
   return (
     <div className={styles.page}>
+      {/*
+        L'en-tête du registre, dans la forme des maquettes : une étiquette dorée
+        en aplat, un filet, le compte à droite. Doré et non gel — les quêtes ne
+        sont pas un rayon, et c'est vers elles qu'on va pour faire quelque chose.
+      */}
       <header className={styles.intro}>
-        <p className={styles.eyebrow}>Quêtes</p>
-        <h1 className={styles.title}>Des parcours proposés, et où tu en es</h1>
+        <div className={styles.introHead}>
+          <span className={styles.eyebrow}>Le registre des quêtes</span>
+          <span className={styles.introRule} aria-hidden="true" />
+          {items.length > 0 ? (
+            <span className={styles.compte}>
+              {items.length} proposée{items.length > 1 ? 's' : ''}
+            </span>
+          ) : null}
+        </div>
+        <h1 className={styles.title}>Quêtes</h1>
         <p className={styles.lede}>
-          Une quête réunit des œuvres choisies à la main. Rien à cocher ici : ta progression se lit
-          dans ce que tu as déjà terminé.
+          Une quête n’est pas une recommandation. C’est un parcours composé à la main, et votre
+          progression s’y lit dans ce que vous avez déjà terminé — il n’y a rien à cocher ici.
         </p>
       </header>
 
@@ -59,11 +73,11 @@ export default function Quests() {
           }
         />
       ) : (
-        <ul className={styles.list}>
+        <Reveal as="ul" className={styles.list}>
           {items.map((quest) => (
             <Row key={quest.id} quest={quest} />
           ))}
-        </ul>
+        </Reveal>
       )}
     </div>
   )
@@ -116,8 +130,14 @@ function NouvelleQuete() {
         if (titre.trim()) creer.mutate()
       }}
     >
+      <div className={styles.createHead}>
+        <h2 className={styles.createTitle}>
+          Écrire une <em>quête</em>
+        </h2>
+        <span className={styles.createNote}>elle naît en brouillon</span>
+      </div>
       <label className={styles.createLabel} htmlFor="titre-quete">
-        Nouvelle quête
+        Son titre
       </label>
       <div className={styles.createRow}>
         <input

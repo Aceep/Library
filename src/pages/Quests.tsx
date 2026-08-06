@@ -7,6 +7,7 @@ import { queryKeys } from '../api/keys'
 import { useSession } from '../session/SessionContext'
 import { useAnnounce } from '../components/Announcer'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import QuestProgress from '../components/QuestProgress'
 import Reveal from '../components/Reveal'
@@ -63,7 +64,7 @@ export default function Quests() {
       {isAdmin ? <NouvelleQuete /> : null}
 
       {isPending ? (
-        <p className={styles.loading}>Chargement…</p>
+        <LoadingNotice />
       ) : error ? (
         <ErrorNotice error={error} onRetry={() => void refetch()} />
       ) : items.length === 0 ? (

@@ -8,6 +8,7 @@ import { queryKeys } from '../api/keys'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import type { MediaType, UserDetail } from '../api/schema'
 import BadgeMedal from '../components/BadgeMedal'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
 import MemberChip from '../components/MemberChip'
@@ -38,8 +39,22 @@ function Profile({ id }: { id: string }) {
 
   useDocumentTitle(data?.user.pseudo ?? null)
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
-  if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
+  /*
+    Le cadre ne dépend d'aucune requête : il est là dès la première peinture.
+    Avant, ces écrans se réduisaient à une ligne de texte pendant le chargement
+    — l'en-tête, le repère de contenu et la position de défilement partaient
+    avec, pour revenir une fraction de seconde plus tard.
+  */
+  if (isPending || error) {
+    return (
+      <div className={styles.page}>
+        <p className={styles.breadcrumb}>
+          <Link to="/membres">Les membres</Link>
+        </p>
+        {isPending ? <LoadingNotice /> : <ErrorNotice error={error} onRetry={() => void refetch()} />}
+      </div>
+    )
+  }
 
   const { user } = data
 
@@ -387,7 +402,7 @@ function RelationList({ userId, tab, meId }: { userId: string; tab: Tab; meId: s
         : fetchFollowers(userId, null, signal),
   })
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
+  if (isPending) return <LoadingNotice />
   if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
 
   if (data.items.length === 0) {

@@ -6,6 +6,7 @@ import { fetchHome, fetchQuests, fetchWatches } from '../api/endpoints'
 import { MEDIA_TYPES, progressRatio, typeLabel } from '../api/schema'
 import type { Account, HomeResponse, MediaType, QuestSummary, WatchItem } from '../api/schema'
 import Cover from '../components/Cover'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import MemberChip from '../components/MemberChip'
 import QuestProgress from '../components/QuestProgress'
@@ -121,8 +122,29 @@ export default function Dashboard() {
     queryFn: ({ signal }) => fetchHome(signal),
   })
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
-  if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
+  /*
+    Le bandeau de quête a sa propre requête et son propre état : il n'a aucune
+    raison d'attendre `/home`, et c'est lui qui porte le seul `<h1>` de
+    l'écran. Le garder ici, c'est garder le titre de l'accueil pendant que le
+    reste arrive — au lieu de réduire la page à une ligne de texte.
+  */
+  if (isPending || error) {
+    return (
+      <div className={styles.page}>
+        <Beam />
+        <QuestBanner />
+        <div className={styles.body}>
+          <div className={styles.main}>
+            {isPending ? (
+              <LoadingNotice />
+            ) : (
+              <ErrorNotice error={error} onRetry={() => void refetch()} />
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const encours = inProgressTypes(data.in_progress).flatMap((type) =>
     data.in_progress[type].map((entry) => ({ entry, type })),

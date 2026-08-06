@@ -13,6 +13,7 @@ import type {
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import { queryKeys } from '../api/keys'
 import { useSession } from '../session/SessionContext'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import StatBars from '../components/StatBars'
 import StatDuel from '../components/StatDuel'
@@ -129,8 +130,22 @@ export default function Statistics() {
     queryFn: ({ signal }) => fetchStats(membre ?? undefined, compareWith, signal),
   })
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
-  if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
+  /*
+    Le cadre ne dépend d'aucune requête : il est là dès la première peinture.
+    Avant, ces écrans se réduisaient à une ligne de texte pendant le chargement
+    — l'en-tête, le repère de contenu et la position de défilement partaient
+    avec, pour revenir une fraction de seconde plus tard.
+  */
+  if (isPending || error) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.intro}>
+          <p className={styles.eyebrow}>Statistiques</p>
+        </header>
+        {isPending ? <LoadingNotice /> : <ErrorNotice error={error} onRetry={() => void refetch()} />}
+      </div>
+    )
+  }
 
   const { dashboard, comparison } = data
   const totals = dashboard.periods[period]

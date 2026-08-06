@@ -531,16 +531,6 @@
   margin-top: var(--s-2);
 }
 
-/* ---- Pagination et vides ---- */
-
-.loading {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
 .end {
   text-align: center;
   font-family: var(--font-mono);

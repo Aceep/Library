@@ -16,6 +16,7 @@ import type { Account, MediaDetail as MediaDetailType, RefreshResponse } from '.
 import { RAYONNAGES } from '../rayons'
 import Availability from '../components/Availability'
 import Cover from '../components/Cover'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import MediaLog from '../components/MediaLog'
 import MemberChip from '../components/MemberChip'
@@ -96,8 +97,21 @@ function Detail({ id }: { id: string }) {
     },
   })
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
-  if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
+  /*
+    Sur une fiche, le cadre honnête est mince : le titre, la jaquette et le
+    médium viennent tous de la requête, et **un `<h1>` ne s'invente pas** — un
+    titre de remplacement sauterait aux yeux le temps d'un aller-retour, puis
+    changerait. Ce qu'on gagne quand même : la page n'est plus détruite puis
+    reconstruite, donc plus de saut de défilement à l'arrivée, et le titre
+    d'onglet reste `null` au lieu de mentir.
+  */
+  if (isPending || error) {
+    return (
+      <div className={styles.page}>
+        {isPending ? <LoadingNotice /> : <ErrorNotice error={error} onRetry={() => void refetch()} />}
+      </div>
+    )
+  }
 
   const detail = data
 

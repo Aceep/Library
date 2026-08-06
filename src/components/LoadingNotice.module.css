@@ -1,0 +1,11 @@
+/**
+ * La même règle était recopiée dans une quinzaine de feuilles, sous le nom
+ * `.loading` ou `.quiet`, et composée pour moitié dans l'ancien vocabulaire.
+ */
+.notice {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}

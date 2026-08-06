@@ -91,11 +91,6 @@ a.rowTitle:hover {
   color: var(--ink-faint);
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}
-
 .more {
   margin-top: var(--space-5);
 }

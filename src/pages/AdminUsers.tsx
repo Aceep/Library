@@ -13,6 +13,7 @@ import type { UserSummary } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import type { UserRole } from '../api/schema'
 import AccessDenied from '../components/AccessDenied'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import IdentityDot from '../components/IdentityDot'
 import { useSession } from '../session/SessionContext'
@@ -73,7 +74,7 @@ function Panel() {
       ) : null}
 
       {list.isPending ? (
-        <p className={styles.quiet}>Chargement…</p>
+        <LoadingNotice />
       ) : list.error ? (
         <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />
       ) : (

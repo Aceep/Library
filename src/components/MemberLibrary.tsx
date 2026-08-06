@@ -10,6 +10,7 @@ import ErrorNotice from './ErrorNotice'
 import MediaCard from './MediaCard'
 import Pagination from './Pagination'
 import { usePageInUrl } from './usePageInUrl'
+import LoadingNotice from './LoadingNotice'
 import styles from './MemberLibrary.module.css'
 
 const STATUS_FILTERS: Array<{ value: TrackingStatus | null; label: string }> = [
@@ -186,7 +187,7 @@ export default function MemberLibrary({
       </p>
 
       {list.isPending ? (
-        <p className={styles.quiet}>Chargement…</p>
+        <LoadingNotice />
       ) : list.error ? (
         <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />
       ) : items.length === 0 ? (

@@ -5,6 +5,7 @@ import { fetchCompare, fetchFollowing } from '../api/endpoints'
 import type { CompareResponse } from '../api/schema'
 import Cover from '../components/Cover'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import { useSession } from '../session/SessionContext'
 import { queryKeys } from '../api/keys'
@@ -36,9 +37,23 @@ export default function Compare() {
     enabled: targetId !== null,
   })
 
-  if (following.isPending) return <p className={styles.loading}>Chargement…</p>
-  if (following.error) {
-    return <ErrorNotice error={following.error} onRetry={() => void following.refetch()} />
+  /*
+    Le cadre ne dépend d'aucune requête : il est là dès la première peinture.
+    Avant, ces écrans se réduisaient à une ligne de texte pendant le chargement
+    — l'en-tête, le repère de contenu et la position de défilement partaient
+    avec, pour revenir une fraction de seconde plus tard.
+  */
+  if (following.isPending || following.error) {
+    return (
+      <div className={styles.page}>
+        <Intro />
+        {following.isPending ? (
+          <LoadingNotice />
+        ) : (
+          <ErrorNotice error={following.error} onRetry={() => void following.refetch()} />
+        )}
+      </div>
+    )
   }
 
   // Ne suivre personne n'est pas une erreur : c'est un état de départ.
@@ -76,7 +91,7 @@ export default function Compare() {
       <div className={styles.page}>
         <Intro />
         {picker}
-        <p className={styles.loading}>Chargement…</p>
+        <LoadingNotice />
       </div>
     )
   }

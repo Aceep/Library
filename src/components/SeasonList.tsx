@@ -13,6 +13,7 @@ import type { Account, EpisodeDetail, MediaDetail, Page } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
 import PeopleDisclosure from './PeopleDisclosure'
 import ProgressBar from './ProgressBar'
+import LoadingNotice from './LoadingNotice'
 import styles from './SeasonList.module.css'
 
 type Season = NonNullable<Extract<MediaDetail, { type: 'tv' }>['seasons']>[number]
@@ -172,7 +173,7 @@ function SeasonRow({
       {open ? (
         <div className={styles.episodes}>
           {episodes.isPending ? (
-            <p className={styles.quiet}>Chargement des épisodes…</p>
+            <LoadingNotice label="Chargement des épisodes…" />
           ) : episodes.error ? (
             <ErrorNotice error={episodes.error} onRetry={() => void episodes.refetch()} />
           ) : (

@@ -7,6 +7,7 @@ import { MEDIA_TYPES, typeLabel, typeLabelPlural } from '../api/schema'
 import type { MediaSummary, MediaType, Showcase as ShowcaseType, UserDetail } from '../api/schema'
 import Cover from './Cover'
 import ErrorNotice from './ErrorNotice'
+import LoadingNotice from './LoadingNotice'
 import styles from './Showcase.module.css'
 
 /** Le maximum est celui du contrat : au-delà, le back refuse en 400. */
@@ -266,7 +267,7 @@ function Picker({
       ) : null}
 
       {list.isPending ? (
-        <p className={styles.quiet}>Chargement…</p>
+        <LoadingNotice />
       ) : list.error ? (
         <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />
       ) : (

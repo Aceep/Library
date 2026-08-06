@@ -6,6 +6,7 @@ import type { Invitation, InvitationStatus } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import AccessDenied from '../components/AccessDenied'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import { useSession } from '../session/SessionContext'
 import { useDocumentTitle } from '../components/useDocumentTitle'
@@ -114,7 +115,7 @@ function Panel() {
       </div>
 
       {list.isPending ? (
-        <p className={styles.quiet}>Chargement…</p>
+        <LoadingNotice />
       ) : list.error ? (
         <ErrorNotice error={list.error} onRetry={() => void list.refetch()} />
       ) : items.length === 0 ? (

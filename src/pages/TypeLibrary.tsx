@@ -9,6 +9,7 @@ import { useReference } from '../reference/ReferenceContext'
 import type { Account, LibraryItem, MediaType, StatusOption, TrackingStatus } from '../api/schema'
 import Cover from '../components/Cover'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import MemberChip from '../components/MemberChip'
 import Pagination from '../components/Pagination'
@@ -200,7 +201,7 @@ function Library({ type }: { type: MediaType }) {
           </div>
 
           {isPending ? (
-            <p className={styles.loading}>Chargement…</p>
+            <LoadingNotice />
           ) : error ? (
             <ErrorNotice error={error} onRetry={() => void refetch()} />
           ) : items.length === 0 ? (

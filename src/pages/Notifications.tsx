@@ -10,6 +10,7 @@ import type { NotificationItem, NotificationKind } from '../api/schema'
 import { queryKeys } from '../api/keys'
 import { useAnnounce } from '../components/Announcer'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import { useDocumentTitle } from '../components/useDocumentTitle'
 import styles from './Notifications.module.css'
@@ -138,7 +139,7 @@ export default function Notifications() {
       {lire.error ? <ErrorNotice error={lire.error} /> : null}
 
       {isPending ? (
-        <p className={styles.loading}>Chargement…</p>
+        <LoadingNotice />
       ) : error ? (
         <ErrorNotice error={error} onRetry={() => void refetch()} />
       ) : items.length === 0 ? (

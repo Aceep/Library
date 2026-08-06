@@ -141,7 +141,3 @@ a.partLink:hover .partTitle {
   color: var(--ink-faint);
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}

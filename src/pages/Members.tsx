@@ -5,6 +5,7 @@ import { fetchUsers } from '../api/endpoints'
 import type { UserSummary } from '../api/endpoints'
 import { queryKeys } from '../api/keys'
 import EmptyState from '../components/EmptyState'
+import LoadingNotice from '../components/LoadingNotice'
 import ErrorNotice from '../components/ErrorNotice'
 import FollowButton from '../components/FollowButton'
 import { useSession } from '../session/SessionContext'
@@ -72,7 +73,7 @@ export default function Members() {
       </div>
 
       {isPending ? (
-        <p className={styles.loading}>Chargement…</p>
+        <LoadingNotice />
       ) : error ? (
         <ErrorNotice error={error} onRetry={() => void refetch()} />
       ) : items.length === 0 ? (

@@ -122,3 +122,39 @@ describe('Saga — la progression compte les parties absentes', () => {
     expect(await screen.findByRole('button', { name: 'Surveiller' })).toBeInTheDocument()
   })
 })
+
+/**
+ * Ces écrans se réduisaient à une ligne de texte pendant le chargement : un
+ * `if (isPending) return <p>Chargement…</p>` en tête de composant emportait
+ * l'en-tête, le repère de contenu et la position de défilement, pour les
+ * rendre une fraction de seconde plus tard.
+ */
+describe('Saga — le cadre tient pendant que la donnée arrive', () => {
+  it('garde son sourcil pendant le chargement', () => {
+    // Une promesse qui ne se résout pas : l'écran reste en attente.
+    fetchSaga.mockReturnValue(new Promise(() => {}))
+    render()
+
+    expect(screen.getByText('Saga')).toBeInTheDocument()
+    expect(screen.getByText('Chargement…')).toBeInTheDocument()
+  })
+
+  /**
+   * Mais **pas de `<h1>` inventé**. Un titre de remplacement sauterait aux yeux
+   * le temps d'un aller-retour réseau, puis changerait sous le regard.
+   */
+  it('n’invente pas de titre tant qu’il ne le connaît pas', () => {
+    fetchSaga.mockReturnValue(new Promise(() => {}))
+    render()
+
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+  })
+
+  it('garde aussi son sourcil quand la source ne répond pas', async () => {
+    fetchSaga.mockRejectedValue(new Error('injoignable'))
+    render()
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.getByText('Saga')).toBeInTheDocument()
+  })
+})

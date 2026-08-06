@@ -74,7 +74,3 @@
   color: var(--ink-muted);
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}

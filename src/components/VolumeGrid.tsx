@@ -13,6 +13,7 @@ import type { VolumeTracking } from '../api/endpoints'
 import type { Account, MediaDetail, Page, SeriesAggregate, VolumeDetail } from '../api/schema'
 import ErrorNotice from './ErrorNotice'
 import PeopleDisclosure from './PeopleDisclosure'
+import LoadingNotice from './LoadingNotice'
 import styles from './VolumeGrid.module.css'
 
 type VolumePages = { pages: Page<VolumeDetail>[]; pageParams: unknown[] }
@@ -143,7 +144,7 @@ export default function VolumeGrid({
       ) : null}
 
       {volumes.isPending ? (
-        <p className={styles.quiet}>Chargement des tomes…</p>
+        <LoadingNotice label="Chargement des tomes…" />
       ) : volumes.error ? (
         <ErrorNotice error={volumes.error} onRetry={() => void volumes.refetch()} />
       ) : items.length === 0 ? (

@@ -8,6 +8,7 @@ import WatchToggle from '../components/WatchToggle'
 import Cover from '../components/Cover'
 import ErrorNotice from '../components/ErrorNotice'
 import { useDocumentTitle } from '../components/useDocumentTitle'
+import LoadingNotice from '../components/LoadingNotice'
 import styles from './Saga.module.css'
 
 export default function Saga() {
@@ -24,8 +25,27 @@ function SagaDetail({ id }: { id: string }) {
 
   useDocumentTitle(data?.saga.title ?? null)
 
-  if (isPending) return <p className={styles.loading}>Chargement…</p>
-  if (error) return <ErrorNotice error={error} onRetry={() => void refetch()} />
+  /*
+    Le cadre ne dépend d'aucune requête : il est là dès la première peinture.
+    Sur une fiche il est mince — un `<h1>` ne s'invente pas, et un titre de
+    remplacement mentirait — mais ce qu'on gagne compte quand même : la page
+    n'est plus détruite puis reconstruite à chaque arrivée, donc plus de saut
+    de défilement, et le repère de contenu reste en place.
+  */
+  if (isPending || error) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.intro}>
+          <p className={styles.eyebrow}>Saga</p>
+        </header>
+        {isPending ? (
+          <LoadingNotice />
+        ) : (
+          <ErrorNotice error={error} onRetry={() => void refetch()} />
+        )}
+      </div>
+    )
+  }
 
   const { saga } = data
   const absentes = saga.part_count - saga.in_library_count

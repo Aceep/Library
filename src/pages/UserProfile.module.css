@@ -4,11 +4,6 @@
   gap: var(--space-5);
 }
 
-.loading {
-  color: var(--ink-faint);
-  font-size: var(--text-sm);
-}
-
 .quiet {
   color: var(--ink-faint);
   font-size: var(--text-sm);

@@ -22,11 +22,11 @@ export default function MemberChip({
   size = 'base',
 }: {
   account: Account
-  size?: 'sm' | 'base'
+  size?: 'sm' | 'base' | 'lg'
 }) {
   return (
     <span
-      className={`${styles.chip} ${size === 'sm' ? styles.sm : ''}`}
+      className={`${styles.chip}${size === 'base' ? '' : ` ${styles[size]}`}`}
       style={{ '--identity': account.identity_color } as CSSProperties}
       // Les initiales seules ne nomment personne pour qui n'a pas la page sous
       // les yeux : le pseudo entier reste le nom accessible.

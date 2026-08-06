@@ -21,3 +21,11 @@
   padding: 2px 5px;
   border-width: 1px;
 }
+
+/* En tête d'un profil, la pastille est l'ancre de l'écran : c'est le seul
+   endroit où elle porte le nom du membre plutôt que de l'accompagner. */
+.lg {
+  font-size: 22px;
+  padding: 8px 14px;
+  border-width: 2px;
+}

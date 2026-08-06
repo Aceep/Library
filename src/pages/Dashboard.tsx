@@ -137,7 +137,11 @@ export default function Dashboard() {
       <Ticker feed={data.feed} />
 
       <div className={styles.body}>
-        <main className={styles.main}>
+        {/* Une colonne, pas un second `main` : la coquille en pose déjà un, et
+            deux repères de contenu principal dans un document n'en laissent
+            aucun de sûr — ni pour un lecteur d'écran, ni pour le lien
+            d'évitement qui doit viser le bon. */}
+        <div className={styles.main}>
           <Reveal className={styles.section}>
             <Veille />
           </Reveal>
@@ -179,7 +183,7 @@ export default function Dashboard() {
               murmures.map((item) => <MurmureRow key={`${item.media.id}-${item.at}`} item={item} />)
             )}
           </Reveal>
-        </main>
+        </div>
 
         <aside className={styles.aside} aria-labelledby="traces">
           <div className={styles.asideHead}>

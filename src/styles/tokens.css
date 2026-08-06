@@ -300,7 +300,6 @@
  */
 :root {
   --surface-page:   var(--bg);
-  --surface-raised: var(--surface);
   --surface-sunken: var(--sunken);
   --paper:          var(--bg);
   --paper-raised:   var(--surface);
@@ -316,13 +315,6 @@
   /* Les anciennes terres pointent sur la variante **texte** : leurs trois
      usages (filet de couverture, nom du type, filet de vignette) composent ou
      tracent, ils ne remplissent pas. */
-  --type-movie:         var(--gel-films-text);
-  --type-tv:            var(--gel-series-text);
-  --type-book:          var(--gel-livres-text);
-  --type-comic_series:  var(--gel-manga-text);
-  --type-game:          var(--gel-jeux-text);
-  --type-music:         var(--gel-musique-text);
-
   --text-xs: 11.5px;
   --text-sm: 13px;
   --text-base: 15.5px;
@@ -338,18 +330,10 @@
   --space-5: var(--s-5);
   --space-6: var(--s-6);
   --space-7: var(--s-7);
-  --space-8: var(--s-8);
-
   --radius-sm: var(--radius-0);
   --radius:    var(--radius-0);
   --radius-lg: var(--radius-0);
-  --radius-md: var(--radius-0);
-
-  --elev-1: none;
-  --elev-2: var(--lift-deep);
   --shadow-soft: var(--lift);
-  --shadow-lift: var(--lift-deep);
-
   --danger: var(--signal-danger);
 }
 

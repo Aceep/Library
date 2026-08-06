@@ -303,7 +303,7 @@ function ProgressLine({
         style={{ background: account.identity_color }}
         aria-hidden="true"
       />
-      <ProgressBar progress={progress} color={account.identity_color} label={label} />
+      <ProgressBar progress={progress} color={account.identity_color} label={label} grow />
     </span>
   )
 }

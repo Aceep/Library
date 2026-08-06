@@ -57,10 +57,18 @@
   font-size: var(--text-base);
 }
 
-.input:focus {
-  outline: none;
+/**
+ * Le filet de focus du dépôt, et non un halo composé ici.
+ *
+ * C'était `rgba(26, 24, 21, .06)` — la seule couleur brute du dépôt avec le
+ * survol du bouton, et une couleur d'encre écrite en dur : en nuit, elle
+ * dessinait un halo sombre sur un fond sombre, donc rien du tout. Cet écran
+ * vit hors de la coquille, ce qui l'a longtemps mis hors de vue.
+ */
+.input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
   border-color: var(--ink-soft);
-  box-shadow: 0 0 0 3px rgba(26, 24, 21, 0.06);
 }
 
 .error {
@@ -81,8 +89,13 @@
   transition: background 120ms ease;
 }
 
+/*
+  `#322d26` avant, soit une encre de jour écrite en dur : en nuit `--ink` est
+  clair, et survoler le bouton le faisait virer au brun sombre — texte compris.
+  Le mélange suit les deux mondes parce qu'il part des jetons.
+*/
 .submit:hover:not(:disabled) {
-  background: #322d26;
+  background: color-mix(in oklab, var(--ink) 88%, var(--bg));
 }
 
 .submit:disabled {

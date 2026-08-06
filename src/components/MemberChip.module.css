@@ -8,8 +8,12 @@
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
-  color: var(--identity, var(--ink-2));
-  border: 1.5px solid var(--identity, var(--rule));
+  /* Pas de repli : `--identity` a une valeur par défaut au `:root`
+     (`currentColor`), donc `var(--identity, …)` ne retombe **jamais** sur son
+     second terme — le même piège que `--gel`. Un membre sans couleur recevait
+     donc une bordure `currentColor`, et non `--rule` comme on le croyait. */
+  color: var(--identity);
+  border: 1.5px solid var(--identity);
   padding: 3px 7px;
   white-space: nowrap;
   flex: none;

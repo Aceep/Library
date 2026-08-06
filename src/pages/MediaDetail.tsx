@@ -385,7 +385,7 @@ function ProgressLine({
         <span className={styles.progressDot} style={{ background: color }} aria-hidden="true" />
         {label}
       </span>
-      <ProgressBar progress={progress} color={color} label={`Progression de ${label}`} />
+      <ProgressBar progress={progress} color={color} label={`Progression de ${label}`} grow />
     </div>
   )
 }

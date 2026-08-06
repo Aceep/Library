@@ -11,6 +11,7 @@ export default function ProgressBar({
   progress,
   color,
   label,
+  grow = false,
 }: {
   progress: Progress | null | undefined
   /**
@@ -21,6 +22,16 @@ export default function ProgressBar({
    */
   color?: string
   label?: string
+  /**
+   * Occuper la place restante quand la barre est posée dans une rangée en
+   * flex, à côté d'une pastille ou d'un mot.
+   *
+   * Deux feuilles d'écran obtenaient ça par `.progressLine > *:last-child` —
+   * un sélecteur qui atteint la racine de ce composant depuis l'extérieur,
+   * exactement le geste que la loi du dépôt interdit. La place s'occupe sur
+   * demande, et la demande est cette prop.
+   */
+  grow?: boolean
 }) {
   const ratio = progressRatio(progress)
   if (ratio === null || !progress) return null
@@ -28,7 +39,7 @@ export default function ProgressBar({
   const percent = Math.round(ratio * 100)
 
   return (
-    <div className={styles.wrapper}>
+    <div className={grow ? `${styles.wrapper} ${styles.grow}` : styles.wrapper}>
       <div
         className={styles.track}
         role="progressbar"

@@ -592,7 +592,8 @@
 .tuileFiletPlein {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--identity, var(--ink-2));
+  /* Repli mort : `--identity` est déclaré au `:root`. */
+  background: var(--identity);
 }
 
 .tuileSansMesure {

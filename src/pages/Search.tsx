@@ -305,6 +305,31 @@ function Groupe({ type, requete }: { type: MediaType; requete: Requete }) {
   )
 }
 
+/**
+ * Qui signe l'œuvre — le seul champ sûr pour distinguer deux résultats de même
+ * titre. Les autres (éditeur, langue, ISBN) mêlent plusieurs éditions tant que
+ * `detail_level` vaut `"search"`, et mentiraient plus qu'ils n'aideraient.
+ */
+export function creditsDe(result: SearchResult): string | null {
+  switch (result.type) {
+    case 'book':
+    case 'comic_series': {
+      const authors = result.metadata.authors
+      return Array.isArray(authors) && authors.length > 0 ? authors.join(', ') : null
+    }
+    case 'movie':
+      return result.metadata.director || null
+    case 'tv': {
+      const creators = result.metadata.creators
+      return Array.isArray(creators) && creators.length > 0 ? creators.join(', ') : null
+    }
+    case 'game':
+      return result.metadata.developer || null
+    case 'music':
+      return result.metadata.artist || null
+  }
+}
+
 function ResultRow({ result, type }: { result: SearchResult; type: MediaType }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -341,7 +366,7 @@ function ResultRow({ result, type }: { result: SearchResult; type: MediaType }) 
           <p className={styles.resultOriginal}>{result.original_title}</p>
         ) : null}
         <p className={styles.resultMeta}>
-          {[result.year, result.source].filter(Boolean).join(' · ')}
+          {[creditsDe(result), result.year].filter(Boolean).join(' · ')}
         </p>
         {add.error ? <ErrorNotice error={add.error} /> : null}
       </div>

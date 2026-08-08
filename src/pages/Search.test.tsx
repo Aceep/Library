@@ -161,3 +161,47 @@ describe('Recherche — l’adresse dit dans quel mode on cherche', () => {
     expect(screen.queryByText('Dernières recherches')).not.toBeInTheDocument()
   })
 })
+
+describe("Ce qui distingue deux résultats", () => {
+  beforeEach(() => {
+    searchExternal.mockReset()
+    window.localStorage.clear()
+  })
+
+  it("nomme l'auteur d'un livre, et ne montre plus la source", async () => {
+    const resultat = {
+      type: 'book' as const,
+      source: 'openlibrary' as const,
+      external_id: 'OL893414W',
+      title: 'Dune',
+      original_title: null,
+      year: 1965,
+      cover_url: null,
+      summary: null,
+      detail_level: 'search' as const,
+      in_library: false,
+      media_id: null,
+      metadata: {
+        authors: ['Frank Herbert'],
+        publisher: null,
+        page_count: null,
+        language: null,
+        genres: [],
+        series: null,
+        external_ids: { openlibrary: 'OL893414W', googlebooks: null },
+      },
+    }
+    searchExternal.mockImplementation(({ type }: { type: string }) =>
+      Promise.resolve({
+        items: type === 'book' ? [resultat] : [],
+        next_cursor: null,
+        total: type === 'book' ? 1 : 0,
+      }),
+    )
+
+    render('/recherche?q=dune')
+
+    expect(await screen.findByText(/Frank Herbert/)).toBeInTheDocument()
+    expect(screen.queryByText(/openlibrary/)).not.toBeInTheDocument()
+  })
+})

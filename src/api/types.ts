@@ -515,6 +515,80 @@ export interface paths {
       };
     };
   };
+  "/editions": {
+    /**
+     * Les éditions d’une œuvre
+     * @description Appelée au **dépliage** d’une ligne groupée de `GET /search`, jamais pendant la recherche : c’est un appel réseau par œuvre.
+     *
+     * `work_ids` reçoit le contenu de `group.external_ids`. Les éditions des différentes fiches d’un même groupe sont **fusionnées** — la même édition y reparaît souvent — puis triées : français d’abord, puis les fiches les plus renseignées.
+     *
+     * Contrairement au bloc `metadata` d’un résultat de recherche, dont `detail_level` vaut `"search"` et qui mêle plusieurs éditions, ces champs-ci décrivent **une** édition et sont exacts.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Seule source à exposer ses éditions */
+          source: "openlibrary";
+          /** @description Identifiants d’œuvres séparés par des virgules — ceux de `group.external_ids` */
+          work_ids: string;
+          /** @description Éditions demandées **par œuvre** interrogée. Une page peut en rendre davantage : les fiches d’un même groupe sont fusionnées, pas tronquées. */
+          limit?: number;
+          cursor?: string;
+        };
+      };
+      responses: {
+        /** @description Page d’éditions */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** @description Identifiant de l’édition chez la source — la clé d’ajout */
+                  edition_id: string;
+                  publisher: string | null;
+                  /** @description Année extraite d’une date en texte libre */
+                  year: number | null;
+                  page_count: number | null;
+                  isbn13: string | null;
+                  cover_url: string | null;
+                  /** @description Code ISO 639-2, tel que la source le donne */
+                  language: string | null;
+                  /** @description « Poche », « Relié »… */
+                  physical_format: string | null;
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+              /** @description Éditions de cette page, doublons fusionnés — pas le total de l’œuvre */
+              total: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        429: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/media": {
     /**
      * Lister la bibliothèque commune
@@ -601,6 +675,8 @@ export interface paths {
      *
      * **Séries mal couvertes.** Quand la source ne donne pas la liste des tomes — fréquent pour les séries franco-belges — la fiche est créée **sans tome** plutôt que refusée. `POST /media/:id/volumes` permet de les ajouter à la main.
      *
+     * **Édition retenue.** `edition_id`, choisi au dépliage d’une ligne groupée et obtenu de `GET /editions`, renseigne la fiche à sa création : éditeur, pagination, ISBN et jaquette. La fiche reste celle de l’**œuvre** — deux éditions du même livre ne font pas deux fiches. Si la fiche existait déjà, le choix est ignoré : premier arrivé, premier servi. Et si l’ISBN de l’édition appartient déjà à une autre fiche, la clé de déduplication d’origine est conservée.
+     *
      * Le corps ne transporte **pas** les métadonnées reçues à la recherche : le serveur les redemande à la source, pour qu’un client ne puisse pas écrire ce qu’il veut dans la bibliothèque commune.
      *
      * La jaquette est enregistrée sous forme d’URL distante ; sa recopie sur notre stockage arrive à l’étape 6.
@@ -627,6 +703,8 @@ export interface paths {
              * @default false
              */
             owned?: boolean;
+            /** @description Édition retenue, issue de `GET /editions`. Renseigne la fiche à sa création ; ignoré si la fiche existe déjà */
+            edition_id?: string;
           };
         };
       };
@@ -6369,6 +6447,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "book";
       metadata: components["schemas"]["BookMetadataInput"];
@@ -6398,6 +6483,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "comic_series";
       metadata: components["schemas"]["ComicSeriesMetadataInput"];
@@ -6427,6 +6519,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "game";
       metadata: components["schemas"]["GameMetadataInput"];
@@ -6456,6 +6555,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "movie";
       metadata: components["schemas"]["MovieMetadataInput"];
@@ -6485,6 +6591,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "music";
       /** @description Métadonnées propres aux albums */
@@ -6576,6 +6689,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "tv";
       metadata: components["schemas"]["TvMetadataInput"];
@@ -8301,6 +8421,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "book";
       metadata: components["schemas"]["BookMetadata"];
@@ -8330,6 +8457,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "comic_series";
       metadata: components["schemas"]["ComicSeriesMetadata"];
@@ -8359,6 +8493,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "game";
       metadata: components["schemas"]["GameMetadata"];
@@ -8388,6 +8529,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "movie";
       metadata: components["schemas"]["MovieMetadata"];
@@ -8417,6 +8565,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "music";
       /** @description Métadonnées propres aux albums */
@@ -8508,6 +8663,13 @@ export interface components {
       in_library: boolean;
       /** @description Identifiant interne quand `in_library` est vrai, nul sinon — évite un aller-retour pour ouvrir la fiche */
       media_id: string | null;
+      /** @description Renseigné quand la ligne réunit plusieurs fiches de la source, `null` sinon */
+      group: {
+        /** @description Nombre de fiches réunies, représentant compris */
+        size: number;
+        /** @description Toutes les fiches réunies, représentant compris — la clé du dépliage */
+        external_ids: string[];
+      } | null;
       /** @constant */
       type: "tv";
       metadata: components["schemas"]["TvMetadata"];

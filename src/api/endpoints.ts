@@ -4,6 +4,7 @@ import type {
   Availability,
   BackupStatus,
   CompareResponse,
+  EditionsPage,
   EpisodeDetail,
   HomeResponse,
   LibraryItem,
@@ -371,17 +372,44 @@ export const searchExternal = (
   )
 
 /**
+ * Les éditions d'une œuvre groupée.
+ *
+ * Appelée au **dépliage** d'une ligne, jamais pendant la recherche : c'est un
+ * appel réseau par œuvre, et quarante lignes montées d'un coup en feraient
+ * quarante pour une liste que personne n'a demandée.
+ *
+ * `workIds` reçoit le contenu de `group.external_ids`. Open Library est la
+ * seule source qui expose ses éditions — d'où le `source` figé.
+ *
+ * Répond `503` quand la source est en panne. L'écran doit le supporter **sans
+ * perdre la ligne** : on verse l'œuvre même sans avoir pu choisir d'édition.
+ */
+export const fetchEditions = (workIds: string[], signal?: AbortSignal) =>
+  api.get<EditionsPage>(
+    '/editions',
+    { source: 'openlibrary', work_ids: workIds.join(',') },
+    signal,
+  )
+
+/**
  * Ajout d'une œuvre à partir d'un résultat de recherche.
  *
  * Idempotent sur `(source, external_id)` : `created: false` signifie que la
  * fiche existait déjà et que le suivi vient d'y être rattaché. Ce n'est pas une
  * erreur, et surtout pas un doublon — dans les deux cas on ouvre la fiche.
+ *
+ * `external_id` reste celui du **représentant** du groupe, même quand une
+ * édition a été choisie : la fiche est celle de l'œuvre, et deux éditions du
+ * même livre ne font pas deux fiches. `edition_id` ne fait que la renseigner —
+ * éditeur, pagination, ISBN, jaquette. Il est **ignoré si la fiche existait
+ * déjà** : premier arrivé, premier servi.
  */
 export const addMedia = (body: {
   source: MediaSource
   external_id: string
   type: MediaType
   owned?: boolean
+  edition_id?: string
 }) => api.post<{ created: boolean; media: { id: string } }>('/media', body)
 
 /* ------------------------------------------------------------------ */

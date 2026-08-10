@@ -280,6 +280,76 @@
   margin-top: var(--s-2);
 }
 
+/* ---- La ligne groupée et son dépliage ---- */
+
+/**
+ * Le dépliage : doré parce qu'il s'actionne, mais en filet et non en aplat —
+ * « Verser au fonds » reste l'action de l'écran, et deux pleins dorés sur une
+ * même ligne se disputeraient l'œil.
+ */
+.deplier {
+  display: inline-block;
+  margin-top: var(--s-3);
+  background: none;
+  border: none;
+  padding: 0 0 2px;
+  border-bottom: var(--rule-w) solid var(--gold-text);
+  color: var(--gold-text);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity var(--dur-2) var(--ease-page);
+}
+
+.deplier:hover {
+  opacity: 0.72;
+}
+
+.editionsAttente {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--muted);
+  margin-top: var(--s-3);
+}
+
+.editions {
+  list-style: none;
+  margin-top: var(--s-3);
+  border-top: var(--rule-w) solid var(--rule-soft);
+}
+
+/**
+ * Une édition tient sur une ligne : le nom prend la place qui reste, la
+ * pastille et les chiffres n'en prennent que la leur. Les champs manquants ne
+ * laissent pas de colonne vide — `.editionMeta` se réduit à rien.
+ */
+.edition {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-bottom: var(--rule-w) solid var(--rule-soft);
+  cursor: pointer;
+}
+
+.editionNom {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: 16px;
+}
+
+.editionMeta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
 .resultAction {
   flex: none;
 }

@@ -94,6 +94,18 @@ export const queryKeys = {
   episodes: (seasonId: string) => ['episodes', seasonId] as const,
   volumes: (mediaId: string) => ['volumes', mediaId] as const,
   search: (type: string, params: unknown) => ['search', type, params] as const,
+  /**
+   * Les éditions d'une œuvre groupée, sous leur **propre** préfixe et non sous
+   * `search` : elles ne dépendent ni du terme cherché ni du rayon, et replier
+   * puis redéplier la même ligne doit servir le cache plutôt que rappeler la
+   * source. Elles ne dépendent pas davantage du fonds — verser un livre ne
+   * change rien à la liste des éditions que la source connaît.
+   *
+   * Les identifiants sont joints plutôt que passés en tableau : c'est
+   * exactement ce que la requête envoie en `work_ids`, et la clé se relit donc
+   * telle qu'elle part sur le réseau.
+   */
+  editions: (ids: string[]) => ['editions', ids.join(',')] as const,
   invitation: (token: string) => ['invitation', token] as const,
   mediaTrackers: (id: string) => ['people', 'trackers', 'media', id] as const,
   episodeWatchers: (id: string) => ['people', 'trackers', 'episode', id] as const,

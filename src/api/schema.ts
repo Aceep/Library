@@ -17,6 +17,31 @@ export type EpisodeDetail = S['EpisodeDetail']
 export type VolumeDetail = S['VolumeDetail']
 export type SearchResult = S['SearchResult']
 export type HomeResponse = S['HomeResponse']
+
+/**
+ * Ce que `GET /editions` rend d'une page d'éditions.
+ *
+ * Deux pièges dans cette forme, et aucun ne se devine :
+ *
+ * - **`limit` se compte par œuvre interrogée.** Une page peut donc rendre plus
+ *   d'éditions que la limite demandée : les fiches d'un même groupe sont
+ *   fusionnées, pas tronquées. On ne borne jamais sur `items.length`.
+ * - **`total` compte cette page après fusion**, pas les éditions de l'œuvre.
+ *   L'afficher comme « 12 éditions » serait un chiffre faux.
+ */
+export type EditionsPage =
+  paths['/editions']['get']['responses'][200]['content']['application/json']
+
+/**
+ * Une édition — l'objet d'un choix au dépliage.
+ *
+ * Contrairement au bloc `metadata` d'un résultat de recherche, dont
+ * `detail_level` vaut `"search"` et qui mêle plusieurs éditions, ces champs
+ * décrivent **une** édition. Tous sont nullables sauf `edition_id` : une
+ * édition sans éditeur, sans année ni pagination existe, et l'écran ne doit
+ * alors dessiner ni `null` ni séparateur vide.
+ */
+export type Edition = EditionsPage['items'][number]
 export type CompareResponse = S['CompareResponse']
 export type RefreshResponse = S['RefreshResponse']
 

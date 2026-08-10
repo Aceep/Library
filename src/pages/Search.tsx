@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../api/client'
-import { addMedia, searchExternal } from '../api/endpoints'
+import { addMedia, fetchEditions, searchExternal } from '../api/endpoints'
 import { MEDIA_TYPES, typeLabelPlural } from '../api/schema'
 import type { MediaType, SearchResult } from '../api/schema'
 import Cover from '../components/Cover'
@@ -330,13 +330,103 @@ export function creditsDe(result: SearchResult): string | null {
   }
 }
 
+/**
+ * Les éditions d'une œuvre groupée, dépliées sous sa ligne.
+ *
+ * Le composant n'est monté qu'une fois la ligne ouverte, et c'est tout
+ * l'intérêt du dépliage : la requête ne part qu'au geste. Quarante lignes
+ * montées d'un coup feraient quarante appels sortants pour une liste que
+ * personne n'a demandée.
+ *
+ * On n'affiche **ni `total`, ni un compte d'éditions** : `total` est le compte
+ * de la page après fusion, pas celui de l'œuvre, et `limit` se lit par œuvre
+ * interrogée — une page peut donc en rendre davantage. Le seul chiffre honnête
+ * ici serait faux.
+ */
+function Editions({
+  workIds,
+  choisie,
+  onChoisir,
+}: {
+  workIds: string[]
+  choisie: string | null
+  onChoisir: (editionId: string) => void
+}) {
+  const { data, isPending, error } = useQuery({
+    queryKey: queryKeys.editions(workIds),
+    queryFn: ({ signal }) => fetchEditions(workIds, signal),
+    // Les éditions d'une œuvre ne bougent pas d'une minute à l'autre : replier
+    // puis redéplier une ligne ne redemande rien à la source.
+    staleTime: 5 * 60 * 1000,
+  })
+
+  if (isPending) return <p className={styles.editionsAttente}>Lecture des éditions…</p>
+
+  /*
+    La source peut être en panne — la route répond alors 503. L'échec se dit
+    **sur la ligne et ne la démonte pas** : on doit pouvoir verser l'œuvre même
+    quand ses éditions sont injoignables, sans quoi une panne d'Open Library
+    interdirait d'ajouter le moindre livre.
+
+    Pas de `onRetry` : la requête se relance en repliant puis redépliant, et un
+    second bouton au même endroit dirait deux fois la même chose.
+  */
+  if (error) return <ErrorNotice error={error} tone="notice" />
+
+  if (data.items.length === 0) {
+    return <p className={styles.editionsAttente}>Aucune édition connue pour cette œuvre.</p>
+  }
+
+  return (
+    <ul className={styles.editions}>
+      {data.items.map((edition) => (
+        <li key={edition.edition_id}>
+          <label className={styles.edition}>
+            <input
+              type="radio"
+              // Un groupe de boutons radio par ligne : deux lignes dépliées en
+              // même temps ne doivent pas se décocher l'une l'autre.
+              name={`edition-${workIds.join('-')}`}
+              value={edition.edition_id}
+              checked={choisie === edition.edition_id}
+              onChange={() => onChoisir(edition.edition_id)}
+            />
+            <span className={styles.editionNom}>
+              {/* Une édition peut n'avoir ni éditeur, ni format, ni année, ni
+                  pagination : on n'écrit que ce qui existe, et on ne laisse
+                  jamais un séparateur pendre dans le vide. */}
+              {[edition.publisher, edition.physical_format].filter(Boolean).join(' · ') ||
+                'Édition sans éditeur connu'}
+            </span>
+            <span className={styles.editionMeta}>
+              {[edition.year, edition.page_count ? `${edition.page_count} p.` : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          </label>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function ResultRow({ result, type }: { result: SearchResult; type: MediaType }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  const [ouvert, setOuvert] = useState(false)
+  const [edition, setEdition] = useState<string | null>(null)
+
   const add = useMutation({
     mutationFn: () =>
-      addMedia({ source: result.source, external_id: result.external_id, type: result.type }),
+      addMedia({
+        source: result.source,
+        // Le représentant du groupe, toujours : la fiche est celle de l'œuvre,
+        // et deux éditions du même livre ne font pas deux fiches.
+        external_id: result.external_id,
+        type: result.type,
+        ...(edition ? { edition_id: edition } : {}),
+      }),
     onSuccess: (response) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.library })
       void queryClient.invalidateQueries({ queryKey: queryKeys.home })
@@ -368,6 +458,29 @@ function ResultRow({ result, type }: { result: SearchResult; type: MediaType }) 
         <p className={styles.resultMeta}>
           {[creditsDe(result), result.year].filter(Boolean).join(' · ')}
         </p>
+
+        {/* `group` n'est renseigné que sur une ligne qui en réunit plusieurs —
+            et jamais hors des livres, seul type que le back regroupe. */}
+        {result.group ? (
+          <>
+            <button
+              type="button"
+              className={styles.deplier}
+              aria-expanded={ouvert}
+              onClick={() => setOuvert((etat) => !etat)}
+            >
+              {result.group.size} fiches · voir les éditions
+            </button>
+            {ouvert ? (
+              <Editions
+                workIds={result.group.external_ids}
+                choisie={edition}
+                onChoisir={setEdition}
+              />
+            ) : null}
+          </>
+        ) : null}
+
         {add.error ? <ErrorNotice error={add.error} /> : null}
       </div>
 

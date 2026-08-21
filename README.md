@@ -5,6 +5,29 @@ Interface de la médiathèque partagée, branchée sur l'API `bibliotheque-back`
 React 18 + TypeScript + Vite, TanStack Query et CSS Modules. Tout est en
 français, sans i18n.
 
+## L'instance en ligne
+
+<https://mediatheque.tail739f35.ts.net/>
+
+Le front et l'API y partagent **une seule origine** : son nginx sert le front
+compilé, monte l'API sous `/api` — qu'il retire avant de la passer au back —,
+sert `/covers` depuis le back lui aussi, et renvoie `index.html` pour tout le
+reste. C'est cette unité d'origine qui garde le cookie de session first-party
+là-bas, exactement comme le proxy de Vite le fait ici.
+
+Deux conséquences qui ne se devinent pas :
+
+- **Pour viser cette API depuis le poste**, l'adresse porte le préfixe :
+  `https://mediatheque.tail739f35.ts.net/api`. Voir « Viser l'instance en
+  ligne » plus bas — l'origine nue ne donne pas une erreur, elle donne du HTML.
+- **Ses comptes ne sont pas ceux du seed local.** `SEED_USER_A_*` et
+  `SEED_USER_B_*` y ont été posés au déploiement : `alice` / `alice-dev-password`
+  n'y ouvre rien. Un nouvel arrivant passe par une invitation, pas par un seed.
+
+Le tag servi n'est pas forcément `main` : comparer les empreintes de
+`dist/assets/` avec celles de la page en ligne avant de lire cet écran comme un
+aperçu de son propre travail.
+
 ## Démarrer
 
 Le projet exige **Node 24** (voir `.nvmrc`). La contrainte vient de `jsdom`, qui
@@ -110,11 +133,29 @@ Si le back tourne sur une autre machine, son IP se donne par variable :
 VITE_API_TARGET=http://<adresse>:3000 npm run dev
 ```
 
-Ou une fois pour toutes dans `.env.local`, qui n'est pas versionné. **Ne
-remets pas d'IP dans `vite.config.ts`** : celle qui s'y trouvait a fini par
-désigner une machine qui n'existait plus, et un défaut faux coûte plus qu'un
-défaut restrictif — l'application démarre, se connecte même, puis échoue
-partout sans dire pourquoi.
+Ou une fois pour toutes dans `.env.local`, qui n'est pas versionné — c'est
+`loadEnv` qui le lit dans `vite.config.ts`, et non `process.env`, qui ne voit
+jamais les fichiers `.env`. **Ne remets pas d'IP dans `vite.config.ts`** : celle
+qui s'y trouvait a fini par désigner une machine qui n'existait plus, et un
+défaut faux coûte plus qu'un défaut restrictif — l'application démarre, se
+connecte même, puis échoue partout sans dire pourquoi.
+
+#### Viser l'instance en ligne
+
+Elle sert le front **et** l'API sur une seule origine : son nginx monte l'API
+sous `/api` et la rend au back sans ce préfixe, `/covers` va au back lui aussi,
+le reste retombe sur `index.html`. L'adresse porte donc ce `/api` :
+
+```bash
+VITE_API_TARGET=https://mediatheque.tail739f35.ts.net/api npm run dev
+```
+
+Le proxy retire `/api` de la requête, la cible le remet — les deux se
+compensent, et `/covers` traverse le même préfixe pour revenir au back. Viser
+l'origine nue paraît plus juste et ne l'est pas : `/api/home` tombe alors sur la
+réécriture SPA et renvoie `index.html` en **200**, du HTML là où le code attend
+du JSON. Aucune erreur de proxy dans le terminal, aucun `401` — juste des écrans
+vides.
 
 Symptôme d'une adresse morte : les appels échouent côté navigateur et le
 **terminal Vite** — pas la console — affiche :

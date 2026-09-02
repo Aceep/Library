@@ -45,9 +45,11 @@ const LIVRE: SearchResult = {
     isbn10: null,
     isbn13: null,
     language: null,
+    languages: [],
+    edition_manual: false,
     genres: [],
     series: null,
-    external_ids: { openlibrary: 'OL893414W', googlebooks: null },
+    external_ids: { openlibrary: 'OL893414W', googlebooks: null, edition: null },
   },
 }
 

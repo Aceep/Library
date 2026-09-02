@@ -6661,7 +6661,7 @@
           },
           "language": {
             "default": null,
-            "description": "Code langue ISO 639-1",
+            "description": "Code langue de l’édition retenue. Nul au niveau recherche : une œuvre n’a pas de langue",
             "anyOf": [
               {
                 "type": "string"
@@ -6670,6 +6670,19 @@
                 "type": "null"
               }
             ]
+          },
+          "languages": {
+            "default": [],
+            "description": "Langues dans lesquelles l’œuvre a paru — propriété de l’œuvre, contrairement à `language` qui est celle de l’édition retenue",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "edition_manual": {
+            "default": false,
+            "description": "Vrai quand le lecteur a choisi l’édition lui-même, au dépliage",
+            "type": "boolean"
           },
           "genres": {
             "default": [],
@@ -6693,7 +6706,8 @@
           "external_ids": {
             "default": {
               "openlibrary": null,
-              "googlebooks": null
+              "googlebooks": null,
+              "edition": null
             },
             "type": "object",
             "properties": {
@@ -6710,6 +6724,18 @@
               },
               "googlebooks": {
                 "default": null,
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "edition": {
+                "default": null,
+                "description": "Édition retenue chez Open Library — celle qui renseigne la fiche",
                 "anyOf": [
                   {
                     "type": "string"
@@ -14931,7 +14957,7 @@
           },
           "language": {
             "default": null,
-            "description": "Code langue ISO 639-1",
+            "description": "Code langue de l’édition retenue. Nul au niveau recherche : une œuvre n’a pas de langue",
             "anyOf": [
               {
                 "type": "string"
@@ -14940,6 +14966,19 @@
                 "type": "null"
               }
             ]
+          },
+          "languages": {
+            "default": [],
+            "description": "Langues dans lesquelles l’œuvre a paru — propriété de l’œuvre, contrairement à `language` qui est celle de l’édition retenue",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "edition_manual": {
+            "default": false,
+            "description": "Vrai quand le lecteur a choisi l’édition lui-même, au dépliage",
+            "type": "boolean"
           },
           "genres": {
             "default": [],
@@ -14963,7 +15002,8 @@
           "external_ids": {
             "default": {
               "openlibrary": null,
-              "googlebooks": null
+              "googlebooks": null,
+              "edition": null
             },
             "type": "object",
             "properties": {
@@ -14988,11 +15028,24 @@
                     "type": "null"
                   }
                 ]
+              },
+              "edition": {
+                "default": null,
+                "description": "Édition retenue chez Open Library — celle qui renseigne la fiche",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
               "openlibrary",
-              "googlebooks"
+              "googlebooks",
+              "edition"
             ],
             "additionalProperties": false,
             "description": "Identifiants chez les sources qui ont contribué à cette fiche"
@@ -15005,6 +15058,8 @@
           "isbn10",
           "isbn13",
           "language",
+          "languages",
+          "edition_manual",
           "genres",
           "series",
           "external_ids"
@@ -16398,7 +16453,84 @@
         "tags": [
           "système"
         ],
-        "description": "Vérifie Postgres et Redis en parallèle. Renvoie 200 si les deux répondent, 503 si au moins un est en panne.",
+        "description": "Sonde destinée à un orchestrateur : 200 si Postgres et Redis répondent tous les deux, 503 si au moins un est en panne. Le corps ne dit rien de plus, et c’est délibéré — cette route est publique et non authentifiée, elle ne sert donc que des **états** qu’on choisit soi-même, jamais un message reçu d’un autre système : celui de Prisma nomme l’hôte, le port et l’utilisateur de la base. Le détail des dépendances est sur `GET /admin/health`, et les messages bruts sont dans les journaux du serveur.",
+        "responses": {
+          "200": {
+            "description": "État du service, sans rien qui vienne d’ailleurs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ]
+                    },
+                    "uptime_s": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "uptime_s"
+                  ],
+                  "additionalProperties": false,
+                  "description": "État du service, sans rien qui vienne d’ailleurs"
+                },
+                "examples": {
+                  "Réponse type": {
+                    "value": {
+                      "status": "ok",
+                      "uptime_s": 3612
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "État du service, sans rien qui vienne d’ailleurs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ]
+                    },
+                    "uptime_s": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "uptime_s"
+                  ],
+                  "additionalProperties": false,
+                  "description": "État du service, sans rien qui vienne d’ailleurs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/health": {
+      "get": {
+        "summary": "Détail de l’état du service",
+        "tags": [
+          "système"
+        ],
+        "description": "Ce que `GET /health` ne sert pas : la latence de chaque dépendance, le message qui explique une panne, et l’état des sources externes facultatives. `version` est le tag Git de l’image qui répond, `null` pour une image construite sans. **Mêmes codes que la route publique** — 200 si Postgres et Redis répondent, 503 sinon —, calculés une seule fois pour que les deux ne puissent pas diverger. **Tant qu’elle répond** : cette route lit le compte en base et la session dans Redis, donc pendant une panne franche de l’une ou de l’autre elle rend 500 avant même de sonder. C’est `GET /health` qui parle alors, et les journaux du conteneur qui disent laquelle est tombée — le détail sert à diagnostiquer une dégradation, cas où les deux dépendances vont bien. `checks.googlebooks` rapporte ce que le dernier appel à Google Books a laissé, sans rien appeler : une source facultative dégradée ne change ni le code HTTP ni `status`. Pour tester une clé Google Books : la poser, redémarrer, ajouter un livre depuis Google Books (`POST /media` avec `source: \"googlebooks\"`), puis relire ici. `checked_at` absent signifie qu’aucun **verdict** n’a été obtenu — soit qu’aucun appel n’ait eu lieu, soit qu’il se soit perdu dans une coupure ou un quota rendu en 429. Un `up` sans cette date se lit « rien de vérifié », jamais « vérifié bon ».",
         "responses": {
           "200": {
             "description": "État du service et de ses dépendances",
@@ -16417,6 +16549,16 @@
                     "uptime_s": {
                       "type": "number",
                       "minimum": 0
+                    },
+                    "version": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "checks": {
                       "type": "object",
@@ -16437,7 +16579,7 @@
                               "maximum": 9007199254740991
                             },
                             "error": {
-                              "description": "Détail technique, présent seulement si le service est down",
+                              "description": "Détail technique, expurgé des secrets de l’environnement. Présent seulement si le service est down, et seulement derrière `GET /admin/health` : la route publique n’en sert aucun.",
                               "type": "string"
                             }
                           },
@@ -16462,7 +16604,7 @@
                               "maximum": 9007199254740991
                             },
                             "error": {
-                              "description": "Détail technique, présent seulement si le service est down",
+                              "description": "Détail technique, expurgé des secrets de l’environnement. Présent seulement si le service est down, et seulement derrière `GET /admin/health` : la route publique n’en sert aucun.",
                               "type": "string"
                             }
                           },
@@ -16470,6 +16612,45 @@
                             "status"
                           ],
                           "additionalProperties": false
+                        },
+                        "googlebooks": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "up",
+                                "degraded"
+                              ]
+                            },
+                            "checked_at": {
+                              "description": "Date du dernier appel dont on a tiré un verdict. **Absent ne veut pas dire « aucun appel »** : un appel qui s’est perdu dans une coupure, une file qui a renoncé ou un quota rendu en 429 ne laisse pas de verdict et ne date rien. Un `up` sans cette date signifie donc « rien de vérifié », jamais « vérifié bon ».",
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            },
+                            "since": {
+                              "description": "Depuis quand le refus dure, figé au premier échec de la série",
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            },
+                            "http_status": {
+                              "description": "Statut rendu par la source — 400 pour une clé refusée",
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "message": {
+                              "description": "Ce que la source dit d’elle-même, ses mots : « API key not valid. Please pass a valid API key. »",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "status"
+                          ],
+                          "additionalProperties": false,
+                          "description": "État d’une source externe facultative, tel que le dernier appel l’a laissé"
                         }
                       },
                       "required": [
@@ -16482,6 +16663,7 @@
                   "required": [
                     "status",
                     "uptime_s",
+                    "version",
                     "checks"
                   ],
                   "additionalProperties": false,
@@ -16492,6 +16674,7 @@
                     "value": {
                       "status": "ok",
                       "uptime_s": 3612,
+                      "version": "v1.1.0",
                       "checks": {
                         "postgres": {
                           "status": "up",
@@ -16500,10 +16683,37 @@
                         "redis": {
                           "status": "up",
                           "latency_ms": 1
+                        },
+                        "googlebooks": {
+                          "status": "degraded",
+                          "checked_at": "2026-08-26T09:14:02.311Z",
+                          "since": "2026-08-26T09:12:44.008Z",
+                          "http_status": 400,
+                          "message": "API key not valid. Please pass a valid API key."
                         }
                       }
                     }
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -16526,6 +16736,16 @@
                       "type": "number",
                       "minimum": 0
                     },
+                    "version": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "checks": {
                       "type": "object",
                       "properties": {
@@ -16545,7 +16765,7 @@
                               "maximum": 9007199254740991
                             },
                             "error": {
-                              "description": "Détail technique, présent seulement si le service est down",
+                              "description": "Détail technique, expurgé des secrets de l’environnement. Présent seulement si le service est down, et seulement derrière `GET /admin/health` : la route publique n’en sert aucun.",
                               "type": "string"
                             }
                           },
@@ -16570,7 +16790,7 @@
                               "maximum": 9007199254740991
                             },
                             "error": {
-                              "description": "Détail technique, présent seulement si le service est down",
+                              "description": "Détail technique, expurgé des secrets de l’environnement. Présent seulement si le service est down, et seulement derrière `GET /admin/health` : la route publique n’en sert aucun.",
                               "type": "string"
                             }
                           },
@@ -16578,6 +16798,45 @@
                             "status"
                           ],
                           "additionalProperties": false
+                        },
+                        "googlebooks": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "up",
+                                "degraded"
+                              ]
+                            },
+                            "checked_at": {
+                              "description": "Date du dernier appel dont on a tiré un verdict. **Absent ne veut pas dire « aucun appel »** : un appel qui s’est perdu dans une coupure, une file qui a renoncé ou un quota rendu en 429 ne laisse pas de verdict et ne date rien. Un `up` sans cette date signifie donc « rien de vérifié », jamais « vérifié bon ».",
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            },
+                            "since": {
+                              "description": "Depuis quand le refus dure, figé au premier échec de la série",
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            },
+                            "http_status": {
+                              "description": "Statut rendu par la source — 400 pour une clé refusée",
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "message": {
+                              "description": "Ce que la source dit d’elle-même, ses mots : « API key not valid. Please pass a valid API key. »",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "status"
+                          ],
+                          "additionalProperties": false,
+                          "description": "État d’une source externe facultative, tel que le dernier appel l’a laissé"
                         }
                       },
                       "required": [
@@ -16590,6 +16849,7 @@
                   "required": [
                     "status",
                     "uptime_s",
+                    "version",
                     "checks"
                   ],
                   "additionalProperties": false,
@@ -17564,7 +17824,7 @@
         "tags": [
           "recherche"
         ],
-        "description": "Résultats **normalisés** : un tronc commun identique pour tous les types (identifiant externe, source, titre, année, jaquette, `detail_level`, `in_library`) et un bloc `metadata` typé par type, discriminé sur `type`.\n\n**Sources par type** — `movie` et `tv` : TMDB. `book` : Open Library pour la recherche, Google Books pour les résumés et les couvertures, fusionnés sur l’ISBN-13. `comic_series` : AniList, avec repli Jikan si AniList ne répond pas. `game` : IGDB, authentifié par un jeton Twitch renouvelé automatiquement. `music` : MusicBrainz, pochettes Cover Art Archive, sans clé.\n\n**Albums** — l’unité est le *groupe de publication* MusicBrainz, c’est-à-dire l’œuvre et non l’une de ses éditions : *OK Computer* apparaît une fois, pas une fois par pressage. La recherche est restreinte aux albums et EP — singles et compilations de labels noieraient le reste. La liste des pistes n’est pas dans les résultats : elle arrive avec `POST /media`, qui interroge l’édition retenue.\n\n**Recherche de livres** — `q` cherche titre et auteur, `isbn` fait une recherche exacte (ISBN-10 ou ISBN-13, tirets tolérés). L’un des deux est obligatoire ; `isbn` est réservé au type `book`.\n\nLes blocs `metadata` des résultats sont partiels, ce que dit `detail_level: \"search\"` — un champ nul ne prouve pas que la source l’ignore, seulement qu’on ne le lui a pas encore demandé. L’ajout (`POST /media`) interroge les fiches détaillées et remplit le reste.\n\n`in_library` tient compte de la **déduplication** : un livre ajouté depuis Google Books est reconnu lors d’une recherche Open Library, dès lors que les deux portent le même ISBN-13.\n\n**Pagination** — `limit` (défaut 40, maximum 100) et `cursor`, comme `GET /media`. Le curseur est opaque : il retient la position exacte chez la source, y compris au milieu d’une de ses pages.",
+        "description": "Résultats **normalisés** : un tronc commun identique pour tous les types (identifiant externe, source, titre, année, jaquette, `detail_level`, `in_library`) et un bloc `metadata` typé par type, discriminé sur `type`.\n\n**Sources par type** — `movie` et `tv` : TMDB. `book` : Open Library pour la recherche ; Google Books n’intervient qu’en repli quand Open Library ignore l’ISBN cherché, et à l’ajout pour enrichir l’édition retenue — plus de fusion par ISBN-13 à la recherche. `comic_series` : AniList, avec repli Jikan si AniList ne répond pas. `game` : IGDB, authentifié par un jeton Twitch renouvelé automatiquement. `music` : MusicBrainz, pochettes Cover Art Archive, sans clé.\n\n**Albums** — l’unité est le *groupe de publication* MusicBrainz, c’est-à-dire l’œuvre et non l’une de ses éditions : *OK Computer* apparaît une fois, pas une fois par pressage. La recherche est restreinte aux albums et EP — singles et compilations de labels noieraient le reste. La liste des pistes n’est pas dans les résultats : elle arrive avec `POST /media`, qui interroge l’édition retenue.\n\n**Recherche de livres** — `q` cherche titre et auteur, `isbn` fait une recherche exacte (ISBN-10 ou ISBN-13, tirets tolérés). L’un des deux est obligatoire ; `isbn` est réservé au type `book`. `q` doit faire **au moins trois caractères** : Open Library refuse en dessous, et une requête plus courte rend un 400 `VALIDATION` — pas un 503, la source n’y est pour rien. `isbn` n’a pas cette contrainte, les autres types non plus.\n\nLes blocs `metadata` des résultats sont partiels, ce que dit `detail_level: \"search\"` — un champ nul ne prouve pas que la source l’ignore, seulement qu’on ne le lui a pas encore demandé. L’ajout (`POST /media`) interroge les fiches détaillées et remplit le reste.\n\n`in_library` s’appuie sur `(source, external_id)`. Pour les livres, la déduplication par ISBN ne joue plus au niveau recherche : une œuvre n’a pas d’ISBN, seule une de ses éditions en a un, et il est choisi à l’ajout.\n\n**Pagination** — `limit` (défaut 40, maximum 100) et `cursor`, comme `GET /media`. Le curseur est opaque : il retient la position exacte chez la source, y compris au milieu d’une de ses pages.",
         "parameters": [
           {
             "schema": {
@@ -18074,7 +18334,7 @@
         "tags": [
           "bibliothèque"
         ],
-        "description": "Reprend l’instantané des métadonnées à la source, crée la fiche commune et sa hiérarchie — saisons et épisodes pour une série, tomes pour un manga, **en une seule transaction** — puis la ligne de suivi de l’utilisateur de la session.\n\n**Idempotent.** Ajouter deux fois la même œuvre ne crée pas de doublon : la deuxième fois renvoie `200` avec `created: false` et rattache le suivi de l’appelant à la fiche existante. C’est le cas normal quand l’autre compte l’a déjà ajoutée.\n\n**Déduplication transverse aux sources.** Pour les livres, la reconnaissance passe d’abord par `dedup_key` (`isbn13:<ISBN>`), puis par `(source, external_id)`. Un livre ajouté depuis Open Library puis retrouvé via Google Books ne produit donc qu’une seule fiche — et les deux vues sont **fusionnées champ par champ** : le résumé le plus long l’emporte, la couverture déjà en place est conservée, les listes s’unissent, et aucune valeur existante n’est remplacée par un nul. Un livre sans ISBN dérivable n’est pas déduplicable : mieux vaut deux fiches qu’une fusion erronée.\n\n**Séries mal couvertes.** Quand la source ne donne pas la liste des tomes — fréquent pour les séries franco-belges — la fiche est créée **sans tome** plutôt que refusée. `POST /media/:id/volumes` permet de les ajouter à la main.\n\n**Édition retenue.** `edition_id`, choisi au dépliage d’une ligne groupée et obtenu de `GET /editions`, renseigne la fiche à sa création : éditeur, pagination, ISBN et jaquette. La fiche reste celle de l’**œuvre** — deux éditions du même livre ne font pas deux fiches. Si la fiche existait déjà, le choix est ignoré : premier arrivé, premier servi. Et si l’ISBN de l’édition appartient déjà à une autre fiche, la clé de déduplication d’origine est conservée.\n\nLe corps ne transporte **pas** les métadonnées reçues à la recherche : le serveur les redemande à la source, pour qu’un client ne puisse pas écrire ce qu’il veut dans la bibliothèque commune.\n\nLa jaquette est enregistrée sous forme d’URL distante ; sa recopie sur notre stockage arrive à l’étape 6.",
+        "description": "Reprend l’instantané des métadonnées à la source, crée la fiche commune et sa hiérarchie — saisons et épisodes pour une série, tomes pour un manga, **en une seule transaction** — puis la ligne de suivi de l’utilisateur de la session.\n\n**Idempotent.** Ajouter deux fois la même œuvre ne crée pas de doublon : la deuxième fois renvoie `200` avec `created: false` et rattache le suivi de l’appelant à la fiche existante. C’est le cas normal quand l’autre compte l’a déjà ajoutée.\n\n**Déduplication transverse aux sources.** Pour les livres, la reconnaissance passe d’abord par `dedup_key` (`isbn13:<ISBN>`), puis par `(source, external_id)`. Un document d’œuvre Open Library n’a pas d’ISBN à lui — il agrège ceux de toutes ses éditions : la clé vient de l’**édition retenue**. Un livre ajouté depuis Open Library puis retrouvé via Google Books ne produit donc qu’une seule fiche **quand l’édition retenue porte l’ISBN du volume Google Books**, et deux sinon. Ce n’est pas un défaut : deux éditions différentes sont deux fiches, c’est la sémantique voulue. Quand la fusion a lieu, les deux vues sont **fusionnées champ par champ** : le résumé le plus long l’emporte, la couverture déjà en place est conservée, les listes s’unissent, et aucune valeur existante n’est remplacée par un nul. Un livre dont l’édition retenue n’a pas d’ISBN n’est pas déduplicable : mieux vaut deux fiches qu’une fusion erronée.\n\n**Séries mal couvertes.** Quand la source ne donne pas la liste des tomes — fréquent pour les séries franco-belges — la fiche est créée **sans tome** plutôt que refusée. `POST /media/:id/volumes` permet de les ajouter à la main.\n\n**Édition retenue.** Un livre versé depuis Open Library retient une édition, que le lecteur ait déplié ou non — et le cas sans dépliage est le plus courant. `edition_id`, choisi au dépliage d’une ligne groupée et obtenu de `GET /editions`, prime quand il est fourni ; sinon le serveur applique le tri de `GET /editions` — français d’abord, puis complétude, puis année — aux cinquante premières éditions de l’œuvre. `metadata.edition_manual` dit laquelle des deux voies a renseigné la fiche, et le choix du lecteur ne se révise pas. L’édition pose éditeur, pagination, ISBN, langue et jaquette ; le résumé vient de la fiche d’œuvre, à défaut de la première phrase que rend la recherche, et Google Books entre en concurrence sur l’ISBN de l’édition retenue quand il le connaît — le plus long des deux vrais résumés l’emporte. La fiche reste celle de l’**œuvre** : choisir une édition ne crée pas une fiche par édition — à ne pas confondre avec deux **sources** qui retiennent des éditions différentes, lesquelles font bien deux fiches. Si la fiche existait déjà, le choix est ignoré : premier arrivé, premier servi. Et si l’ISBN de l’édition appartient déjà à une autre fiche, la clé de déduplication d’origine est conservée. Une source d’éditions injoignable ne coûte pas l’ajout : la fiche est versée avec des champs d’édition nuls, ce que `detail_level` ne masque pas — un nul dit qu’on ne sait pas, jamais qu’on a deviné.\n\nLe corps ne transporte **pas** les métadonnées reçues à la recherche : le serveur les redemande à la source, pour qu’un client ne puisse pas écrire ce qu’il veut dans la bibliothèque commune.\n\nLa jaquette est enregistrée sous forme d’URL distante ; sa recopie sur notre stockage arrive à l’étape 6.",
         "requestBody": {
           "required": true,
           "content": {

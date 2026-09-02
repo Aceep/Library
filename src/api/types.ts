@@ -13,7 +13,37 @@ export interface paths {
   "/health": {
     /**
      * État du service
-     * @description Vérifie Postgres et Redis en parallèle. Renvoie 200 si les deux répondent, 503 si au moins un est en panne.
+     * @description Sonde destinée à un orchestrateur : 200 si Postgres et Redis répondent tous les deux, 503 si au moins un est en panne. Le corps ne dit rien de plus, et c’est délibéré — cette route est publique et non authentifiée, elle ne sert donc que des **états** qu’on choisit soi-même, jamais un message reçu d’un autre système : celui de Prisma nomme l’hôte, le port et l’utilisateur de la base. Le détail des dépendances est sur `GET /admin/health`, et les messages bruts sont dans les journaux du serveur.
+     */
+    get: {
+      responses: {
+        /** @description État du service, sans rien qui vienne d’ailleurs */
+        200: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              status: "ok" | "degraded";
+              uptime_s: number;
+            };
+          };
+        };
+        /** @description État du service, sans rien qui vienne d’ailleurs */
+        503: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              status: "ok" | "degraded";
+              uptime_s: number;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/admin/health": {
+    /**
+     * Détail de l’état du service
+     * @description Ce que `GET /health` ne sert pas : la latence de chaque dépendance, le message qui explique une panne, et l’état des sources externes facultatives. `version` est le tag Git de l’image qui répond, `null` pour une image construite sans. **Mêmes codes que la route publique** — 200 si Postgres et Redis répondent, 503 sinon —, calculés une seule fois pour que les deux ne puissent pas diverger. **Tant qu’elle répond** : cette route lit le compte en base et la session dans Redis, donc pendant une panne franche de l’une ou de l’autre elle rend 500 avant même de sonder. C’est `GET /health` qui parle alors, et les journaux du conteneur qui disent laquelle est tombée — le détail sert à diagnostiquer une dégradation, cas où les deux dépendances vont bien. `checks.googlebooks` rapporte ce que le dernier appel à Google Books a laissé, sans rien appeler : une source facultative dégradée ne change ni le code HTTP ni `status`. Pour tester une clé Google Books : la poser, redémarrer, ajouter un livre depuis Google Books (`POST /media` avec `source: "googlebooks"`), puis relire ici. `checked_at` absent signifie qu’aucun **verdict** n’a été obtenu — soit qu’aucun appel n’ait eu lieu, soit qu’il se soit perdu dans une coupure ou un quota rendu en 429. Un `up` sans cette date se lit « rien de vérifié », jamais « vérifié bon ».
      */
     get: {
       responses: {
@@ -24,23 +54,55 @@ export interface paths {
               /** @enum {string} */
               status: "ok" | "degraded";
               uptime_s: number;
+              version: string | null;
               checks: {
                 postgres: {
                   /** @enum {string} */
                   status: "up" | "down";
                   latency_ms?: number;
-                  /** @description Détail technique, présent seulement si le service est down */
+                  /** @description Détail technique, expurgé des secrets de l’environnement. Présent seulement si le service est down, et seulement derrière `GET /admin/health` : la route publique n’en sert aucun. */
                   error?: string;
                 };
                 redis: {
                   /** @enum {string} */
                   status: "up" | "down";
                   latency_ms?: number;
-                  /** @description Détail technique, présent seulement si le service est down */
+                  /** @description Détail technique, expurgé des secrets de l’environnement. Présent seulement si le service est down, et seulement derrière `GET /admin/health` : la route publique n’en sert aucun. */
                   error?: string;
+                };
+                /** @description État d’une source externe facultative, tel que le dernier appel l’a laissé */
+                googlebooks?: {
+                  /** @enum {string} */
+                  status: "up" | "degraded";
+                  /**
+                   * Format: date-time
+                   * @description Date du dernier appel dont on a tiré un verdict. **Absent ne veut pas dire « aucun appel »** : un appel qui s’est perdu dans une coupure, une file qui a renoncé ou un quota rendu en 429 ne laisse pas de verdict et ne date rien. Un `up` sans cette date signifie donc « rien de vérifié », jamais « vérifié bon ».
+                   */
+                  checked_at?: string;
+                  /**
+                   * Format: date-time
+                   * @description Depuis quand le refus dure, figé au premier échec de la série
+                   */
+                  since?: string;
+                  /** @description Statut rendu par la source — 400 pour une clé refusée */
+                  http_status?: number;
+                  /** @description Ce que la source dit d’elle-même, ses mots : « API key not valid. Please pass a valid API key. » */
+                  message?: string;
                 };
               };
             };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
           };
         };
         /** @description État du service et de ses dépendances */
@@ -50,20 +112,40 @@ export interface paths {
               /** @enum {string} */
               status: "ok" | "degraded";
               uptime_s: number;
+              version: string | null;
               checks: {
                 postgres: {
                   /** @enum {string} */
                   status: "up" | "down";
                   latency_ms?: number;
-                  /** @description Détail technique, présent seulement si le service est down */
+                  /** @description Détail technique, expurgé des secrets de l’environnement. Présent seulement si le service est down, et seulement derrière `GET /admin/health` : la route publique n’en sert aucun. */
                   error?: string;
                 };
                 redis: {
                   /** @enum {string} */
                   status: "up" | "down";
                   latency_ms?: number;
-                  /** @description Détail technique, présent seulement si le service est down */
+                  /** @description Détail technique, expurgé des secrets de l’environnement. Présent seulement si le service est down, et seulement derrière `GET /admin/health` : la route publique n’en sert aucun. */
                   error?: string;
+                };
+                /** @description État d’une source externe facultative, tel que le dernier appel l’a laissé */
+                googlebooks?: {
+                  /** @enum {string} */
+                  status: "up" | "degraded";
+                  /**
+                   * Format: date-time
+                   * @description Date du dernier appel dont on a tiré un verdict. **Absent ne veut pas dire « aucun appel »** : un appel qui s’est perdu dans une coupure, une file qui a renoncé ou un quota rendu en 429 ne laisse pas de verdict et ne date rien. Un `up` sans cette date signifie donc « rien de vérifié », jamais « vérifié bon ».
+                   */
+                  checked_at?: string;
+                  /**
+                   * Format: date-time
+                   * @description Depuis quand le refus dure, figé au premier échec de la série
+                   */
+                  since?: string;
+                  /** @description Statut rendu par la source — 400 pour une clé refusée */
+                  http_status?: number;
+                  /** @description Ce que la source dit d’elle-même, ses mots : « API key not valid. Please pass a valid API key. » */
+                  message?: string;
                 };
               };
             };
@@ -448,15 +530,15 @@ export interface paths {
      * Chercher une œuvre chez les sources externes
      * @description Résultats **normalisés** : un tronc commun identique pour tous les types (identifiant externe, source, titre, année, jaquette, `detail_level`, `in_library`) et un bloc `metadata` typé par type, discriminé sur `type`.
      *
-     * **Sources par type** — `movie` et `tv` : TMDB. `book` : Open Library pour la recherche, Google Books pour les résumés et les couvertures, fusionnés sur l’ISBN-13. `comic_series` : AniList, avec repli Jikan si AniList ne répond pas. `game` : IGDB, authentifié par un jeton Twitch renouvelé automatiquement. `music` : MusicBrainz, pochettes Cover Art Archive, sans clé.
+     * **Sources par type** — `movie` et `tv` : TMDB. `book` : Open Library pour la recherche ; Google Books n’intervient qu’en repli quand Open Library ignore l’ISBN cherché, et à l’ajout pour enrichir l’édition retenue — plus de fusion par ISBN-13 à la recherche. `comic_series` : AniList, avec repli Jikan si AniList ne répond pas. `game` : IGDB, authentifié par un jeton Twitch renouvelé automatiquement. `music` : MusicBrainz, pochettes Cover Art Archive, sans clé.
      *
      * **Albums** — l’unité est le *groupe de publication* MusicBrainz, c’est-à-dire l’œuvre et non l’une de ses éditions : *OK Computer* apparaît une fois, pas une fois par pressage. La recherche est restreinte aux albums et EP — singles et compilations de labels noieraient le reste. La liste des pistes n’est pas dans les résultats : elle arrive avec `POST /media`, qui interroge l’édition retenue.
      *
-     * **Recherche de livres** — `q` cherche titre et auteur, `isbn` fait une recherche exacte (ISBN-10 ou ISBN-13, tirets tolérés). L’un des deux est obligatoire ; `isbn` est réservé au type `book`.
+     * **Recherche de livres** — `q` cherche titre et auteur, `isbn` fait une recherche exacte (ISBN-10 ou ISBN-13, tirets tolérés). L’un des deux est obligatoire ; `isbn` est réservé au type `book`. `q` doit faire **au moins trois caractères** : Open Library refuse en dessous, et une requête plus courte rend un 400 `VALIDATION` — pas un 503, la source n’y est pour rien. `isbn` n’a pas cette contrainte, les autres types non plus.
      *
      * Les blocs `metadata` des résultats sont partiels, ce que dit `detail_level: "search"` — un champ nul ne prouve pas que la source l’ignore, seulement qu’on ne le lui a pas encore demandé. L’ajout (`POST /media`) interroge les fiches détaillées et remplit le reste.
      *
-     * `in_library` tient compte de la **déduplication** : un livre ajouté depuis Google Books est reconnu lors d’une recherche Open Library, dès lors que les deux portent le même ISBN-13.
+     * `in_library` s’appuie sur `(source, external_id)`. Pour les livres, la déduplication par ISBN ne joue plus au niveau recherche : une œuvre n’a pas d’ISBN, seule une de ses éditions en a un, et il est choisi à l’ajout.
      *
      * **Pagination** — `limit` (défaut 40, maximum 100) et `cursor`, comme `GET /media`. Le curseur est opaque : il retient la position exacte chez la source, y compris au milieu d’une de ses pages.
      */
@@ -671,11 +753,11 @@ export interface paths {
      *
      * **Idempotent.** Ajouter deux fois la même œuvre ne crée pas de doublon : la deuxième fois renvoie `200` avec `created: false` et rattache le suivi de l’appelant à la fiche existante. C’est le cas normal quand l’autre compte l’a déjà ajoutée.
      *
-     * **Déduplication transverse aux sources.** Pour les livres, la reconnaissance passe d’abord par `dedup_key` (`isbn13:<ISBN>`), puis par `(source, external_id)`. Un livre ajouté depuis Open Library puis retrouvé via Google Books ne produit donc qu’une seule fiche — et les deux vues sont **fusionnées champ par champ** : le résumé le plus long l’emporte, la couverture déjà en place est conservée, les listes s’unissent, et aucune valeur existante n’est remplacée par un nul. Un livre sans ISBN dérivable n’est pas déduplicable : mieux vaut deux fiches qu’une fusion erronée.
+     * **Déduplication transverse aux sources.** Pour les livres, la reconnaissance passe d’abord par `dedup_key` (`isbn13:<ISBN>`), puis par `(source, external_id)`. Un document d’œuvre Open Library n’a pas d’ISBN à lui — il agrège ceux de toutes ses éditions : la clé vient de l’**édition retenue**. Un livre ajouté depuis Open Library puis retrouvé via Google Books ne produit donc qu’une seule fiche **quand l’édition retenue porte l’ISBN du volume Google Books**, et deux sinon. Ce n’est pas un défaut : deux éditions différentes sont deux fiches, c’est la sémantique voulue. Quand la fusion a lieu, les deux vues sont **fusionnées champ par champ** : le résumé le plus long l’emporte, la couverture déjà en place est conservée, les listes s’unissent, et aucune valeur existante n’est remplacée par un nul. Un livre dont l’édition retenue n’a pas d’ISBN n’est pas déduplicable : mieux vaut deux fiches qu’une fusion erronée.
      *
      * **Séries mal couvertes.** Quand la source ne donne pas la liste des tomes — fréquent pour les séries franco-belges — la fiche est créée **sans tome** plutôt que refusée. `POST /media/:id/volumes` permet de les ajouter à la main.
      *
-     * **Édition retenue.** `edition_id`, choisi au dépliage d’une ligne groupée et obtenu de `GET /editions`, renseigne la fiche à sa création : éditeur, pagination, ISBN et jaquette. La fiche reste celle de l’**œuvre** — deux éditions du même livre ne font pas deux fiches. Si la fiche existait déjà, le choix est ignoré : premier arrivé, premier servi. Et si l’ISBN de l’édition appartient déjà à une autre fiche, la clé de déduplication d’origine est conservée.
+     * **Édition retenue.** Un livre versé depuis Open Library retient une édition, que le lecteur ait déplié ou non — et le cas sans dépliage est le plus courant. `edition_id`, choisi au dépliage d’une ligne groupée et obtenu de `GET /editions`, prime quand il est fourni ; sinon le serveur applique le tri de `GET /editions` — français d’abord, puis complétude, puis année — aux cinquante premières éditions de l’œuvre. `metadata.edition_manual` dit laquelle des deux voies a renseigné la fiche, et le choix du lecteur ne se révise pas. L’édition pose éditeur, pagination, ISBN, langue et jaquette ; le résumé vient de la fiche d’œuvre, à défaut de la première phrase que rend la recherche, et Google Books entre en concurrence sur l’ISBN de l’édition retenue quand il le connaît — le plus long des deux vrais résumés l’emporte. La fiche reste celle de l’**œuvre** : choisir une édition ne crée pas une fiche par édition — à ne pas confondre avec deux **sources** qui retiennent des éditions différentes, lesquelles font bien deux fiches. Si la fiche existait déjà, le choix est ignoré : premier arrivé, premier servi. Et si l’ISBN de l’édition appartient déjà à une autre fiche, la clé de déduplication d’origine est conservée. Une source d’éditions injoignable ne coûte pas l’ajout : la fiche est versée avec des champs d’édition nuls, ce que `detail_level` ne masque pas — un nul dit qu’on ne sait pas, jamais qu’on a deviné.
      *
      * Le corps ne transporte **pas** les métadonnées reçues à la recherche : le serveur les redemande à la source, pour qu’un client ne puisse pas écrire ce qu’il veut dans la bibliothèque commune.
      *
@@ -8054,10 +8136,20 @@ export interface components {
        */
       isbn13?: string | null;
       /**
-       * @description Code langue ISO 639-1
+       * @description Code langue de l’édition retenue. Nul au niveau recherche : une œuvre n’a pas de langue
        * @default null
        */
       language?: string | null;
+      /**
+       * @description Langues dans lesquelles l’œuvre a paru — propriété de l’œuvre, contrairement à `language` qui est celle de l’édition retenue
+       * @default []
+       */
+      languages?: string[];
+      /**
+       * @description Vrai quand le lecteur a choisi l’édition lui-même, au dépliage
+       * @default false
+       */
+      edition_manual?: boolean;
       /** @default [] */
       genres?: string[];
       /**
@@ -8069,7 +8161,8 @@ export interface components {
        * @description Identifiants chez les sources qui ont contribué à cette fiche
        * @default {
        *   "openlibrary": null,
-       *   "googlebooks": null
+       *   "googlebooks": null,
+       *   "edition": null
        * }
        */
       external_ids?: {
@@ -8077,6 +8170,11 @@ export interface components {
         openlibrary?: string | null;
         /** @default null */
         googlebooks?: string | null;
+        /**
+         * @description Édition retenue chez Open Library — celle qui renseigne la fiche
+         * @default null
+         */
+        edition?: string | null;
       };
     };
     GameMetadataInput: {
@@ -10028,10 +10126,20 @@ export interface components {
        */
       isbn13: string | null;
       /**
-       * @description Code langue ISO 639-1
+       * @description Code langue de l’édition retenue. Nul au niveau recherche : une œuvre n’a pas de langue
        * @default null
        */
       language: string | null;
+      /**
+       * @description Langues dans lesquelles l’œuvre a paru — propriété de l’œuvre, contrairement à `language` qui est celle de l’édition retenue
+       * @default []
+       */
+      languages: string[];
+      /**
+       * @description Vrai quand le lecteur a choisi l’édition lui-même, au dépliage
+       * @default false
+       */
+      edition_manual: boolean;
       /** @default [] */
       genres: string[];
       /**
@@ -10043,7 +10151,8 @@ export interface components {
        * @description Identifiants chez les sources qui ont contribué à cette fiche
        * @default {
        *   "openlibrary": null,
-       *   "googlebooks": null
+       *   "googlebooks": null,
+       *   "edition": null
        * }
        */
       external_ids: {
@@ -10051,6 +10160,11 @@ export interface components {
         openlibrary: string | null;
         /** @default null */
         googlebooks: string | null;
+        /**
+         * @description Édition retenue chez Open Library — celle qui renseigne la fiche
+         * @default null
+         */
+        edition: string | null;
       };
     };
     GameMetadata: {

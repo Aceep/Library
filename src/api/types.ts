@@ -3580,6 +3580,417 @@ export interface paths {
       };
     };
   };
+  "/me/journal": {
+    /**
+     * Mon journal, tous films confondus, avec sa partie privée
+     * @description Mes visionnages, de la plus récente à la plus ancienne date de fin, l’identifiant départageant deux entrées du même jour. C’est la route qui manquait : le journal se lisait film par film (`GET /media/:id/log`), jamais en une liste.
+     *
+     * Chaque élément joint la fiche réduite de l’œuvre — les champs de `media`, décrits ci-dessous — et la partie privée : absente, elle se lit `{ reactions: [], comment: null }`, le journal partagé et le carnet ayant toujours la même liste d’entrées.
+     *
+     * **Films seulement, comme le `POST`.** Le site journalise aussi les livres, les jeux, la musique, les séries et les BD : ces entrées-là existent, et cette liste ne les rend pas.
+     *
+     * **Aucun `user_id`.** Cette route ne parle que de toi ; le journal des autres se lit sur `GET /media/:id/log?user_id=`, sans leur carnet.
+     *
+     * **Pagination** — `limit` et `cursor`, comme partout.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Nombre d'éléments (défaut 40, maximum 100) */
+          limit?: number;
+          /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
+          cursor?: string;
+        };
+      };
+      responses: {
+        /** @description Page de mon journal */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  /** @description Une entrée de journal */
+                  entry: {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    user_id: string;
+                    /** Format: uuid */
+                    media_id: string;
+                    started_at: string | null;
+                    /** Format: date */
+                    finished_at: string;
+                    /** @description La note de cette fois-là, indépendante de celle de l’œuvre */
+                    rating: number | null;
+                    /** @description Un mot sur cette fois-là, distinct de la critique de l’œuvre */
+                    comment: string | null;
+                    /** Format: date-time */
+                    created_at: string;
+                  };
+                  /** @description L’œuvre, réduite à ce que le journal affiche */
+                  media: {
+                    /** Format: uuid */
+                    id: string;
+                    /**
+                     * @description Type d'œuvre
+                     * @enum {string}
+                     */
+                    type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
+                    /**
+                     * @description Source d'origine de la fiche
+                     * @enum {string}
+                     */
+                    source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                    title: string;
+                    cover_url: string | null;
+                    year: number | null;
+                    /** @description `metadata.director` de la fiche */
+                    director: string | null;
+                  };
+                  /** @description La partie privée d’un visionnage */
+                  carnet: {
+                    reactions: string[];
+                    /** @description Rien qu’à l’auteur */
+                    comment: string | null;
+                  };
+                })[];
+              /** @description Curseur de la page suivante, `null` si c’est la dernière */
+              next_cursor: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * « J’ai vu ce film » — un visionnage et sa partie privée, en un geste
+     * @description Le geste de l’application mobile. **Un seul appel**, qui décide lui-même de ce qu’il fait :
+     *
+     * - si le film n’est pas encore `done` dans ton suivi, il y passe, avec cette date, et l’entrée de journal du jour se crée — comme le ferait `PATCH /media/:id/tracking { "status": "done", "finished_at": … }` ;
+     * - s’il l’est déjà, c’est une revoyure : une entrée de plus, sans toucher au statut ni à la date de fin du suivi — comme le ferait `POST /media/:id/log`.
+     *
+     * **`rating` est la note de ce visionnage-là**, et elle s’écrit sur l’entrée. Dans les deux cas, elle **ne devient la note de l’œuvre que si cette entrée est la plus récente** : ajouter après coup une revoyure ancienne ne revient pas sur l’avis d’aujourd’hui. **Un corps sans `rating` ne touche pas à la note de l’œuvre** : un geste qui n’ajoute qu’une réaction ou une remarque ne dit rien de l’avis d’aujourd’hui, et ne vient donc pas l’écraser.
+     *
+     * **Idempotent par la date.** Une entrée existe déjà pour ce film ce jour-là ? Aucune seconde n’est créée : celle-là est corrigée — sa note si tu en envoies une, et son carnet, **remplacé en bloc** par celui du corps, donc vidé par un corps sans `reactions` ni `comment`. La réponse est alors `200` au lieu de `201`. Voir deux fois le même film le même jour reste possible par `POST /media/:id/log`, à la main.
+     *
+     * **Films seulement, pour l’instant** : un autre type répond `400`.
+     *
+     * `reactions` : douze clés au plus, `^[a-z0-9_]{1,32}$`, sans doublon. Le back n’en connaît pas le sens.
+     */
+    post: {
+      /** @description « J’ai vu ce film » — un visionnage et sa partie privée, en un geste */
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description L’œuvre qu’on vient de voir
+             */
+            media_id: string;
+            /**
+             * Format: date
+             * @description Obligatoire : c’est elle qui date et ordonne l’entrée
+             */
+            finished_at: string;
+            rating?: number | null;
+            /** @description Réactions cochées, 12 au plus, sans doublon */
+            reactions?: string[];
+            /** @description Rien qu’à l’auteur */
+            comment?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Une entrée existait déjà ce jour-là — elle a été corrigée */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une entrée de journal */
+              entry: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                user_id: string;
+                /** Format: uuid */
+                media_id: string;
+                started_at: string | null;
+                /** Format: date */
+                finished_at: string;
+                /** @description La note de cette fois-là, indépendante de celle de l’œuvre */
+                rating: number | null;
+                /** @description Un mot sur cette fois-là, distinct de la critique de l’œuvre */
+                comment: string | null;
+                /** Format: date-time */
+                created_at: string;
+              };
+              /** @description L’œuvre, réduite à ce que le journal affiche */
+              media: {
+                /** Format: uuid */
+                id: string;
+                /**
+                 * @description Type d'œuvre
+                 * @enum {string}
+                 */
+                type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
+                /**
+                 * @description Source d'origine de la fiche
+                 * @enum {string}
+                 */
+                source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                title: string;
+                cover_url: string | null;
+                year: number | null;
+                /** @description `metadata.director` de la fiche */
+                director: string | null;
+              };
+              /** @description La partie privée d’un visionnage */
+              carnet: {
+                reactions: string[];
+                /** @description Rien qu’à l’auteur */
+                comment: string | null;
+              };
+            };
+          };
+        };
+        /** @description Visionnage créé */
+        201: {
+          content: {
+            "application/json": {
+              /** @description Une entrée de journal */
+              entry: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                user_id: string;
+                /** Format: uuid */
+                media_id: string;
+                started_at: string | null;
+                /** Format: date */
+                finished_at: string;
+                /** @description La note de cette fois-là, indépendante de celle de l’œuvre */
+                rating: number | null;
+                /** @description Un mot sur cette fois-là, distinct de la critique de l’œuvre */
+                comment: string | null;
+                /** Format: date-time */
+                created_at: string;
+              };
+              /** @description L’œuvre, réduite à ce que le journal affiche */
+              media: {
+                /** Format: uuid */
+                id: string;
+                /**
+                 * @description Type d'œuvre
+                 * @enum {string}
+                 */
+                type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
+                /**
+                 * @description Source d'origine de la fiche
+                 * @enum {string}
+                 */
+                source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                title: string;
+                cover_url: string | null;
+                year: number | null;
+                /** @description `metadata.director` de la fiche */
+                director: string | null;
+              };
+              /** @description La partie privée d’un visionnage */
+              carnet: {
+                reactions: string[];
+                /** @description Rien qu’à l’auteur */
+                comment: string | null;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/journal/{id}": {
+    /**
+     * Supprimer un visionnage
+     * @description Efface l’entrée ; la partie privée part avec elle. **La note et le statut du suivi ne bougent pas** — règle existante de `DELETE /log/:id` : supprimer une entrée corrige un souvenir, pas un avis, et le seul visionnage d’un film supprimé ne le repasse pas à « à voir ».
+     *
+     * **Films seulement, comme le `POST`.** L’entrée d’un livre, d’un jeu, d’une série ou d’une BD — le site en écrit — répond `400` : elle se supprime par `DELETE /log/:id`.
+     *
+     * Supprimer l’entrée de quelqu’un d’autre est refusé (`403`), rôle compris.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Corriger un visionnage et sa partie privée
+     * @description Seuls les champs envoyés sont modifiés. `finished_at` et `rating` suivent **les mêmes règles que `PATCH /log/:id`** : une date de début postérieure à la fin est refusée, et la note remonte au suivi si l’entrée est, ou devient, la plus récente.
+     *
+     * **Un `PATCH` qui ne touche qu’au carnet ne touche pas à la note de l’œuvre — à la différence de `PATCH /log/:id`, où la remontée est tentée à chaque correction.** Ici, seuls `rating` et `finished_at` la déclenchent. Corriger une réaction ou une remarque ne dit rien de l’avis d’aujourd’hui, que `PATCH /media/:id/tracking` a pu changer entre-temps sans rien écrire dans le journal : faire remonter la note de l’entrée à cette occasion l’écraserait en silence.
+     *
+     * `reactions` remplace le tableau (`[]` le vide) ; `comment` remplace le texte (`null` l’efface). Une entrée créée par le site, sans ligne de carnet, en gagne une.
+     *
+     * **Films seulement, comme le `POST`.** L’entrée d’un livre, d’un jeu, d’une série ou d’une BD — le site en écrit — répond `400` : le carnet ne sait pas encore en parler.
+     *
+     * Corriger l’entrée de quelqu’un d’autre est refusé (`403`), rôle compris.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Correction d’un visionnage et de sa partie privée */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: date */
+            finished_at?: string;
+            rating?: number | null;
+            /** @description Remplace le tableau ; `[]` le vide */
+            reactions?: string[];
+            /** @description Remplace le texte ; `null` l’efface */
+            comment?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Un visionnage du journal, avec sa partie privée */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une entrée de journal */
+              entry: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                user_id: string;
+                /** Format: uuid */
+                media_id: string;
+                started_at: string | null;
+                /** Format: date */
+                finished_at: string;
+                /** @description La note de cette fois-là, indépendante de celle de l’œuvre */
+                rating: number | null;
+                /** @description Un mot sur cette fois-là, distinct de la critique de l’œuvre */
+                comment: string | null;
+                /** Format: date-time */
+                created_at: string;
+              };
+              /** @description L’œuvre, réduite à ce que le journal affiche */
+              media: {
+                /** Format: uuid */
+                id: string;
+                /**
+                 * @description Type d'œuvre
+                 * @enum {string}
+                 */
+                type: "book" | "comic_series" | "movie" | "tv" | "game" | "music";
+                /**
+                 * @description Source d'origine de la fiche
+                 * @enum {string}
+                 */
+                source: "openlibrary" | "googlebooks" | "anilist" | "tmdb" | "igdb" | "musicbrainz";
+                title: string;
+                cover_url: string | null;
+                year: number | null;
+                /** @description `metadata.director` de la fiche */
+                director: string | null;
+              };
+              /** @description La partie privée d’un visionnage */
+              carnet: {
+                reactions: string[];
+                /** @description Rien qu’à l’auteur */
+                comment: string | null;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/media/{id}/availability": {
     /**
      * Où regarder un film ou une série

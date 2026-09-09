@@ -26483,6 +26483,1345 @@
         }
       }
     },
+    "/me/journal": {
+      "get": {
+        "summary": "Mon journal, tous films confondus, avec sa partie privée",
+        "tags": [
+          "carnet"
+        ],
+        "description": "Mes visionnages, de la plus récente à la plus ancienne date de fin, l’identifiant départageant deux entrées du même jour. C’est la route qui manquait : le journal se lisait film par film (`GET /media/:id/log`), jamais en une liste.\n\nChaque élément joint la fiche réduite de l’œuvre — les champs de `media`, décrits ci-dessous — et la partie privée : absente, elle se lit `{ reactions: [], comment: null }`, le journal partagé et le carnet ayant toujours la même liste d’entrées.\n\n**Films seulement, comme le `POST`.** Le site journalise aussi les livres, les jeux, la musique, les séries et les BD : ces entrées-là existent, et cette liste ne les rend pas.\n\n**Aucun `user_id`.** Cette route ne parle que de toi ; le journal des autres se lit sur `GET /media/:id/log?user_id=`, sans leur carnet.\n\n**Pagination** — `limit` et `cursor`, comme partout.",
+        "parameters": [
+          {
+            "schema": {
+              "default": 40,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Nombre d'éléments (défaut 40, maximum 100)"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "description": "Curseur opaque renvoyé par la page précédente dans `next_cursor`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page de mon journal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "entry": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "media_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "started_at": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finished_at": {
+                                "type": "string",
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                              },
+                              "rating": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 10,
+                                    "description": "Note sur 10"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "La note de cette fois-là, indépendante de celle de l’œuvre"
+                              },
+                              "comment": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Un mot sur cette fois-là, distinct de la critique de l’œuvre"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "user_id",
+                              "media_id",
+                              "started_at",
+                              "finished_at",
+                              "rating",
+                              "comment",
+                              "created_at"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Une entrée de journal"
+                          },
+                          "media": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "book",
+                                  "comic_series",
+                                  "movie",
+                                  "tv",
+                                  "game",
+                                  "music"
+                                ],
+                                "description": "Type d'œuvre"
+                              },
+                              "source": {
+                                "type": "string",
+                                "enum": [
+                                  "openlibrary",
+                                  "googlebooks",
+                                  "anilist",
+                                  "tmdb",
+                                  "igdb",
+                                  "musicbrainz"
+                                ],
+                                "description": "Source d'origine de la fiche"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "cover_url": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uri"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "year": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "director": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "`metadata.director` de la fiche"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "source",
+                              "title",
+                              "cover_url",
+                              "year",
+                              "director"
+                            ],
+                            "additionalProperties": false,
+                            "description": "L’œuvre, réduite à ce que le journal affiche"
+                          },
+                          "carnet": {
+                            "type": "object",
+                            "properties": {
+                              "reactions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "pattern": "^[a-z0-9_]{1,32}$",
+                                  "description": "Clé de réaction, dont le sens vit dans le client"
+                                }
+                              },
+                              "comment": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Rien qu’à l’auteur"
+                              }
+                            },
+                            "required": [
+                              "reactions",
+                              "comment"
+                            ],
+                            "additionalProperties": false,
+                            "description": "La partie privée d’un visionnage"
+                          }
+                        },
+                        "required": [
+                          "entry",
+                          "media",
+                          "carnet"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Un visionnage du journal, avec sa partie privée"
+                      }
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Curseur de la page suivante, `null` si c’est la dernière"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Page de mon journal"
+                },
+                "examples": {
+                  "Réponse type": {
+                    "value": {
+                      "items": [
+                        {
+                          "entry": {
+                            "id": "e0000000-0000-4000-8000-000000000002",
+                            "user_id": "11111111-1111-4111-8111-111111111111",
+                            "media_id": "d0000000-0000-4000-8000-000000000013",
+                            "started_at": "2026-07-11",
+                            "finished_at": "2026-07-12",
+                            "rating": 9,
+                            "comment": "Revu six ans après. Tout tient.",
+                            "created_at": "2026-07-12T22:10:00.000Z"
+                          },
+                          "media": {
+                            "id": "d0000000-0000-4000-8000-000000000013",
+                            "type": "movie",
+                            "source": "tmdb",
+                            "title": "Inception",
+                            "cover_url": "https://image.tmdb.org/t/p/w500/9gk7adZmeSSuQfZBtWWLIcVcSY.jpg",
+                            "year": 2010,
+                            "director": "Christopher Nolan"
+                          },
+                          "carnet": {
+                            "reactions": [
+                              "adore",
+                              "touche"
+                            ],
+                            "comment": "Revu avec Léa, toujours aussi fort."
+                          }
+                        }
+                      ],
+                      "next_cursor": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "« J’ai vu ce film » — un visionnage et sa partie privée, en un geste",
+        "tags": [
+          "carnet"
+        ],
+        "description": "Le geste de l’application mobile. **Un seul appel**, qui décide lui-même de ce qu’il fait :\n\n- si le film n’est pas encore `done` dans ton suivi, il y passe, avec cette date, et l’entrée de journal du jour se crée — comme le ferait `PATCH /media/:id/tracking { \"status\": \"done\", \"finished_at\": … }` ;\n- s’il l’est déjà, c’est une revoyure : une entrée de plus, sans toucher au statut ni à la date de fin du suivi — comme le ferait `POST /media/:id/log`.\n\n**`rating` est la note de ce visionnage-là**, et elle s’écrit sur l’entrée. Dans les deux cas, elle **ne devient la note de l’œuvre que si cette entrée est la plus récente** : ajouter après coup une revoyure ancienne ne revient pas sur l’avis d’aujourd’hui. **Un corps sans `rating` ne touche pas à la note de l’œuvre** : un geste qui n’ajoute qu’une réaction ou une remarque ne dit rien de l’avis d’aujourd’hui, et ne vient donc pas l’écraser.\n\n**Idempotent par la date.** Une entrée existe déjà pour ce film ce jour-là ? Aucune seconde n’est créée : celle-là est corrigée — sa note si tu en envoies une, et son carnet, **remplacé en bloc** par celui du corps, donc vidé par un corps sans `reactions` ni `comment`. La réponse est alors `200` au lieu de `201`. Voir deux fois le même film le même jour reste possible par `POST /media/:id/log`, à la main.\n\n**Films seulement, pour l’instant** : un autre type répond `400`.\n\n`reactions` : douze clés au plus, `^[a-z0-9_]{1,32}$`, sans doublon. Le back n’en connaît pas le sens.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "media_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "description": "L’œuvre qu’on vient de voir"
+                  },
+                  "finished_at": {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                    "description": "Obligatoire : c’est elle qui date et ordonne l’entrée"
+                  },
+                  "rating": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10,
+                        "description": "Note sur 10"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "reactions": {
+                    "maxItems": 12,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_]{1,32}$",
+                      "description": "Clé de réaction, dont le sens vit dans le client"
+                    },
+                    "description": "Réactions cochées, 12 au plus, sans doublon"
+                  },
+                  "comment": {
+                    "description": "Rien qu’à l’auteur",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 10000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "media_id",
+                  "finished_at"
+                ],
+                "additionalProperties": false,
+                "description": "« J’ai vu ce film » — un visionnage et sa partie privée, en un geste"
+              }
+            }
+          },
+          "description": "« J’ai vu ce film » — un visionnage et sa partie privée, en un geste"
+        },
+        "responses": {
+          "200": {
+            "description": "Une entrée existait déjà ce jour-là — elle a été corrigée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "media_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "started_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "finished_at": {
+                          "type": "string",
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                        },
+                        "rating": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 10,
+                              "description": "Note sur 10"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "La note de cette fois-là, indépendante de celle de l’œuvre"
+                        },
+                        "comment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Un mot sur cette fois-là, distinct de la critique de l’œuvre"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "user_id",
+                        "media_id",
+                        "started_at",
+                        "finished_at",
+                        "rating",
+                        "comment",
+                        "created_at"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Une entrée de journal"
+                    },
+                    "media": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "book",
+                            "comic_series",
+                            "movie",
+                            "tv",
+                            "game",
+                            "music"
+                          ],
+                          "description": "Type d'œuvre"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "openlibrary",
+                            "googlebooks",
+                            "anilist",
+                            "tmdb",
+                            "igdb",
+                            "musicbrainz"
+                          ],
+                          "description": "Source d'origine de la fiche"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "cover_url": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "year": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "director": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "`metadata.director` de la fiche"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "source",
+                        "title",
+                        "cover_url",
+                        "year",
+                        "director"
+                      ],
+                      "additionalProperties": false,
+                      "description": "L’œuvre, réduite à ce que le journal affiche"
+                    },
+                    "carnet": {
+                      "type": "object",
+                      "properties": {
+                        "reactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_]{1,32}$",
+                            "description": "Clé de réaction, dont le sens vit dans le client"
+                          }
+                        },
+                        "comment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Rien qu’à l’auteur"
+                        }
+                      },
+                      "required": [
+                        "reactions",
+                        "comment"
+                      ],
+                      "additionalProperties": false,
+                      "description": "La partie privée d’un visionnage"
+                    }
+                  },
+                  "required": [
+                    "entry",
+                    "media",
+                    "carnet"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Une entrée existait déjà ce jour-là — elle a été corrigée"
+                },
+                "examples": {
+                  "Réponse type": {
+                    "value": {
+                      "entry": {
+                        "id": "e0000000-0000-4000-8000-000000000002",
+                        "user_id": "11111111-1111-4111-8111-111111111111",
+                        "media_id": "d0000000-0000-4000-8000-000000000013",
+                        "started_at": "2026-07-11",
+                        "finished_at": "2026-07-12",
+                        "rating": 9,
+                        "comment": "Revu six ans après. Tout tient.",
+                        "created_at": "2026-07-12T22:10:00.000Z"
+                      },
+                      "media": {
+                        "id": "d0000000-0000-4000-8000-000000000013",
+                        "type": "movie",
+                        "source": "tmdb",
+                        "title": "Inception",
+                        "cover_url": "https://image.tmdb.org/t/p/w500/9gk7adZmeSSuQfZBtWWLIcVcSY.jpg",
+                        "year": 2010,
+                        "director": "Christopher Nolan"
+                      },
+                      "carnet": {
+                        "reactions": [
+                          "adore",
+                          "touche"
+                        ],
+                        "comment": "Revu avec Léa, toujours aussi fort."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Visionnage créé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "media_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "started_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "finished_at": {
+                          "type": "string",
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                        },
+                        "rating": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 10,
+                              "description": "Note sur 10"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "La note de cette fois-là, indépendante de celle de l’œuvre"
+                        },
+                        "comment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Un mot sur cette fois-là, distinct de la critique de l’œuvre"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "user_id",
+                        "media_id",
+                        "started_at",
+                        "finished_at",
+                        "rating",
+                        "comment",
+                        "created_at"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Une entrée de journal"
+                    },
+                    "media": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "book",
+                            "comic_series",
+                            "movie",
+                            "tv",
+                            "game",
+                            "music"
+                          ],
+                          "description": "Type d'œuvre"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "openlibrary",
+                            "googlebooks",
+                            "anilist",
+                            "tmdb",
+                            "igdb",
+                            "musicbrainz"
+                          ],
+                          "description": "Source d'origine de la fiche"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "cover_url": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "year": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "director": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "`metadata.director` de la fiche"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "source",
+                        "title",
+                        "cover_url",
+                        "year",
+                        "director"
+                      ],
+                      "additionalProperties": false,
+                      "description": "L’œuvre, réduite à ce que le journal affiche"
+                    },
+                    "carnet": {
+                      "type": "object",
+                      "properties": {
+                        "reactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_]{1,32}$",
+                            "description": "Clé de réaction, dont le sens vit dans le client"
+                          }
+                        },
+                        "comment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Rien qu’à l’auteur"
+                        }
+                      },
+                      "required": [
+                        "reactions",
+                        "comment"
+                      ],
+                      "additionalProperties": false,
+                      "description": "La partie privée d’un visionnage"
+                    }
+                  },
+                  "required": [
+                    "entry",
+                    "media",
+                    "carnet"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Visionnage créé"
+                },
+                "examples": {
+                  "Réponse type": {
+                    "value": {
+                      "entry": {
+                        "id": "e0000000-0000-4000-8000-000000000002",
+                        "user_id": "11111111-1111-4111-8111-111111111111",
+                        "media_id": "d0000000-0000-4000-8000-000000000013",
+                        "started_at": "2026-07-11",
+                        "finished_at": "2026-07-12",
+                        "rating": 9,
+                        "comment": "Revu six ans après. Tout tient.",
+                        "created_at": "2026-07-12T22:10:00.000Z"
+                      },
+                      "media": {
+                        "id": "d0000000-0000-4000-8000-000000000013",
+                        "type": "movie",
+                        "source": "tmdb",
+                        "title": "Inception",
+                        "cover_url": "https://image.tmdb.org/t/p/w500/9gk7adZmeSSuQfZBtWWLIcVcSY.jpg",
+                        "year": 2010,
+                        "director": "Christopher Nolan"
+                      },
+                      "carnet": {
+                        "reactions": [
+                          "adore",
+                          "touche"
+                        ],
+                        "comment": "Revu avec Léa, toujours aussi fort."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/journal/{id}": {
+      "patch": {
+        "summary": "Corriger un visionnage et sa partie privée",
+        "tags": [
+          "carnet"
+        ],
+        "description": "Seuls les champs envoyés sont modifiés. `finished_at` et `rating` suivent **les mêmes règles que `PATCH /log/:id`** : une date de début postérieure à la fin est refusée, et la note remonte au suivi si l’entrée est, ou devient, la plus récente.\n\n**Un `PATCH` qui ne touche qu’au carnet ne touche pas à la note de l’œuvre — à la différence de `PATCH /log/:id`, où la remontée est tentée à chaque correction.** Ici, seuls `rating` et `finished_at` la déclenchent. Corriger une réaction ou une remarque ne dit rien de l’avis d’aujourd’hui, que `PATCH /media/:id/tracking` a pu changer entre-temps sans rien écrire dans le journal : faire remonter la note de l’entrée à cette occasion l’écraserait en silence.\n\n`reactions` remplace le tableau (`[]` le vide) ; `comment` remplace le texte (`null` l’efface). Une entrée créée par le site, sans ligne de carnet, en gagne une.\n\n**Films seulement, comme le `POST`.** L’entrée d’un livre, d’un jeu, d’une série ou d’une BD — le site en écrit — répond `400` : le carnet ne sait pas encore en parler.\n\nCorriger l’entrée de quelqu’un d’autre est refusé (`403`), rôle compris.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "finished_at": {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                  },
+                  "rating": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10,
+                        "description": "Note sur 10"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "reactions": {
+                    "description": "Remplace le tableau ; `[]` le vide",
+                    "maxItems": 12,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_]{1,32}$",
+                      "description": "Clé de réaction, dont le sens vit dans le client"
+                    }
+                  },
+                  "comment": {
+                    "description": "Remplace le texte ; `null` l’efface",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 10000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Correction d’un visionnage et de sa partie privée"
+              }
+            }
+          },
+          "description": "Correction d’un visionnage et de sa partie privée"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Un visionnage du journal, avec sa partie privée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "media_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "started_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "finished_at": {
+                          "type": "string",
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                        },
+                        "rating": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 10,
+                              "description": "Note sur 10"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "La note de cette fois-là, indépendante de celle de l’œuvre"
+                        },
+                        "comment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Un mot sur cette fois-là, distinct de la critique de l’œuvre"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "user_id",
+                        "media_id",
+                        "started_at",
+                        "finished_at",
+                        "rating",
+                        "comment",
+                        "created_at"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Une entrée de journal"
+                    },
+                    "media": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "book",
+                            "comic_series",
+                            "movie",
+                            "tv",
+                            "game",
+                            "music"
+                          ],
+                          "description": "Type d'œuvre"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "openlibrary",
+                            "googlebooks",
+                            "anilist",
+                            "tmdb",
+                            "igdb",
+                            "musicbrainz"
+                          ],
+                          "description": "Source d'origine de la fiche"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "cover_url": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "year": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "director": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "`metadata.director` de la fiche"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "source",
+                        "title",
+                        "cover_url",
+                        "year",
+                        "director"
+                      ],
+                      "additionalProperties": false,
+                      "description": "L’œuvre, réduite à ce que le journal affiche"
+                    },
+                    "carnet": {
+                      "type": "object",
+                      "properties": {
+                        "reactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_]{1,32}$",
+                            "description": "Clé de réaction, dont le sens vit dans le client"
+                          }
+                        },
+                        "comment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Rien qu’à l’auteur"
+                        }
+                      },
+                      "required": [
+                        "reactions",
+                        "comment"
+                      ],
+                      "additionalProperties": false,
+                      "description": "La partie privée d’un visionnage"
+                    }
+                  },
+                  "required": [
+                    "entry",
+                    "media",
+                    "carnet"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Un visionnage du journal, avec sa partie privée"
+                },
+                "examples": {
+                  "Réponse type": {
+                    "value": {
+                      "entry": {
+                        "id": "e0000000-0000-4000-8000-000000000002",
+                        "user_id": "11111111-1111-4111-8111-111111111111",
+                        "media_id": "d0000000-0000-4000-8000-000000000013",
+                        "started_at": "2026-07-11",
+                        "finished_at": "2026-07-12",
+                        "rating": 9,
+                        "comment": "Revu six ans après. Tout tient.",
+                        "created_at": "2026-07-12T22:10:00.000Z"
+                      },
+                      "media": {
+                        "id": "d0000000-0000-4000-8000-000000000013",
+                        "type": "movie",
+                        "source": "tmdb",
+                        "title": "Inception",
+                        "cover_url": "https://image.tmdb.org/t/p/w500/9gk7adZmeSSuQfZBtWWLIcVcSY.jpg",
+                        "year": 2010,
+                        "director": "Christopher Nolan"
+                      },
+                      "carnet": {
+                        "reactions": [
+                          "adore",
+                          "touche"
+                        ],
+                        "comment": "Revu avec Léa, toujours aussi fort."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Supprimer un visionnage",
+        "tags": [
+          "carnet"
+        ],
+        "description": "Efface l’entrée ; la partie privée part avec elle. **La note et le statut du suivi ne bougent pas** — règle existante de `DELETE /log/:id` : supprimer une entrée corrige un souvenir, pas un avis, et le seul visionnage d’un film supprimé ne le repasse pas à « à voir ».\n\n**Films seulement, comme le `POST`.** L’entrée d’un livre, d’un jeu, d’une série ou d’une BD — le site en écrit — répond `400` : elle se supprime par `DELETE /log/:id`.\n\nSupprimer l’entrée de quelqu’un d’autre est refusé (`403`), rôle compris.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/media/{id}/availability": {
       "get": {
         "summary": "Où regarder un film ou une série",
@@ -36958,6 +38297,10 @@
     {
       "name": "suivi",
       "description": "Progression individuelle"
+    },
+    {
+      "name": "carnet",
+      "description": "La partie privée du journal — la seule exception à « tout est public ». Ne parle que de l’utilisateur de la session."
     },
     {
       "name": "veille",

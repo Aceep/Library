@@ -26986,6 +26986,10 @@
                                   }
                                 ],
                                 "description": "`metadata.director` de la fiche"
+                              },
+                              "external_id": {
+                                "type": "string",
+                                "description": "Identifiant chez la source — le `tmdb_id` du film"
                               }
                             },
                             "required": [
@@ -26995,7 +26999,8 @@
                               "title",
                               "cover_url",
                               "year",
-                              "director"
+                              "director",
+                              "external_id"
                             ],
                             "additionalProperties": false,
                             "description": "L’œuvre, réduite à ce que le journal affiche"
@@ -27078,6 +27083,7 @@
                             "id": "d0000000-0000-4000-8000-000000000013",
                             "type": "movie",
                             "source": "tmdb",
+                            "external_id": "27205",
                             "title": "Inception",
                             "cover_url": "https://image.tmdb.org/t/p/w500/9gk7adZmeSSuQfZBtWWLIcVcSY.jpg",
                             "year": 2010,
@@ -27348,6 +27354,10 @@
                             }
                           ],
                           "description": "`metadata.director` de la fiche"
+                        },
+                        "external_id": {
+                          "type": "string",
+                          "description": "Identifiant chez la source — le `tmdb_id` du film"
                         }
                       },
                       "required": [
@@ -27357,7 +27367,8 @@
                         "title",
                         "cover_url",
                         "year",
-                        "director"
+                        "director",
+                        "external_id"
                       ],
                       "additionalProperties": false,
                       "description": "L’œuvre, réduite à ce que le journal affiche"
@@ -27418,6 +27429,7 @@
                         "id": "d0000000-0000-4000-8000-000000000013",
                         "type": "movie",
                         "source": "tmdb",
+                        "external_id": "27205",
                         "title": "Inception",
                         "cover_url": "https://image.tmdb.org/t/p/w500/9gk7adZmeSSuQfZBtWWLIcVcSY.jpg",
                         "year": 2010,
@@ -27590,6 +27602,10 @@
                             }
                           ],
                           "description": "`metadata.director` de la fiche"
+                        },
+                        "external_id": {
+                          "type": "string",
+                          "description": "Identifiant chez la source — le `tmdb_id` du film"
                         }
                       },
                       "required": [
@@ -27599,7 +27615,8 @@
                         "title",
                         "cover_url",
                         "year",
-                        "director"
+                        "director",
+                        "external_id"
                       ],
                       "additionalProperties": false,
                       "description": "L’œuvre, réduite à ce que le journal affiche"
@@ -27660,6 +27677,7 @@
                         "id": "d0000000-0000-4000-8000-000000000013",
                         "type": "movie",
                         "source": "tmdb",
+                        "external_id": "27205",
                         "title": "Inception",
                         "cover_url": "https://image.tmdb.org/t/p/w500/9gk7adZmeSSuQfZBtWWLIcVcSY.jpg",
                         "year": 2010,
@@ -27940,6 +27958,10 @@
                             }
                           ],
                           "description": "`metadata.director` de la fiche"
+                        },
+                        "external_id": {
+                          "type": "string",
+                          "description": "Identifiant chez la source — le `tmdb_id` du film"
                         }
                       },
                       "required": [
@@ -27949,7 +27971,8 @@
                         "title",
                         "cover_url",
                         "year",
-                        "director"
+                        "director",
+                        "external_id"
                       ],
                       "additionalProperties": false,
                       "description": "L’œuvre, réduite à ce que le journal affiche"
@@ -28010,6 +28033,7 @@
                         "id": "d0000000-0000-4000-8000-000000000013",
                         "type": "movie",
                         "source": "tmdb",
+                        "external_id": "27205",
                         "title": "Inception",
                         "cover_url": "https://image.tmdb.org/t/p/w500/9gk7adZmeSSuQfZBtWWLIcVcSY.jpg",
                         "year": 2010,

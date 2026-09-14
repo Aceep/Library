@@ -3740,6 +3740,8 @@ export interface paths {
                     year: number | null;
                     /** @description `metadata.director` de la fiche */
                     director: string | null;
+                    /** @description Identifiant chez la source — le `tmdb_id` du film */
+                    external_id: string;
                   };
                   /** @description La partie privée d’un visionnage */
                   carnet: {
@@ -3847,6 +3849,8 @@ export interface paths {
                 year: number | null;
                 /** @description `metadata.director` de la fiche */
                 director: string | null;
+                /** @description Identifiant chez la source — le `tmdb_id` du film */
+                external_id: string;
               };
               /** @description La partie privée d’un visionnage */
               carnet: {
@@ -3898,6 +3902,8 @@ export interface paths {
                 year: number | null;
                 /** @description `metadata.director` de la fiche */
                 director: string | null;
+                /** @description Identifiant chez la source — le `tmdb_id` du film */
+                external_id: string;
               };
               /** @description La partie privée d’un visionnage */
               carnet: {
@@ -4049,6 +4055,8 @@ export interface paths {
                 year: number | null;
                 /** @description `metadata.director` de la fiche */
                 director: string | null;
+                /** @description Identifiant chez la source — le `tmdb_id` du film */
+                external_id: string;
               };
               /** @description La partie privée d’un visionnage */
               carnet: {

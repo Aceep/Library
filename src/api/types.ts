@@ -202,8 +202,6 @@ export interface paths {
      *
      * Chaque groupe (`en_cours`, `prochaine`) porte ses bornes `du` / `au`, lundi et dimanche inclus, dans le fuseau Europe/Paris. Un film y figure une fois, quel que soit le nombre de types de sortie salle qu’il cumule (limitée, large).
      *
-     * `directors` peut être vide : TMDB ne crédite pas toujours de réalisateur sur une fiche encore incomplète, et ce n’est pas une panne.
-     *
      * Réponse mise en cache 6 h, tous membres confondus — les sorties en salle ne dépendent d’aucun compte.
      */
     get: {
@@ -236,8 +234,6 @@ export interface paths {
                     release_date: string | null;
                     /** @description Affiche en URL absolue */
                     cover_url: string | null;
-                    /** @description Réalisateurs, dans l’ordre du générique — vide si TMDB n’en crédite aucun */
-                    directors: string[];
                   })[];
               };
               /** @description La semaine prochaine */
@@ -264,8 +260,6 @@ export interface paths {
                     release_date: string | null;
                     /** @description Affiche en URL absolue */
                     cover_url: string | null;
-                    /** @description Réalisateurs, dans l’ordre du générique — vide si TMDB n’en crédite aucun */
-                    directors: string[];
                   })[];
               };
             };

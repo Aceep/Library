@@ -195,6 +195,97 @@ export interface paths {
       };
     };
   };
+  "/reference/sorties": {
+    /**
+     * Sorties en salle, semaine en cours et semaine prochaine
+     * @description Pour l’écran « Au ciné » : les films qui sortent en salle cette semaine et la semaine prochaine, dans le pays de l’instance (`WATCH_REGION`, `FR` par défaut) — la même donnée d’instance que `GET /media/{id}/availability`.
+     *
+     * Chaque groupe (`en_cours`, `prochaine`) porte ses bornes `du` / `au`, lundi et dimanche inclus, dans le fuseau Europe/Paris. Un film y figure une fois, quel que soit le nombre de types de sortie salle qu’il cumule (limitée, large).
+     *
+     * `directors` peut être vide : TMDB ne crédite pas toujours de réalisateur sur une fiche encore incomplète, et ce n’est pas une panne.
+     *
+     * Réponse mise en cache 6 h, tous membres confondus — les sorties en salle ne dépendent d’aucun compte.
+     */
+    get: {
+      responses: {
+        /** @description Sorties en salle en France : semaine en cours et semaine prochaine */
+        200: {
+          content: {
+            "application/json": {
+              /** @description La semaine en cours */
+              en_cours: {
+                /**
+                 * Format: date
+                 * @description Lundi de la semaine, inclus
+                 */
+                du: string;
+                /**
+                 * Format: date
+                 * @description Dimanche de la semaine, inclus
+                 */
+                au: string;
+                films: ({
+                    /** @description Identifiant du film chez TMDB */
+                    tmdb_id: number;
+                    /** @description Titre en français, avec repli sur le titre original */
+                    title: string;
+                    original_title: string | null;
+                    /** @description Année de sortie, nulle si TMDB ne la donne pas */
+                    year: number | null;
+                    /** @description Date de sortie en salle en France, `AAAA-MM-JJ` */
+                    release_date: string | null;
+                    /** @description Affiche en URL absolue */
+                    cover_url: string | null;
+                    /** @description Réalisateurs, dans l’ordre du générique — vide si TMDB n’en crédite aucun */
+                    directors: string[];
+                  })[];
+              };
+              /** @description La semaine prochaine */
+              prochaine: {
+                /**
+                 * Format: date
+                 * @description Lundi de la semaine, inclus
+                 */
+                du: string;
+                /**
+                 * Format: date
+                 * @description Dimanche de la semaine, inclus
+                 */
+                au: string;
+                films: ({
+                    /** @description Identifiant du film chez TMDB */
+                    tmdb_id: number;
+                    /** @description Titre en français, avec repli sur le titre original */
+                    title: string;
+                    original_title: string | null;
+                    /** @description Année de sortie, nulle si TMDB ne la donne pas */
+                    year: number | null;
+                    /** @description Date de sortie en salle en France, `AAAA-MM-JJ` */
+                    release_date: string | null;
+                    /** @description Affiche en URL absolue */
+                    cover_url: string | null;
+                    /** @description Réalisateurs, dans l’ordre du générique — vide si TMDB n’en crédite aucun */
+                    directors: string[];
+                  })[];
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/auth/login": {
     /**
      * Ouvrir une session
@@ -3591,6 +3682,8 @@ export interface paths {
      *
      * **Aucun `user_id`.** Cette route ne parle que de toi ; le journal des autres se lit sur `GET /media/:id/log?user_id=`, sans leur carnet.
      *
+     * **`?reaction=`** ne rend que les entrées dont le carnet porte cette réaction — utile pour « Au ciné », qui filtre sur `en_salle`. Le back ne connaît pas le sens de la clé, seulement sa forme.
+     *
      * **Pagination** — `limit` et `cursor`, comme partout.
      */
     get: {
@@ -3600,6 +3693,8 @@ export interface paths {
           limit?: number;
           /** @description Curseur opaque renvoyé par la page précédente dans `next_cursor` */
           cursor?: string;
+          /** @description Ne rend que les entrées dont le carnet porte cette réaction */
+          reaction?: string;
         };
       };
       responses: {

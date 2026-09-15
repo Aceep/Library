@@ -4146,6 +4146,312 @@ export interface paths {
       };
     };
   };
+  "/reference/personnes": {
+    /**
+     * Chercher un réalisateur chez TMDB
+     * @description La recherche qui précède `POST /me/realisateurs` : elle donne les `tmdb_id` à lui passer.
+     *
+     * **Ne rend que des réalisateurs.** TMDB ne sait pas filtrer une recherche de personnes par métier ; le tri se fait ici, sur `known_for_department = "Directing"`, ce que TMDB appelle le métier principal d’une personne. Un acteur homonyme ne sort donc pas — et un réalisateur qui joue plus qu’il ne réalise n’en sortira pas non plus.
+     *
+     * **Dix résultats au plus**, dans l’ordre de pertinence de TMDB, sur sa première page seulement. C’est une liste de choix, pas un catalogue.
+     *
+     * Sous `/reference` et non sous `/me` : le résultat ne dépend d’aucun compte. La session reste exigée, comme sur `GET /reference/sorties`.
+     *
+     * `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Le nom cherché */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Résultats de recherche de réalisateurs, dix au plus */
+        200: {
+          content: {
+            "application/json": {
+              results: ({
+                  /** @description Identifiant de la **personne** chez TMDB */
+                  tmdb_id: number;
+                  /** @description Nom tel que TMDB l’écrit */
+                  name: string;
+                  /** @description Photo en URL absolue, taille `w185`, nulle si TMDB n’en a pas */
+                  profile_url: string | null;
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/realisateurs": {
+    /**
+     * Mes réalisateurs
+     * @description Ceux que je suis, du plus récemment ajouté au plus ancien.
+     *
+     * `name` et `profile_url` sont ceux que TMDB donnait **au moment de l’ajout** : la liste s’affiche sans rappeler TMDB. Un nom ou une photo qui change chez eux se rattrape en retirant puis en remettant le réalisateur.
+     *
+     * **Aucun `user_id`.** Cette route ne parle que de toi ; les réalisateurs des autres membres ne sont exposés nulle part.
+     *
+     * Sans pagination : on suit quelques dizaines de personnes, pas des milliers.
+     */
+    get: {
+      responses: {
+        /** @description Mes réalisateurs, du plus récemment ajouté au plus ancien */
+        200: {
+          content: {
+            "application/json": ({
+                /** @description Identifiant de la **personne** chez TMDB */
+                tmdb_id: number;
+                /** @description Nom tel que TMDB l’écrit */
+                name: string;
+                /** @description Photo en URL absolue, taille `w185`, nulle si TMDB n’en a pas */
+                profile_url: string | null;
+                /**
+                 * Format: date-time
+                 * @description Date à laquelle ce membre l’a ajouté
+                 */
+                ajoute_le: string;
+              })[];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Suivre un réalisateur
+     * @description Le nom et la photo sont lus chez TMDB (`person/{id}`) et **recopiés** dans la ligne : c’est ce qui permet à `GET /me/realisateurs` de ne jamais rappeler TMDB.
+     *
+     * **Idempotent.** Déjà suivi ? Aucune seconde ligne n’est créée, la réponse est `200` au lieu de `201` et rend la ligne existante — avec sa date d’ajout d’origine, que ce geste ne rafraîchit pas. Un doublon est de toute façon impossible en base : l’unicité `(membre, personne)` y est écrite.
+     *
+     * Un `tmdb_id` que TMDB ne connaît pas répond `404`. Rien n’interdit de suivre quelqu’un qui n’est pas réalisateur — `GET /reference/personnes` ne propose que des réalisateurs, mais cette route-ci fait confiance à l’identifiant qu’on lui donne : sa filmographie sera simplement vide.
+     *
+     * `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    post: {
+      /** @description Suivre un réalisateur */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Identifiant de la personne chez TMDB */
+            tmdb_id: number;
+          };
+        };
+      };
+      responses: {
+        /** @description Il était déjà suivi — la ligne existante, inchangée */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Identifiant de la **personne** chez TMDB */
+              tmdb_id: number;
+              /** @description Nom tel que TMDB l’écrit */
+              name: string;
+              /** @description Photo en URL absolue, taille `w185`, nulle si TMDB n’en a pas */
+              profile_url: string | null;
+              /**
+               * Format: date-time
+               * @description Date à laquelle ce membre l’a ajouté
+               */
+              ajoute_le: string;
+            };
+          };
+        };
+        /** @description Réalisateur ajouté */
+        201: {
+          content: {
+            "application/json": {
+              /** @description Identifiant de la **personne** chez TMDB */
+              tmdb_id: number;
+              /** @description Nom tel que TMDB l’écrit */
+              name: string;
+              /** @description Photo en URL absolue, taille `w185`, nulle si TMDB n’en a pas */
+              profile_url: string | null;
+              /**
+               * Format: date-time
+               * @description Date à laquelle ce membre l’a ajouté
+               */
+              ajoute_le: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/realisateurs/{tmdbId}": {
+    /**
+     * Ne plus suivre un réalisateur
+     * @description Le paramètre est le `tmdb_id` de la **personne**, celui rendu par `GET /me/realisateurs`, et non l’identifiant de la ligne : celle-ci n’en publie aucun.
+     *
+     * Un réalisateur que je ne suis pas répond `404` — y compris quand quelqu’un d’autre le suit : le compte ne voit que ses propres lignes.
+     */
+    delete: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/realisateurs/{tmdbId}/films": {
+    /**
+     * Sa filmographie, et ce que j’en ai vu
+     * @description Les films **réalisés** par cette personne (`crew`, poste `Director` — ni ceux qu’elle a produits, ni ceux où elle joue), dédoublonnés, de la plus ancienne sortie à la plus récente.
+     *
+     * **Un film sans date de sortie ne figure pas dans la liste** : TMDB porte les projets annoncés, qui n’en ont pas et qu’une liste chronologique ne saurait pas placer.
+     *
+     * **`vu`** est mon visionnage le plus récent de ce film, ou `null`. Il vient de mon journal à moi : celui d’un autre membre ne le remplit jamais, même s’il suit le même réalisateur. Le rapprochement se fait sur l’identifiant TMDB du film — une œuvre entrée dans la bibliothèque depuis une autre source n’y répond pas.
+     *
+     * **Rien n’entre dans la bibliothèque** : cette route ne crée aucune œuvre et n’écrit aucun suivi.
+     *
+     * La filmographie est mémorisée 24 h côté serveur, **par personne et non par membre** — elle est la même pour tous. `vu`, lui, est relu en base à chaque appel et n’est jamais mémorisé.
+     *
+     * Un réalisateur que je ne suis pas répond `404` : il faut l’ajouter d’abord. `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    get: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description La filmographie d’un réalisateur suivi, de la plus ancienne sortie à la plus récente */
+        200: {
+          content: {
+            "application/json": {
+              films: ({
+                  /** @description Identifiant du **film** chez TMDB */
+                  tmdb_id: number;
+                  /** @description Titre en français, avec repli sur le titre original */
+                  title: string;
+                  original_title: string | null;
+                  /** @description Année de sortie, tirée de `release_date` */
+                  year: number | null;
+                  /**
+                   * Format: date
+                   * @description Date de sortie — un film qui n’en a pas ne figure pas dans la liste
+                   */
+                  release_date: string;
+                  /** @description Affiche en URL absolue, taille `w500` */
+                  cover_url: string | null;
+                  /** @description Nul si je ne l’ai jamais journalisé */
+                  vu: ({
+                    /**
+                     * Format: uuid
+                     * @description L’entrée de journal la plus récente pour ce film
+                     */
+                    entry_id: string;
+                    /** @description La note de ce visionnage-là */
+                    rating: number | null;
+                    /**
+                     * Format: date
+                     * @description La date de ce visionnage
+                     */
+                    finished_at: string;
+                  }) | null;
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/media/{id}/availability": {
     /**
      * Où regarder un film ou une série

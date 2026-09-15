@@ -211,7 +211,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              /** @description À l’affiche aujourd’hui, dans les cinémas du propriétaire */
+              /** @description Les sorties de la semaine de cinéma en cours (du mercredi au mardi), à l’affiche dans les cinémas du propriétaire */
               en_cours: {
                 /**
                  * Format: date

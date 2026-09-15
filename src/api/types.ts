@@ -4522,6 +4522,314 @@ export interface paths {
       };
     };
   };
+  "/reference/sagas": {
+    /**
+     * Chercher une saga chez TMDB
+     * @description La recherche qui précède `POST /me/sagas` : elle donne les `tmdb_id` à lui passer.
+     *
+     * **Dix résultats au plus**, dans l’ordre de pertinence de TMDB, sur sa première page seulement. C’est une liste de choix, pas un catalogue.
+     *
+     * Sous `/reference` et non sous `/me` : le résultat ne dépend d’aucun compte. La session reste exigée, comme sur `GET /reference/personnes`.
+     *
+     * `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Le nom cherché */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Résultats de recherche de sagas, dix au plus */
+        200: {
+          content: {
+            "application/json": {
+              results: ({
+                  /** @description Identifiant de la **collection** chez TMDB */
+                  tmdb_id: number;
+                  /** @description Nom tel que TMDB l’écrit */
+                  name: string;
+                  /** @description Affiche en URL absolue, taille `w500`, nulle si TMDB n’en a pas */
+                  cover_url: string | null;
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/sagas": {
+    /**
+     * Mes sagas
+     * @description Celles que je suis, de la plus récemment ajoutée à la plus ancienne.
+     *
+     * `name` et `cover_url` sont ceux que TMDB donnait **au moment de l’ajout** : la liste s’affiche sans rappeler TMDB. Un nom ou une affiche qui change chez eux se rattrape en retirant puis en remettant la saga.
+     *
+     * **Aucun `user_id`.** Cette route ne parle que de toi ; les sagas des autres membres ne sont exposées nulle part.
+     *
+     * Sans pagination : on suit quelques dizaines de sagas, pas des milliers.
+     */
+    get: {
+      responses: {
+        /** @description Mes sagas, de la plus récemment ajoutée à la plus ancienne */
+        200: {
+          content: {
+            "application/json": ({
+                /** @description Identifiant de la **collection** chez TMDB */
+                tmdb_id: number;
+                /** @description Nom tel que TMDB l’écrit */
+                name: string;
+                /** @description Affiche en URL absolue, taille `w500`, nulle si TMDB n’en a pas */
+                cover_url: string | null;
+                /**
+                 * Format: date-time
+                 * @description Date à laquelle ce membre l’a ajoutée
+                 */
+                ajoute_le: string;
+              })[];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Suivre une saga
+     * @description Le nom et l’affiche sont lus chez TMDB (`collection/{id}`) et **recopiés** dans la ligne : c’est ce qui permet à `GET /me/sagas` de ne jamais rappeler TMDB.
+     *
+     * **Idempotent.** Déjà suivie ? Aucune seconde ligne n’est créée, la réponse est `200` au lieu de `201` et rend la ligne existante — avec sa date d’ajout d’origine, que ce geste ne rafraîchit pas. Un doublon est de toute façon impossible en base : l’unicité `(membre, collection)` y est écrite.
+     *
+     * Un `tmdb_id` que TMDB ne connaît pas répond `404`.
+     *
+     * `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    post: {
+      /** @description Suivre une saga */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Identifiant de la collection chez TMDB */
+            tmdb_id: number;
+          };
+        };
+      };
+      responses: {
+        /** @description Elle était déjà suivie — la ligne existante, inchangée */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Identifiant de la **collection** chez TMDB */
+              tmdb_id: number;
+              /** @description Nom tel que TMDB l’écrit */
+              name: string;
+              /** @description Affiche en URL absolue, taille `w500`, nulle si TMDB n’en a pas */
+              cover_url: string | null;
+              /**
+               * Format: date-time
+               * @description Date à laquelle ce membre l’a ajoutée
+               */
+              ajoute_le: string;
+            };
+          };
+        };
+        /** @description Saga ajoutée */
+        201: {
+          content: {
+            "application/json": {
+              /** @description Identifiant de la **collection** chez TMDB */
+              tmdb_id: number;
+              /** @description Nom tel que TMDB l’écrit */
+              name: string;
+              /** @description Affiche en URL absolue, taille `w500`, nulle si TMDB n’en a pas */
+              cover_url: string | null;
+              /**
+               * Format: date-time
+               * @description Date à laquelle ce membre l’a ajoutée
+               */
+              ajoute_le: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/sagas/{tmdbId}": {
+    /**
+     * Ne plus suivre une saga
+     * @description Le paramètre est le `tmdb_id` de la **collection**, celui rendu par `GET /me/sagas`, et non l’identifiant de la ligne : celle-ci n’en publie aucun.
+     *
+     * Une saga que je ne suis pas répond `404` — y compris quand quelqu’un d’autre la suit : le compte ne voit que ses propres lignes.
+     */
+    delete: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/sagas/{tmdbId}/films": {
+    /**
+     * Ses films, et ce que j’en ai vu
+     * @description Les films de cette collection (`collection/{id}`.parts), de la plus ancienne sortie à la plus récente.
+     *
+     * **Un film sans date de sortie ne figure pas dans la liste** : TMDB porte les projets annoncés, qui n’en ont pas et qu’une liste chronologique ne saurait pas placer.
+     *
+     * **`vu`** est mon visionnage le plus récent de ce film, ou `null`. Il vient de mon journal à moi : celui d’un autre membre ne le remplit jamais, même s’il suit la même saga. Le rapprochement se fait sur l’identifiant TMDB du film — une œuvre entrée dans la bibliothèque depuis une autre source n’y répond pas.
+     *
+     * **`introuvable`** est vrai si *je* l’ai moi-même marqué introuvable (`PUT /me/introuvables/{tmdbId}`) — jamais la marque d’un autre membre, même s’il suit la même saga. La marque est la même que celle des réalisateurs : un film introuvable le reste, quelle que soit la liste où il apparaît.
+     *
+     * **Rien n’entre dans la bibliothèque** : cette route ne crée aucune œuvre et n’écrit aucun suivi.
+     *
+     * La liste est mémorisée 24 h côté serveur, **par collection et non par membre** — elle est la même pour tous. `vu`, lui, est relu en base à chaque appel et n’est jamais mémorisé.
+     *
+     * Une saga que je ne suis pas répond `404` : il faut l’ajouter d’abord. `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    get: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description Les films d’une saga suivie, de la plus ancienne sortie à la plus récente */
+        200: {
+          content: {
+            "application/json": {
+              films: ({
+                  /** @description Identifiant du **film** chez TMDB */
+                  tmdb_id: number;
+                  /** @description Titre en français, avec repli sur le titre original */
+                  title: string;
+                  original_title: string | null;
+                  /** @description Année de sortie, tirée de `release_date` */
+                  year: number | null;
+                  /**
+                   * Format: date
+                   * @description Date de sortie — un film qui n’en a pas ne figure pas dans la liste
+                   */
+                  release_date: string;
+                  /** @description Affiche en URL absolue, taille `w500` */
+                  cover_url: string | null;
+                  /** @description Nul si je ne l’ai jamais journalisé */
+                  vu: ({
+                    /**
+                     * Format: uuid
+                     * @description L’entrée de journal la plus récente pour ce film
+                     */
+                    entry_id: string;
+                    /** @description La note de ce visionnage-là */
+                    rating: number | null;
+                    /**
+                     * Format: date
+                     * @description La date de ce visionnage
+                     */
+                    finished_at: string;
+                  }) | null;
+                  /** @description Vrai si je l’ai moi-même marqué introuvable (`PUT /me/introuvables/{tmdbId}`) — jamais la marque d’un autre membre. */
+                  introuvable: boolean;
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/media/{id}/availability": {
     /**
      * Où regarder un film ou une série

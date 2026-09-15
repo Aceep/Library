@@ -4742,9 +4742,11 @@ export interface paths {
   "/me/sagas/{tmdbId}/films": {
     /**
      * Ses films, et ce que j’en ai vu
-     * @description Les films de cette collection (`collection/{id}`.parts), de la plus ancienne sortie à la plus récente.
+     * @description Les films de cette collection (`collection/{id}`.parts) **plus** ceux qu’on y a ajoutés à la main (`PUT /me/sagas/{tmdbId}/films/{filmId}`), de la plus ancienne sortie à la plus récente. Une collection TMDB n’est pas toujours complète : « Alien - Saga » (8091) n’a que les quatre films originaux.
      *
-     * **Un film sans date de sortie ne figure pas dans la liste** : TMDB porte les projets annoncés, qui n’en ont pas et qu’une liste chronologique ne saurait pas placer.
+     * **`ajoute`** distingue les deux origines : faux pour un film de la collection, vrai pour un film ajouté à la main. **Un doublon entre les deux — le même `tmdb_id`, ajouté puis retrouvé aussi dans la collection — ne sort qu’une fois, avec `ajoute: false`** : la collection l’emporte.
+     *
+     * **Un film sans date de sortie ne figure pas dans la liste** : TMDB porte les projets annoncés, qui n’en ont pas et qu’une liste chronologique ne saurait pas placer. Un film ajouté que TMDB ne connaît plus, ou sans date de sortie, en est de même écarté.
      *
      * **`vu`** est mon visionnage le plus récent de ce film, ou `null`. Il vient de mon journal à moi : celui d’un autre membre ne le remplit jamais, même s’il suit la même saga. Le rapprochement se fait sur l’identifiant TMDB du film — une œuvre entrée dans la bibliothèque depuis une autre source n’y répond pas.
      *
@@ -4752,9 +4754,9 @@ export interface paths {
      *
      * **Rien n’entre dans la bibliothèque** : cette route ne crée aucune œuvre et n’écrit aucun suivi.
      *
-     * La liste est mémorisée 24 h côté serveur, **par collection et non par membre** — elle est la même pour tous. `vu`, lui, est relu en base à chaque appel et n’est jamais mémorisé.
+     * Les parties de la collection sont mémorisées 24 h côté serveur, **par collection et non par membre** — la même liste pour tous. La fiche de chaque film ajouté se mémorise, elle, 30 jours **par film**, et les appels à TMDB qu’elle demande s’espacent d’au moins 200 ms. `vu`, lui, est relu en base à chaque appel et n’est jamais mémorisé.
      *
-     * Une saga que je ne suis pas répond `404` : il faut l’ajouter d’abord. `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     * Une saga que je ne suis pas répond `404` : il faut l’ajouter d’abord. `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur et qu’un appel à TMDB est nécessaire.
      */
     get: {
       parameters: {
@@ -4799,6 +4801,8 @@ export interface paths {
                   }) | null;
                   /** @description Vrai si je l’ai moi-même marqué introuvable (`PUT /me/introuvables/{tmdbId}`) — jamais la marque d’un autre membre. */
                   introuvable: boolean;
+                  /** @description Vrai pour un film ajouté à la main (`PUT /me/sagas/{tmdbId}/films/{filmId}`), faux pour un film de la collection TMDB. Une collection TMDB n’est pas toujours complète — « Alien - Saga » n’a que les quatre films originaux — d’où cet ajout. */
+                  ajoute: boolean;
                 })[];
             };
           };
@@ -4823,6 +4827,90 @@ export interface paths {
         };
         /** @description Default Response */
         503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/sagas/{tmdbId}/films/{filmId}": {
+    /**
+     * Ajouter un film à une saga
+     * @description Complète une saga suivie avec un film que sa collection TMDB ne porte pas — le constat qui a fait naître cette route : « Alien - Saga » (8091) n’a que les quatre films originaux, ni Prometheus, ni Covenant, ni Romulus, ni les Alien vs Predator.
+     *
+     * `tmdbId` est celui de la **collection**, `filmId` celui du **film** — deux identifiants de nature différente, comme partout ailleurs dans ces routes.
+     *
+     * **Idempotent.** Ajouter un film déjà ajouté ne crée pas de seconde ligne et répond `204` comme la première fois — l’unicité `(membre, collection, film)` en base le garantit de toute façon.
+     *
+     * Une saga que je ne suis pas répond `404` : il faut la suivre d’abord (`POST /me/sagas`). Un `filmId` que TMDB ne connaît pas répond aussi `404`, vérifié par un appel à `movie/{id}`.
+     *
+     * `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    put: {
+      parameters: {
+        path: {
+          tmdbId: number;
+          filmId: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Retirer un film ajouté à une saga
+     * @description L’inverse de `PUT /me/sagas/{tmdbId}/films/{filmId}`. Ne touche jamais aux films de la collection TMDB elle-même, seulement à ceux ajoutés à la main.
+     *
+     * **204 dans tous les cas**, y compris quand le film n’était pas ajouté, ou que la saga n’est plus suivie : retirer un ajout absent n’est pas une erreur.
+     */
+    delete: {
+      parameters: {
+        path: {
+          tmdbId: number;
+          filmId: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };

@@ -4374,6 +4374,8 @@ export interface paths {
      *
      * **`vu`** est mon visionnage le plus récent de ce film, ou `null`. Il vient de mon journal à moi : celui d’un autre membre ne le remplit jamais, même s’il suit le même réalisateur. Le rapprochement se fait sur l’identifiant TMDB du film — une œuvre entrée dans la bibliothèque depuis une autre source n’y répond pas.
      *
+     * **`introuvable`** est vrai si *je* l’ai moi-même marqué introuvable (`PUT /me/introuvables/{tmdbId}`) — jamais la marque d’un autre membre, même s’il suit le même réalisateur.
+     *
      * **Rien n’entre dans la bibliothèque** : cette route ne crée aucune œuvre et n’écrit aucun suivi.
      *
      * La filmographie est mémorisée 24 h côté serveur, **par personne et non par membre** — elle est la même pour tous. `vu`, lui, est relu en base à chaque appel et n’est jamais mémorisé.
@@ -4421,6 +4423,8 @@ export interface paths {
                      */
                     finished_at: string;
                   }) | null;
+                  /** @description Vrai si je l’ai moi-même marqué introuvable (`PUT /me/introuvables/{tmdbId}`) — jamais la marque d’un autre membre. */
+                  introuvable: boolean;
                 })[];
             };
           };
@@ -4445,6 +4449,72 @@ export interface paths {
         };
         /** @description Default Response */
         503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/introuvables/{tmdbId}": {
+    /**
+     * Marquer un film introuvable
+     * @description Le paramètre est le `tmdb_id` d’un **film**, et non d’une personne : celui rendu par `GET /me/realisateurs/{tmdbId}/films`.
+     *
+     * **Idempotent.** Marquer un film déjà marqué ne crée pas de seconde ligne et répond `204` comme la première fois — l’unicité `(membre, film)` en base le garantit de toute façon.
+     *
+     * La marque est strictement personnelle : elle ne modifie que `GET /me/realisateurs/{tmdbId}/films` **pour moi**, jamais pour un autre membre.
+     */
+    put: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Retirer la marque « introuvable »
+     * @description Le paramètre est le `tmdb_id` d’un **film**, comme sur `PUT /me/introuvables/{tmdbId}`.
+     *
+     * **204 dans tous les cas**, y compris quand le film n’était pas marqué : retirer une marque absente ne fait rien de plus, et ce n’est pas une erreur.
+     */
+    delete: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };

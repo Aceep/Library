@@ -197,46 +197,57 @@ export interface paths {
   };
   "/reference/sorties": {
     /**
-     * Sorties en salle, semaine en cours et semaine prochaine
-     * @description Pour l’écran « Au ciné » : les films qui sortent en salle cette semaine et la semaine prochaine, dans le pays de l’instance (`WATCH_REGION`, `FR` par défaut) — la même donnée d’instance que `GET /media/{id}/availability`.
+     * Sorties en salle : à l’affiche chez soi aujourd’hui, et la semaine prochaine
+     * @description Pour l’écran « Au ciné ». Deux données de nature différente, dans deux champs :
      *
-     * Chaque groupe (`en_cours`, `prochaine`) porte ses bornes `du` / `au`, lundi et dimanche inclus, dans le fuseau Europe/Paris. Un film y figure une fois, quel que soit le nombre de types de sortie salle qu’il cumule (limitée, large).
+     * - `en_cours` : les films à l’affiche **aujourd’hui** dans les cinémas du propriétaire (`SORTIES_CINEMAS`), lus sur Allociné par une tâche de fond au démarrage puis toutes les 6 h — jamais interrogé à la demande. `du` et `au` valent tous deux ce jour-là. `cinemas_configures` vaut faux tant qu’aucun cinéma n’est configuré, et `films` reste alors vide. `calcule_le` est nul tant que la tâche n’a jamais tourné.
+     * - `prochaine` : la semaine prochaine (lundi à dimanche, fuseau Europe/Paris) dans le pays de l’instance (`WATCH_REGION`, `FR` par défaut), chez TMDB — les douze sorties les plus populaires, calculées à la demande et mises en cache 6 h.
      *
-     * Réponse mise en cache 6 h, tous membres confondus — les sorties en salle ne dépendent d’aucun compte.
+     * Un film de `en_cours` dont `tmdb_id` est nul n’a pas été retrouvé chez TMDB : à afficher, mais sans lien vers une fiche.
      */
     get: {
       responses: {
-        /** @description Sorties en salle en France : semaine en cours et semaine prochaine */
+        /** @description Sorties en salle : à l’affiche chez soi aujourd’hui, et la semaine prochaine en France */
         200: {
           content: {
             "application/json": {
-              /** @description La semaine en cours */
+              /** @description À l’affiche aujourd’hui, dans les cinémas du propriétaire */
               en_cours: {
                 /**
                  * Format: date
-                 * @description Lundi de la semaine, inclus
+                 * @description Le jour couvert (égal à `au`)
                  */
                 du: string;
                 /**
                  * Format: date
-                 * @description Dimanche de la semaine, inclus
+                 * @description Le jour couvert (égal à `du`)
                  */
                 au: string;
+                /** @description Horodatage de la dernière passe de la tâche de fond. Nul si elle n’a jamais tourné */
+                calcule_le: string | null;
+                /** @description Faux si `SORTIES_CINEMAS` est vide — dans ce cas, `films` est toujours vide */
+                cinemas_configures: boolean;
                 films: ({
-                    /** @description Identifiant du film chez TMDB */
-                    tmdb_id: number;
+                    /** @description Identifiant du film chez TMDB, nul si non résolu */
+                    tmdb_id: number | null;
+                    /** @description Identifiant du film chez Allociné (`internalId`) */
+                    allocine_id: number;
                     /** @description Titre en français, avec repli sur le titre original */
                     title: string;
                     original_title: string | null;
-                    /** @description Année de sortie, nulle si TMDB ne la donne pas */
+                    /** @description Année de sortie, nulle si Allociné ne la donne pas */
                     year: number | null;
                     /** @description Date de sortie en salle en France, `AAAA-MM-JJ` */
                     release_date: string | null;
-                    /** @description Affiche en URL absolue */
+                    /** @description Affiche Allociné, en URL absolue */
                     cover_url: string | null;
+                    /** @description Réalisateurs, dans l’ordre porté par Allociné */
+                    directors: string[];
+                    /** @description Noms des cinémas du propriétaire où ce film est à l’affiche aujourd’hui, au moins un */
+                    cinemas: string[];
                   })[];
               };
-              /** @description La semaine prochaine */
+              /** @description La semaine prochaine, TMDB, plafonnée à 12 films */
               prochaine: {
                 /**
                  * Format: date

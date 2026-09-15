@@ -291,6 +291,53 @@ export interface paths {
       };
     };
   };
+  "/reference/plex": {
+    /**
+     * Films demandés sur Seerr et disponibles sur le Plex, pas encore vus
+     * @description Pour la Frise et « Ensuite ». La liste « à voir » du propriétaire, ce n’est pas une liste tenue à la main : c’est son Plex, alimenté par ce qu’il a demandé dans Seerr et qui y est déjà disponible.
+     *
+     * Lue en Redis, écrite par une tâche de fond qui relit Seerr au démarrage puis toutes les heures — jamais interrogé à la demande. Rien n’est écrit en base.
+     *
+     * `configure` vaut faux tant que `SEERR_URL`, `SEERR_API_KEY` ou `SEERR_USER` manque, et `films` reste alors toujours vide. `calcule_le` est nul tant que la tâche n’a jamais tourné.
+     */
+    get: {
+      responses: {
+        /** @description Les films du Plex du propriétaire, demandés sur Seerr, disponibles et pas encore vus */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Faux si Seerr n’est pas configuré (SEERR_URL, SEERR_API_KEY, SEERR_USER) — films est alors toujours vide */
+              configure: boolean;
+              /** @description Horodatage de la dernière passe de la tâche de fond. Nul si elle n’a jamais tourné, ou si Redis est vide */
+              calcule_le: string | null;
+              films: ({
+                  /** @description Identifiant du film chez TMDB */
+                  tmdb_id: number;
+                  /** @description Titre en français, avec repli sur le titre original */
+                  title: string;
+                  original_title: string | null;
+                  /** @description Année de sortie, nulle si TMDB ne la donne pas */
+                  year: number | null;
+                  /** @description Affiche en URL absolue */
+                  cover_url: string | null;
+                  /**
+                   * Format: date-time
+                   * @description Date de la demande sur Seerr
+                   */
+                  demande_le: string;
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/auth/login": {
     /**
      * Ouvrir une session

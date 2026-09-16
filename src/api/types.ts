@@ -3994,6 +3994,8 @@ export interface paths {
      *
      * Pour chaque ligne : titre et année cherchent un candidat chez TMDB, apparié par les mêmes règles que l’import SensCritique (`dev/importer-senscritique.ts`) — **un seul candidat net importe**, zéro ou plusieurs partent dans `non_reconnus` avec les candidats trouvés, jamais devinés.
      *
+     * **Aucun candidat net en français ? La recherche est refaite en anglais** (brief du 16 septembre 2026) — Letterboxd donne parfois le titre anglais d’un film étranger, que ni le titre français ni l’original ne rapprochent. Un seul candidat net dans l’un ou l’autre importe ; plusieurs, dans l’une ou l’autre langue, partent dans `non_reconnus` avec l’union des deux recherches.
+     *
      * La date de l’entrée est `Watched Date`, ou `Date` si elle est vide. La note est `Rating × 2` arrondie à l’entier (une note Letterboxd vide n’écrit pas de note). **Une ligne déjà présente — même film TMDB, même date, chez ce membre — est ignorée** (`deja_presents`), sans créer de doublon.
      *
      * Films seulement, comme le reste du carnet : l’œuvre entre dans la bibliothèque si elle n’y était pas, exactement comme `POST /media/:id/log`, sans toucher au statut de suivi.

@@ -7904,6 +7904,262 @@ export interface paths {
       };
     };
   };
+  "/reference/chroniques/annees/{annee}": {
+    /**
+     * La chronique d’une année du Voyage
+     * @description Le récit et les essentiels d’une année, écrits une fois par Claude et ne bougeant plus.
+     *
+     * `200` si la chronique existe déjà. `202` si elle n’existe pas encore mais que le chroniqueur est configuré : la demande l’enfile (`chroniques:file`), à relire dans quelques secondes — c’est la tâche de fond (`plugins/chroniques.ts`) qui l’écrit, jamais cette route elle-même. `{ configure: false }` si `ANTHROPIC_API_KEY` n’est pas posée sur ce serveur : rien ne s’enfile alors.
+     *
+     * `essentiels` peut être vide — une année pauvre en a pu n’avoir aucun résolu sur TMDB, et c’est une réponse comme une autre, jamais retentée.
+     */
+    get: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": ({
+              /** @enum {boolean} */
+              configure: true;
+              /** @enum {string} */
+              statut: "prete";
+              annee: number;
+              /** @description 8 à 12 lignes, ton de chroniqueur enjoué : le cinéma et le monde cette année-là */
+              recit: string;
+              /** @description Trois à cinq faits marquants, cinéma et monde */
+              faits: string[];
+              /** @description Du plus important au moins — vide si aucun essentiel ne s’est résolu sur TMDB */
+              essentiels: ({
+                  /** @description Position dans la liste, du plus important au moins — 1 en tête */
+                  rang: number;
+                  /** @description Identifiant du film chez TMDB, une fois résolu par `matching.ts` */
+                  tmdb_id: number;
+                  /** @description Titre en français, tel que TMDB le donne */
+                  title: string;
+                  original_title: string | null;
+                  /** @description Année de sortie chez TMDB, nulle si TMDB ne la donne pas */
+                  year: number | null;
+                  /** @description Réalisateur, tel que Claude l’a cité */
+                  realisateur: string;
+                  /** @description Une ligne : pourquoi ce film compte pour cette année */
+                  pourquoi: string;
+                  /** @description Affiche en URL absolue, nulle si TMDB n’en a pas */
+                  cover_url: string | null;
+                })[];
+            }) | {
+              /** @enum {boolean} */
+              configure: false;
+            };
+          };
+        };
+        /** @description La chronique de cette année est en cours d’écriture — redemander dans quelques secondes */
+        202: {
+          content: {
+            "application/json": {
+              /** @enum {boolean} */
+              configure: true;
+              /** @enum {string} */
+              statut: "en_preparation";
+              annee: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/reference/chroniques/films/{tmdbId}": {
+    /**
+     * Le carton « Et pendant ce temps… » d’un film
+     * @description Le plus souvent écrit après coup : journaliser un film (`POST /me/journal`) enfile son carton — mais n’importe quel `tmdb_id` peut être demandé ici directement, et sera enfilé de la même façon s’il manque.
+     *
+     * Mêmes trois formes que `GET /reference/chroniques/annees/{annee}` : `200` prêt, `202` en préparation (enfilé), `{ configure: false }` sans clé Anthropic.
+     */
+    get: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              /** @enum {boolean} */
+              configure: true;
+              /** @enum {string} */
+              statut: "prete";
+              tmdb_id: number;
+              /** @description 4 à 6 lignes : le film dans son époque, sa réception, ce qu’il a changé */
+              contexte: string;
+              /** @description Trois faits de la même année, cinéma et monde */
+              faits: string[];
+            } | {
+              /** @enum {boolean} */
+              configure: false;
+            };
+          };
+        };
+        /** @description Le carton de ce film est en cours d’écriture — redemander dans quelques secondes */
+        202: {
+          content: {
+            "application/json": {
+              /** @enum {boolean} */
+              configure: true;
+              /** @enum {string} */
+              statut: "en_preparation";
+              tmdb_id: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage": {
+    /**
+     * Ma progression dans le Voyage
+     * @description La frontière (`frontiere`) est la première année pas encore faite. Une année est faite quand sa chronique existe et que tous ses essentiels sont vus (mon journal) ou marqués introuvables — une année sans essentiel compte faite. `frontiere_statut` dit si sa chronique existe déjà (`ouverte`) ou vient d’être enfilée (`en_preparation`).
+     *
+     * `annees` couvre 1895 à l’année courante. Pour une année verrouillée, `essentiels_total` et `essentiels_faits` restent nuls — on ne génère jamais une chronique d’avance — mais `vus` compte quand même ce que j’ai déjà vu de cette année-là, journalisé en avance.
+     *
+     * `essentiels` (le détail par film) n’est présent que sur l’année ouverte, et seulement si sa chronique existe déjà : `GET /reference/chroniques/annees/{annee}` sert cette même liste, sans le `etat` ni la `note`, qui eux dépendent du membre.
+     *
+     * Réponse mise en cache 60 s par membre.
+     */
+    get: {
+      responses: {
+        /** @description Ma progression dans le Voyage */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Faux si `ANTHROPIC_API_KEY` n’est pas configurée — aucune nouvelle chronique ne s’écrit alors */
+              configure: boolean;
+              /** @enum {number} */
+              depart: 1895;
+              /** @description La première année pas encore faite */
+              frontiere: number;
+              /** @enum {string} */
+              frontiere_statut: "ouverte" | "en_preparation";
+              /** @description De 1895 à l’année courante */
+              annees: ({
+                  annee: number;
+                  /** @enum {string} */
+                  statut: "faite" | "ouverte" | "verrouillee";
+                  /** @description Films de mon journal sortis cette année-là, quelle que soit la date à laquelle je les ai vus */
+                  vus: number;
+                  /** @description Nombre d’essentiels de cette année — nul pour une année verrouillée ou dont la chronique manque encore */
+                  essentiels_total: number | null;
+                  /** @description Essentiels vus ou marqués introuvables — même nullité qu’`essentiels_total` */
+                  essentiels_faits: number | null;
+                  /** @description Détaillé seulement pour l’année ouverte, et seulement quand sa chronique existe déjà */
+                  essentiels?: ({
+                      rang: number;
+                      tmdb_id: number;
+                      title: string;
+                      year: number | null;
+                      cover_url: string | null;
+                      realisateur: string;
+                      pourquoi: string;
+                      /** @enum {string} */
+                      etat: "vu" | "sur_le_plex" | "a_trouver" | "introuvable";
+                      /** @description Ma note, si je l’ai vu et notée */
+                      note: number | null;
+                    })[];
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/demander/{tmdbId}": {
+    /**
+     * Demander un essentiel sur Seerr
+     * @description Relaie la demande à Seerr (`POST /api/v1/request`, pour l’utilisateur `SEERR_USER`) — rien ne s’écrit chez nous, ni suivi ni entrée de journal.
+     *
+     * `201` si Seerr crée la demande. `200` si elle existait déjà (Seerr répond `409`). `503 UPSTREAM_UNAVAILABLE` si Seerr ne répond pas ou refuse ; `503 SERVICE_UNCONFIGURED` si `SEERR_URL`, `SEERR_API_KEY` ou `SEERR_USER` manque sur ce serveur.
+     */
+    post: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description Le film est demandé sur Seerr — `201` la première fois, `200` s’il l’était déjà */
+        200: {
+          content: {
+            "application/json": {
+              /** @enum {boolean} */
+              demande: true;
+            };
+          };
+        };
+        /** @description Le film est demandé sur Seerr — `201` la première fois, `200` s’il l’était déjà */
+        201: {
+          content: {
+            "application/json": {
+              /** @enum {boolean} */
+              demande: true;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;

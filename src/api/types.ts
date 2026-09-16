@@ -8049,7 +8049,9 @@ export interface paths {
      * Ma progression dans le Voyage
      * @description La frontière (`frontiere`) est la première année pas encore faite. Une année est faite quand sa chronique existe et que tous ses essentiels sont vus (mon journal) ou marqués introuvables — une année sans essentiel compte faite. `frontiere_statut` dit si sa chronique existe déjà (`ouverte`) ou vient d’être enfilée (`en_preparation`).
      *
-     * `annees` couvre 1895 à l’année courante. Pour une année verrouillée, `essentiels_total` et `essentiels_faits` restent nuls — on ne génère jamais une chronique d’avance — mais `vus` compte quand même ce que j’ai déjà vu de cette année-là, journalisé en avance.
+     * `annees` couvre 1895 à l’année courante. Pour une année verrouillée, `essentiels_total` et `essentiels_faits` restent nuls — leur décompte se lit une fois l’année ouverte — mais `vus` compte quand même ce que j’ai déjà vu de cette année-là, journalisé en avance.
+     *
+     * `essentiels_apercu` n’apparaît que sur une année verrouillée dont la chronique existe déjà (le moteur en enfile une d’avance) : les affiches seules, sans titre, pour un carton « Prochainement » flouté. Absent quand la chronique manque encore — à distinguer d’un tableau vide, qui dit qu’aucun essentiel ne s’est résolu sur TMDB.
      *
      * `essentiels` (le détail par film) n’est présent que sur l’année ouverte, et seulement si sa chronique existe déjà : `GET /reference/chroniques/annees/{annee}` sert cette même liste, sans le `etat` ni la `note`, qui eux dépendent du membre.
      *
@@ -8093,6 +8095,11 @@ export interface paths {
                       etat: "vu" | "sur_le_plex" | "a_trouver" | "introuvable";
                       /** @description Ma note, si je l’ai vu et notée */
                       note: number | null;
+                    })[];
+                  /** @description Présent seulement pour une année **verrouillée** dont la chronique existe déjà — le moteur en enfile toujours une d’avance. Les affiches seules, sans titre : de quoi flouter le carton « Prochainement » de l’appli sans jamais nommer un film avant l’heure. Absent quand la chronique manque encore, et à distinguer d’un tableau vide (une année dont aucun essentiel ne s’est résolu sur TMDB). */
+                  essentiels_apercu?: ({
+                      /** @description Affiche en URL absolue, nulle si TMDB n’en a pas — l’affiche seule, jamais le titre */
+                      cover_url: string | null;
                     })[];
                 })[];
             };

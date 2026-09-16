@@ -3987,6 +3987,81 @@ export interface paths {
       };
     };
   };
+  "/me/journal/import/letterboxd": {
+    /**
+     * Importer le journal Letterboxd (`diary.csv`)
+     * @description Letterboxd est fermé (Cloudflare, API sur invitation) : pas de synchronisation possible. Le seul chemin est l’export personnel du membre (Réglages → Import & Export → « Export your data » sur Letterboxd), un ZIP dont l’appli extrait `diary.csv` avant de l’envoyer ici — **en JSON**, `{ "csv": "..." }`, jamais en `text/csv`.
+     *
+     * Pour chaque ligne : titre et année cherchent un candidat chez TMDB, apparié par les mêmes règles que l’import SensCritique (`dev/importer-senscritique.ts`) — **un seul candidat net importe**, zéro ou plusieurs partent dans `non_reconnus` avec les candidats trouvés, jamais devinés.
+     *
+     * La date de l’entrée est `Watched Date`, ou `Date` si elle est vide. La note est `Rating × 2` arrondie à l’entier (une note Letterboxd vide n’écrit pas de note). **Une ligne déjà présente — même film TMDB, même date, chez ce membre — est ignorée** (`deja_presents`), sans créer de doublon.
+     *
+     * Films seulement, comme le reste du carnet : l’œuvre entre dans la bibliothèque si elle n’y était pas, exactement comme `POST /media/:id/log`, sans toucher au statut de suivi.
+     *
+     * **La réponse n’arrive qu’une fois le fichier entièrement traité.** Les recherches TMDB passent une par une, à 250 ms d’écart, par la file sortante commune — un fichier de 500 lignes prend donc environ deux minutes. La résolution d’un titre et d’une année se mémorise 30 jours en Redis : rejouer le même fichier ne rappelle pas TMDB pour les lignes déjà résolues. **Prévoir un délai client d’au moins cinq minutes pour cet appel.**
+     *
+     * Un CSV sans les en-têtes de `diary.csv` (`Date,Name,Year,Letterboxd URI,Rating,Rewatch,Tags,Watched Date`) répond `400`. `watched.csv` et `ratings.csv`, qui n’en portent qu’un sous-ensemble, ne sont donc pas acceptés tels quels.
+     */
+    post: {
+      /** @description Le CSV `diary.csv` de l’export Letterboxd */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Le contenu de `diary.csv`, tel quel — l’appli l’a extrait du ZIP Letterboxd si besoin */
+            csv: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Le bilan de l’import — la réponse arrive une fois le fichier entièrement traité */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Visionnages importés — un par ligne reconnue et pas déjà présente */
+              importes: number;
+              /** @description Lignes ignorées : ce membre a déjà une entrée pour ce film à cette date */
+              deja_presents: number;
+              non_reconnus: ({
+                  /** @description Numéro de la ligne dans le CSV — 1 pour l’en-tête, 2 pour la première ligne de données */
+                  ligne: number;
+                  name: string;
+                  year: number | null;
+                  /** @description Vide si aucun candidat ne correspond, plusieurs si le choix est ambigu */
+                  candidats: ({
+                      /** @description Identifiant TMDB du candidat */
+                      tmdb_id: string;
+                      title: string;
+                      year: number | null;
+                    })[];
+                })[];
+              erreurs: {
+                  ligne: number;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/me/journal/{id}": {
     /**
      * Supprimer un visionnage

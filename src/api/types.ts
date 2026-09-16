@@ -3830,7 +3830,7 @@ export interface paths {
      *
      * **`rating` est la note de ce visionnage-là**, et elle s’écrit sur l’entrée. Dans les deux cas, elle **ne devient la note de l’œuvre que si cette entrée est la plus récente** : ajouter après coup une revoyure ancienne ne revient pas sur l’avis d’aujourd’hui. **Un corps sans `rating` ne touche pas à la note de l’œuvre** : un geste qui n’ajoute qu’une réaction ou une remarque ne dit rien de l’avis d’aujourd’hui, et ne vient donc pas l’écraser.
      *
-     * **Idempotent par la date.** Une entrée existe déjà pour ce film ce jour-là ? Aucune seconde n’est créée : celle-là est corrigée — sa note si tu en envoies une, et son carnet, **remplacé en bloc** par celui du corps, donc vidé par un corps sans `reactions` ni `comment`. La réponse est alors `200` au lieu de `201`. Voir deux fois le même film le même jour reste possible par `POST /media/:id/log`, à la main.
+     * **Idempotent par la date.** Une entrée existe déjà pour ce film ce jour-là ? Aucune seconde n’est créée : celle-là est corrigée — sa note si tu en envoies une, et son carnet, **champ par champ, comme le `PATCH`** (correctif du 16 septembre 2026) : `reactions` absent laisse les réactions en place, `comment` absent laisse la remarque en place ; envoyés, même vides (`[]`, `""` ou `null`), ils remplacent. La réponse est alors `200` au lieu de `201`. Voir deux fois le même film le même jour reste possible par `POST /media/:id/log`, à la main.
      *
      * **Films seulement, pour l’instant** : un autre type répond `400`.
      *

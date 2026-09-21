@@ -4298,6 +4298,64 @@ export interface paths {
       };
     };
   };
+  "/reference/films/{tmdbId}/realisateurs": {
+    /**
+     * Les réalisateurs crédités sur un film
+     * @description De quoi naviguer d’une fiche vers une page réalisateur (`GET /me/realisateurs/{tmdbId}/page`) : `crew`, poste `Director`, sur `movie/{id}` chez TMDB — dédoublonnés par personne, dans l’ordre TMDB.
+     *
+     * `realisateurs` est vide si TMDB n’en crédite aucun ; `404` si `tmdbId` est un film que TMDB ne connaît pas.
+     *
+     * Sous `/reference`, pas `/me` : le résultat ne dépend d’aucun compte, comme `GET /reference/personnes`. Mémorisé en Redis 30 jours par film — un film ne change pas de réalisateur.
+     *
+     * `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    get: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description Les réalisateurs crédités (`crew`, poste `Director`) sur ce film chez TMDB, dédoublonnés, dans l’ordre TMDB — vide si TMDB n’en crédite aucun */
+        200: {
+          content: {
+            "application/json": {
+              realisateurs: {
+                  /** @description Identifiant de la **personne** chez TMDB */
+                  tmdb_id: number;
+                  /** @description Nom tel que TMDB l’écrit */
+                  name: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/me/realisateurs": {
     /**
      * Mes réalisateurs
@@ -4520,6 +4578,138 @@ export interface paths {
                   }) | null;
                   /** @description Vrai si je l’ai moi-même marqué introuvable (`PUT /me/introuvables/{tmdbId}`) — jamais la marque d’un autre membre. */
                   introuvable: boolean;
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/realisateurs/{tmdbId}/page": {
+    /**
+     * La page d’un réalisateur — fiche et filmographie complète
+     * @description Pensée pour l’application mobile : la fiche d’une personne (photo, dates, présentation) et **tous** ses films et séries réalisés, mêlés et triés du plus ancien au plus récent — que je la suive ou non (`suivi` le dit, sans jamais l’exiger).
+     *
+     * `photo_url` est `profile_path` chez TMDB, en URL absolue, nulle si TMDB n’en a pas. `naissance`/`deces` sont `birthday`/`deathday`, nuls si TMDB ne les donne pas ou si la personne est vivante.
+     *
+     * `presentation` est la **première phrase** de la biographie TMDB, en français avec repli sur l’anglais si elle y est vide, bornée à 200 caractères (coupée sur un mot, avec « … ») — chaîne vide si TMDB n’a ni l’une ni l’autre.
+     *
+     * Les films viennent de `crew` (`movie_credits`), les séries de `crew` (`tv_credits`, poste `Director`, une ligne par série datée — une série sans date d’antenne n’y figure pas), chacun mémorisé 24 h par personne comme `GET /me/realisateurs/{tmdbId}/films`, dont ce champ reprend exactement le calcul. **`vu` est toujours nul sur une série** : les séries se suivent par `/media`, pas par ce chemin ; `introuvable` y reste calculé, la marque ne distinguant pas film et série.
+     *
+     * Chaque film ou série porte aussi `sur_le_plex`, `demande` et `plex_url` (lus comme `GET /me/voyage`, sur le Plex du propriétaire), `annee_ouverte` (`year` non nul et inférieur ou égal à mon année en cours dans le Voyage, 1895 par défaut), et `voyage` — la ligne `voyage_films` la plus ancienne où il figure parmi mes salles, `null` sinon.
+     *
+     * `404` si `tmdbId` est une personne que TMDB ne connaît pas. `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    get: {
+      parameters: {
+        path: {
+          tmdbId: number;
+        };
+      };
+      responses: {
+        /** @description La page d’un réalisateur — sa fiche et sa filmographie complète, films et séries */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Identifiant de la **personne** chez TMDB */
+              tmdb_id: number;
+              /** @description Nom tel que TMDB l’écrit */
+              name: string;
+              /** @description Photo en URL absolue, nulle si TMDB n’en a pas */
+              photo_url: string | null;
+              /** @description `birthday` chez TMDB */
+              naissance: string | null;
+              /** @description `deathday` chez TMDB, nul s’il est toujours vivant */
+              deces: string | null;
+              /** @description Première phrase de la biographie TMDB en français, repli sur l’anglais si vide, bornée à 200 caractères (coupée sur un mot, avec « … ») — chaîne vide si TMDB n’a ni l’une ni l’autre */
+              presentation: string;
+              /** @description Vrai si je le suis (`user_directors`) */
+              suivi: boolean;
+              /** @description Films et séries qu’il a réalisés, mêlés, du plus ancien au plus récent */
+              films: ({
+                  /** @description Identifiant du **film** chez TMDB */
+                  tmdb_id: number;
+                  /** @description Titre en français, avec repli sur le titre original */
+                  title: string;
+                  original_title: string | null;
+                  /** @description Année de sortie, tirée de `release_date` */
+                  year: number | null;
+                  /**
+                   * Format: date
+                   * @description Date de sortie — un film qui n’en a pas ne figure pas dans la liste
+                   */
+                  release_date: string;
+                  /** @description Affiche en URL absolue, taille `w500` */
+                  cover_url: string | null;
+                  /** @description Nul si je ne l’ai jamais journalisé */
+                  vu: ({
+                    /**
+                     * Format: uuid
+                     * @description L’entrée de journal la plus récente pour ce film
+                     */
+                    entry_id: string;
+                    /** @description La note de ce visionnage-là */
+                    rating: number | null;
+                    /**
+                     * Format: date
+                     * @description La date de ce visionnage
+                     */
+                    finished_at: string;
+                  }) | null;
+                  /** @description Vrai si je l’ai moi-même marqué introuvable (`PUT /me/introuvables/{tmdbId}`) — jamais la marque d’un autre membre. */
+                  introuvable: boolean;
+                  /**
+                   * @description Un film (`movie_credits`) ou une série (`tv_credits`) chez TMDB
+                   * @enum {string}
+                   */
+                  type: "movie" | "tv";
+                  /** @description Disponible sur le Plex du propriétaire, comme le Voyage */
+                  sur_le_plex: boolean;
+                  /** @description Demandé sur Seerr, pas encore disponible sur le Plex */
+                  demande: boolean;
+                  /** @description Lien web vers la fiche Plex, nul si le film n’y est pas */
+                  plex_url: string | null;
+                  /** @description `year` non nul et inférieur ou égal à mon année en cours dans le Voyage (1895 par défaut) */
+                  annee_ouverte: boolean;
+                  /** @description Nul si ce film n’est dans aucune de mes salles */
+                  voyage: {
+                    /** @description L’année du Voyage la plus ancienne où ce film figure */
+                    annee: number;
+                    /**
+                     * Format: uuid
+                     * @description La salle de cette année-là qui le porte
+                     */
+                    salle_id: string;
+                    /**
+                     * Format: uuid
+                     * @description La ligne `voyage_films` correspondante
+                     */
+                    film_id: string;
+                  } | null;
                 })[];
             };
           };

@@ -7993,7 +7993,9 @@ export interface paths {
      *
      * `tampons` porte le passeport : une ligne par décennie bouclée (`decennie` croissant, `boucle_le`), où chacune de ses années a un `ours` et où le ticket de la première année de la décennie suivante est `utilise_le`.
      *
-     * Réponse mise en cache 60 s par membre, invalidée par une écriture au journal (`/me/journal`), une marque « introuvable » (`PUT`/`DELETE /me/introuvables/{tmdbId}`), l’ouverture d’une année, une fournée et une écriture au podium.
+     * `seance_prise` porte la dernière séance que j’ai prise (`POST /me/voyage/seances/{id}/prendre`), tant que son long n’est pas encore vu — `null` dès qu’il l’est, ou si aucune séance n’est prise.
+     *
+     * Réponse mise en cache 60 s par membre, invalidée par une écriture au journal (`/me/journal`), une marque « introuvable » (`PUT`/`DELETE /me/introuvables/{tmdbId}`), l’ouverture d’une année, une fournée, une écriture au podium et toute écriture sur une séance.
      */
     get: {
       responses: {
@@ -8039,6 +8041,19 @@ export interface paths {
                    */
                   boucle_le: string;
                 }[];
+              /** @description La séance que j’ai prise, tant que son long n’est pas encore vu — nulle sinon */
+              seance_prise: ({
+                /** Format: uuid */
+                id: string;
+                annee: number;
+                long: {
+                  title: string;
+                  cover_url: string | null;
+                };
+                court: {
+                  title: string;
+                } | null;
+              }) | null;
             };
           };
         };
@@ -8063,6 +8078,8 @@ export interface paths {
      * `maturite` (`prete` seulement) porte le dernier jugement du chroniqueur sur cette année — `null` tant qu’aucun film de l’année n’a encore été noté. `ticket` (`prete` seulement) porte le ticket vers `annee + 1`, s’il a été gagné — `null` sinon.
      *
      * `recompense` et `progression` (`prete` seulement) : la récompense de cette année (voir `GET /me/voyage`) et de quoi dessiner sa barre — `essentiels_vus`/`essentiels_total` (strictement vus, un introuvable n’y compte pas), `salles_completes`/`salles_autres` (salles hors essentiels, à au moins un film, entièrement vues ou introuvables).
+     *
+     * `seances` (`prete` seulement, brief du 21 septembre 2026, « la séance ») porte mes séances composées, par rang décroissant — la plus récente d’abord —, chacune un `long` jamais vu et un `court` facultatif (`POST /me/voyage/annees/{annee}/seances`). `seance_en_cours` dit si une composition vient d’être demandée et s’écrit encore.
      */
     get: {
       parameters: {
@@ -8201,6 +8218,62 @@ export interface paths {
                 /** @description La salle créée — seulement si acceptée */
                 salle_id: string | null;
               }) | null;
+              /** @description Par rang décroissant — la plus récente d’abord */
+              seances: ({
+                  /** Format: uuid */
+                  id: string;
+                  rang: number;
+                  /** @enum {string} */
+                  statut: "proposee" | "prise" | "ignoree";
+                  /** Format: date-time */
+                  composee_le: string;
+                  /** @description Deux à quatre phrases, à lire pendant le générique */
+                  anecdote: string;
+                  /** @description Le long ou le court d’une séance */
+                  long: {
+                    /**
+                     * Format: uuid
+                     * @description La ligne de mes salles (voyage_films) : le long, ou le programme du court
+                     */
+                    film_id: string;
+                    tmdb_id: number;
+                    title: string;
+                    cover_url: string | null;
+                    /** @description Le nom de la salle où ce film ou programme a été proposé */
+                    salle: string;
+                    /** @enum {string} */
+                    etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                    plex_url: string | null;
+                    /** @description Non nulle quand le court est une bobine précise du programme, plutôt que le programme entier */
+                    bobine: {
+                      tmdb_id: number;
+                      title: string;
+                    } | null;
+                  };
+                  /** @description Nul si l’année n’a encore aucun court, programme ou bobine à proposer */
+                  court: ({
+                    /**
+                     * Format: uuid
+                     * @description La ligne de mes salles (voyage_films) : le long, ou le programme du court
+                     */
+                    film_id: string;
+                    tmdb_id: number;
+                    title: string;
+                    cover_url: string | null;
+                    /** @description Le nom de la salle où ce film ou programme a été proposé */
+                    salle: string;
+                    /** @enum {string} */
+                    etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                    plex_url: string | null;
+                    /** @description Non nulle quand le court est une bobine précise du programme, plutôt que le programme entier */
+                    bobine: {
+                      tmdb_id: number;
+                      title: string;
+                    } | null;
+                  }) | null;
+                })[];
+              /** @description Une composition vient d’être demandée et s’écrit encore */
+              seance_en_cours: boolean;
             }) | ({
               /** @enum {boolean} */
               configure: true;
@@ -8570,6 +8643,364 @@ export interface paths {
         /** @description Default Response */
         204: {
           content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annees/{annee}/seances": {
+    /**
+     * « Composer une séance » — un long jamais vu, un court facultatif
+     * @description Enfile la composition (`seance:<userId>:<annee>`) et répond toujours `202 { statut: "en_preparation" }`. `409 CONFLICT` si une composition est déjà en cours pour cette année.
+     *
+     * On ne compose une séance que dans mon année en cours : `404` sur toute autre année, ou si elle n’a pas encore été ouverte. `400 VALIDATION` si tous les films de mes salles de cette année sont déjà vus ou introuvables — il n’y a alors plus rien de neuf à proposer.
+     *
+     * La composition choisit un long jamais vu (sur mon Plex d’abord, sinon à demander), et en ouverture un court, un programme ou une de ses bobines quand l’année en a — jamais si un titre rendu par le chroniqueur ne se résout sur aucun film ou bobine connus, ou si le long rendu est déjà vu : la génération échoue alors sans rien écrire, et le verrou se libère pour qu’une prochaine demande retente.
+     */
+    post: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description La composition vient d’être enfilée, ou en était déjà une en cours */
+        202: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              statut: "en_preparation";
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/seances/{id}/remplacer": {
+    /**
+     * Remplacer un morceau d’une séance — sans appel au chroniqueur
+     * @description Corps `{ morceau: "long" | "court", film_id, bobine_tmdb_id? }`. `film_id` doit être une ligne de mes salles de cette année-là, sinon `404` (une autre séance, un autre membre, une autre année, ou inconnue).
+     *
+     * Pour `morceau: "long"` : `film_id` doit être un long (sans programme), non vu, non introuvable, et `bobine_tmdb_id` doit être absent — sinon `400 VALIDATION`. Pour `morceau: "court"` : `film_id` doit être un programme ; sans `bobine_tmdb_id`, le programme entier doit n’être ni entièrement vu ni introuvable ; avec, `bobine_tmdb_id` doit appartenir à ce programme et n’être ni vu ni introuvable — sinon `400 VALIDATION`.
+     *
+     * Répond `200 { seance }` après l’écriture, et invalide le cache de `GET /me/voyage`.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      /** @description Le morceau de la séance à remplacer, et son remplaçant */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            morceau: "long" | "court";
+            /**
+             * Format: uuid
+             * @description Un long (sans programme), ou un programme de mes salles de cette année
+             */
+            film_id: string;
+            /** @description Une bobine du programme visé par film_id — seulement pour morceau: "court" */
+            bobine_tmdb_id?: number;
+          };
+        };
+      };
+      responses: {
+        /** @description La séance après l’écriture */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une séance composée par le chroniqueur — un long jamais vu, un court en ouverture, une anecdote */
+              seance: {
+                /** Format: uuid */
+                id: string;
+                rang: number;
+                /** @enum {string} */
+                statut: "proposee" | "prise" | "ignoree";
+                /** Format: date-time */
+                composee_le: string;
+                /** @description Deux à quatre phrases, à lire pendant le générique */
+                anecdote: string;
+                /** @description Le long ou le court d’une séance */
+                long: {
+                  /**
+                   * Format: uuid
+                   * @description La ligne de mes salles (voyage_films) : le long, ou le programme du court
+                   */
+                  film_id: string;
+                  tmdb_id: number;
+                  title: string;
+                  cover_url: string | null;
+                  /** @description Le nom de la salle où ce film ou programme a été proposé */
+                  salle: string;
+                  /** @enum {string} */
+                  etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                  plex_url: string | null;
+                  /** @description Non nulle quand le court est une bobine précise du programme, plutôt que le programme entier */
+                  bobine: {
+                    tmdb_id: number;
+                    title: string;
+                  } | null;
+                };
+                /** @description Nul si l’année n’a encore aucun court, programme ou bobine à proposer */
+                court: ({
+                  /**
+                   * Format: uuid
+                   * @description La ligne de mes salles (voyage_films) : le long, ou le programme du court
+                   */
+                  film_id: string;
+                  tmdb_id: number;
+                  title: string;
+                  cover_url: string | null;
+                  /** @description Le nom de la salle où ce film ou programme a été proposé */
+                  salle: string;
+                  /** @enum {string} */
+                  etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                  plex_url: string | null;
+                  /** @description Non nulle quand le court est une bobine précise du programme, plutôt que le programme entier */
+                  bobine: {
+                    tmdb_id: number;
+                    title: string;
+                  } | null;
+                }) | null;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/seances/{id}/prendre": {
+    /**
+     * Prendre une séance telle quelle
+     * @description Passe cette séance à `prise`, et ignore (`ignoree`) les autres séances `prise` de la même année — une seule prise à la fois, par année. `404` si cette séance n’existe pas, ou n’est pas la mienne.
+     *
+     * Répond `200 { seance }`, et invalide le cache de `GET /me/voyage` (`seance_prise` s’y met à jour).
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description La séance après l’écriture */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une séance composée par le chroniqueur — un long jamais vu, un court en ouverture, une anecdote */
+              seance: {
+                /** Format: uuid */
+                id: string;
+                rang: number;
+                /** @enum {string} */
+                statut: "proposee" | "prise" | "ignoree";
+                /** Format: date-time */
+                composee_le: string;
+                /** @description Deux à quatre phrases, à lire pendant le générique */
+                anecdote: string;
+                /** @description Le long ou le court d’une séance */
+                long: {
+                  /**
+                   * Format: uuid
+                   * @description La ligne de mes salles (voyage_films) : le long, ou le programme du court
+                   */
+                  film_id: string;
+                  tmdb_id: number;
+                  title: string;
+                  cover_url: string | null;
+                  /** @description Le nom de la salle où ce film ou programme a été proposé */
+                  salle: string;
+                  /** @enum {string} */
+                  etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                  plex_url: string | null;
+                  /** @description Non nulle quand le court est une bobine précise du programme, plutôt que le programme entier */
+                  bobine: {
+                    tmdb_id: number;
+                    title: string;
+                  } | null;
+                };
+                /** @description Nul si l’année n’a encore aucun court, programme ou bobine à proposer */
+                court: ({
+                  /**
+                   * Format: uuid
+                   * @description La ligne de mes salles (voyage_films) : le long, ou le programme du court
+                   */
+                  film_id: string;
+                  tmdb_id: number;
+                  title: string;
+                  cover_url: string | null;
+                  /** @description Le nom de la salle où ce film ou programme a été proposé */
+                  salle: string;
+                  /** @enum {string} */
+                  etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                  plex_url: string | null;
+                  /** @description Non nulle quand le court est une bobine précise du programme, plutôt que le programme entier */
+                  bobine: {
+                    tmdb_id: number;
+                    title: string;
+                  } | null;
+                }) | null;
+              };
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/seances/{id}/ignorer": {
+    /**
+     * Ignorer une séance
+     * @description Passe cette séance à `ignoree`. `404` si cette séance n’existe pas, ou n’est pas la mienne.
+     *
+     * Répond `200 { seance }`, et invalide le cache de `GET /me/voyage`.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description La séance après l’écriture */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Une séance composée par le chroniqueur — un long jamais vu, un court en ouverture, une anecdote */
+              seance: {
+                /** Format: uuid */
+                id: string;
+                rang: number;
+                /** @enum {string} */
+                statut: "proposee" | "prise" | "ignoree";
+                /** Format: date-time */
+                composee_le: string;
+                /** @description Deux à quatre phrases, à lire pendant le générique */
+                anecdote: string;
+                /** @description Le long ou le court d’une séance */
+                long: {
+                  /**
+                   * Format: uuid
+                   * @description La ligne de mes salles (voyage_films) : le long, ou le programme du court
+                   */
+                  film_id: string;
+                  tmdb_id: number;
+                  title: string;
+                  cover_url: string | null;
+                  /** @description Le nom de la salle où ce film ou programme a été proposé */
+                  salle: string;
+                  /** @enum {string} */
+                  etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                  plex_url: string | null;
+                  /** @description Non nulle quand le court est une bobine précise du programme, plutôt que le programme entier */
+                  bobine: {
+                    tmdb_id: number;
+                    title: string;
+                  } | null;
+                };
+                /** @description Nul si l’année n’a encore aucun court, programme ou bobine à proposer */
+                court: ({
+                  /**
+                   * Format: uuid
+                   * @description La ligne de mes salles (voyage_films) : le long, ou le programme du court
+                   */
+                  film_id: string;
+                  tmdb_id: number;
+                  title: string;
+                  cover_url: string | null;
+                  /** @description Le nom de la salle où ce film ou programme a été proposé */
+                  salle: string;
+                  /** @enum {string} */
+                  etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                  plex_url: string | null;
+                  /** @description Non nulle quand le court est une bobine précise du programme, plutôt que le programme entier */
+                  bobine: {
+                    tmdb_id: number;
+                    title: string;
+                  } | null;
+                }) | null;
+              };
+            };
+          };
         };
         /** @description Default Response */
         400: {

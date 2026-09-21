@@ -8136,6 +8136,41 @@ export interface paths {
                 emis_le: string;
                 utilise_le: string | null;
               }) | null;
+              /** @description Par ecrit_le croissant */
+              paragraphes: ({
+                  /** Format: uuid */
+                  id: string;
+                  tmdb_id: number | null;
+                  programme_id: string | null;
+                  /** @description Une ligne */
+                  titre: string;
+                  /** @description Trois à cinq phrases qui relient ce film à l’année et aux films déjà vus */
+                  texte: string;
+                  /** Format: date-time */
+                  ecrit_le: string;
+                  /** @description Le film auquel ce paragraphe se rattache */
+                  film: {
+                    title: string;
+                    cover_url: string | null;
+                  };
+                })[];
+              /** @description Les verrous : un paragraphe en cours d’écriture */
+              paragraphes_en_cours: ({
+                  tmdb_id: number | null;
+                  programme_id: string | null;
+                })[];
+              /** @description La dernière demande de salle, tant qu’elle est en_cours ou refusée et non vue ; nulle sinon */
+              demande_salle: ({
+                /** Format: uuid */
+                id: string;
+                demande: string;
+                /** @enum {string} */
+                statut: "en_cours" | "creee" | "refusee";
+                /** @description Pourquoi il n’y avait pas de quoi — seulement si refusée */
+                motif: string | null;
+                /** @description La salle créée — seulement si acceptée */
+                salle_id: string | null;
+              }) | null;
             }) | ({
               /** @enum {boolean} */
               configure: true;
@@ -8333,6 +8368,193 @@ export interface paths {
         };
         /** @description Default Response */
         503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annees/{annee}/chronique": {
+    /**
+     * « Ajouter à la chronique » un paragraphe sur un film
+     * @description Corps `{ tmdb_id }` **ou** `{ programme_id }`, exactement l’un des deux. `tmdb_id` doit être un film de mon journal sorti cette année-là, sinon `400 VALIDATION`. `programme_id` doit être une ligne de mes salles de cette année (film ou programme) entièrement vue — même calcul d’état que `GET /me/voyage/annees/{annee}` — sinon `400 VALIDATION` ; d’un autre membre, d’une autre année, ou inconnue → `404`. Un film vu hors de toute salle a droit à son paragraphe tout autant qu’un film d’une salle.
+     *
+     * Année verrouillée ou sans ouverture → `404`.
+     *
+     * `200 { statut: "ecrit", paragraphe }` si un paragraphe existe déjà pour cette cible — jamais regénéré, aucun appel. Sinon enfile la génération (`paragraphe:<userId>:<annee>:<tmdbId>` ou `…:p:<programmeId>`, mêmes verrous que le reste du Voyage) et répond `202 { statut: "en_preparation" }`, qu’il vienne d’être enfilé ou qu’une génération soit déjà en cours.
+     */
+    post: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      /** @description Le film ou le programme dont on ajoute le paragraphe à la chronique */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Un film de mon journal, vu, sorti cette année-là */
+            tmdb_id?: number;
+            /**
+             * Format: uuid
+             * @description Un film ou un programme de mes salles de cette année, entièrement vu
+             */
+            programme_id?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Ce paragraphe existait déjà — rendu sans appel */
+        200: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              statut: "ecrit";
+              /** @description Un paragraphe de la chronique, ajouté à la demande sur un film — jamais regénéré */
+              paragraphe: {
+                /** Format: uuid */
+                id: string;
+                tmdb_id: number | null;
+                programme_id: string | null;
+                /** @description Une ligne */
+                titre: string;
+                /** @description Trois à cinq phrases qui relient ce film à l’année et aux films déjà vus */
+                texte: string;
+                /** Format: date-time */
+                ecrit_le: string;
+                /** @description Le film auquel ce paragraphe se rattache */
+                film: {
+                  title: string;
+                  cover_url: string | null;
+                };
+              };
+            };
+          };
+        };
+        /** @description Le paragraphe vient d’être enfilé, ou en était déjà un en cours */
+        202: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              statut: "en_preparation";
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annees/{annee}/salles": {
+    /**
+     * « Ouvrir une nouvelle salle » sur une phrase
+     * @description Corps `{ demande }`, une phrase de 1 à 200 caractères (« la comédie italienne cette année-là »). Année verrouillée ou sans ouverture → `404`. Une demande `en_cours` existe déjà pour cette année → `409 CONFLICT`.
+     *
+     * Enfile la génération (`salle:<userId>:<demandeId>`) et répond toujours `202 { statut: "en_preparation", demande_id }`. Douze salles déjà ouvertes cette année-là ? La demande se refuse dès sa génération, **sans appel au chroniqueur** — la réponse à cette route reste `202`, et `demande_salle` (`GET /me/voyage/annees/{annee}`) montre `refusee` juste après.
+     *
+     * La génération crée la salle en dernier rang si elle est acceptée et qu’au moins un film s’est résolu, sinon refuse la demande avec un motif. Invalide dans les deux cas le cache de `GET /me/voyage`.
+     */
+    post: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      /** @description La salle que je demande, en une phrase */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Une phrase qui décrit la salle demandée */
+            demande: string;
+          };
+        };
+      };
+      responses: {
+        /** @description La demande vient d’être enfilée */
+        202: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              statut: "en_preparation";
+              /** Format: uuid */
+              demande_id: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/demandes-salles/{id}/vue": {
+    /**
+     * Marquer une demande de nouvelle salle comme vue
+     * @description Pose `vue_le` sur la demande — la première fois que sa réponse (typiquement un refus) s’affiche à l’écran. **Idempotent** : `204` même si `vue_le` était déjà posé, sans le réécrire. `404` sans demande pour cet identifiant — la mienne seulement.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };

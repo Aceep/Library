@@ -8145,7 +8145,7 @@ export interface paths {
      * « En voir plus » dans une salle
      * @description Enfile une fournée (`chroniques:file`) : trois à cinq films de plus dans cette salle, écrits par le chroniqueur — `202 { statut: "en_preparation" }`, qu’une fournée soit tout juste enfilée ou déjà en cours (le verrou Redis rend la même réponse dans les deux cas, sans réenfiler).
      *
-     * `200 { statut: "epuisee" }` sans rien enfiler si la salle est déjà connue comme épuisée — la dernière fournée n’a rien ajouté, ou le chroniqueur l’a dit. `404` si cette salle n’est pas la mienne.
+     * `200 { statut: "epuisee" }` sans rien enfiler si la salle est déjà connue comme épuisée — la dernière fournée n’a rien ajouté, ou le chroniqueur l’a dit. `404` si cette salle n’est pas la mienne. `503 SERVICE_UNCONFIGURED` si `ANTHROPIC_API_KEY` n’est pas posée sur ce serveur : rien ne s’enfile alors.
      */
     post: {
       parameters: {
@@ -8186,6 +8186,12 @@ export interface paths {
         };
         /** @description Default Response */
         404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };

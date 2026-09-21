@@ -4558,7 +4558,7 @@ export interface paths {
      *
      * **Idempotent.** Marquer un film déjà marqué ne crée pas de seconde ligne et répond `204` comme la première fois — l’unicité `(membre, film)` en base le garantit de toute façon.
      *
-     * La marque est strictement personnelle : elle ne modifie que `GET /me/realisateurs/{tmdbId}/films` **pour moi**, jamais pour un autre membre.
+     * La marque est strictement personnelle : elle ne modifie que `GET /me/realisateurs/{tmdbId}/films` **pour moi**, jamais pour un autre membre. Invalide aussi le cache de `GET /me/voyage` : un film marqué introuvable peut compléter une salle du Voyage (Lion, Palme).
      */
     put: {
       parameters: {
@@ -4589,7 +4589,7 @@ export interface paths {
      * Retirer la marque « introuvable »
      * @description Le paramètre est le `tmdb_id` d’un **film**, comme sur `PUT /me/introuvables/{tmdbId}`.
      *
-     * **204 dans tous les cas**, y compris quand le film n’était pas marqué : retirer une marque absente ne fait rien de plus, et ce n’est pas une erreur.
+     * **204 dans tous les cas**, y compris quand le film n’était pas marqué : retirer une marque absente ne fait rien de plus, et ce n’est pas une erreur. Invalide tout de même le cache de `GET /me/voyage`, pour la même raison que la pose de la marque.
      */
     delete: {
       parameters: {
@@ -7989,7 +7989,11 @@ export interface paths {
      *
      * `visitee` dit si une ouverture existe déjà pour cette année, quel que soit son statut. `profondeur` compte les films de mon journal sortis cette année-là, y compris ceux vus avant d’y arriver ; un programme compte un, jamais ses bobines séparément. `affiche_url` est l’affiche du n°1 de mon podium cette année-là, nulle si la marche est vide.
      *
-     * Réponse mise en cache 60 s par membre, invalidée par une écriture au journal (`/me/journal`), l’ouverture d’une année, une fournée et une écriture au podium.
+     * `recompense` vaut `ours` (profondeur ≥ 1, même sans ouverture), `lion` (« Les essentiels » entièrement vus ou introuvables) ou `palme` (`lion`, et au moins deux autres salles, à au moins un film, complètes au même sens) — `null` sinon.
+     *
+     * `tampons` porte le passeport : une ligne par décennie bouclée (`decennie` croissant, `boucle_le`), où chacune de ses années a un `ours` et où le ticket de la première année de la décennie suivante est `utilise_le`.
+     *
+     * Réponse mise en cache 60 s par membre, invalidée par une écriture au journal (`/me/journal`), une marque « introuvable » (`PUT`/`DELETE /me/introuvables/{tmdbId}`), l’ouverture d’une année, une fournée et une écriture au podium.
      */
     get: {
       responses: {
@@ -8014,6 +8018,8 @@ export interface paths {
                   profondeur: number;
                   /** @description L’affiche du n°1 du podium — nulle si la marche 1 est vide */
                   affiche_url: string | null;
+                  /** @description Ours, Lion ou Palme — une année sans ouverture ne peut avoir que l’Ours */
+                  recompense: ("ours" | "lion" | "palme") | null;
                 })[];
               /** @description Un ticket gagné et pas encore montré — à afficher une fois, puis `POST .../montre` */
               ticket_a_montrer: {
@@ -8023,6 +8029,16 @@ export interface paths {
                 /** Format: date-time */
                 emis_le: string;
               } | null;
+              /** @description Le passeport : les décennies bouclées, croissantes */
+              tampons: {
+                  /** @description 1890, 1900… la décennie bouclée */
+                  decennie: number;
+                  /**
+                   * Format: date-time
+                   * @description La plus tardive entre l’usage du ticket de la décennie suivante et le dernier premier-film-de-l’année qui manquait à celle-ci
+                   */
+                  boucle_le: string;
+                }[];
             };
           };
         };
@@ -8045,6 +8061,8 @@ export interface paths {
      * `podium` porte les trois marches (`PUT`/`DELETE /me/voyage/annees/{annee}/podium/{place}`), `null` pour une place vide — présent sur `prete` et `verrouillee` (toujours vide sur cette dernière, le podium ne se posant que sur une année non verrouillée).
      *
      * `maturite` (`prete` seulement) porte le dernier jugement du chroniqueur sur cette année — `null` tant qu’aucun film de l’année n’a encore été noté. `ticket` (`prete` seulement) porte le ticket vers `annee + 1`, s’il a été gagné — `null` sinon.
+     *
+     * `recompense` et `progression` (`prete` seulement) : la récompense de cette année (voir `GET /me/voyage`) et de quoi dessiner sa barre — `essentiels_vus`/`essentiels_total` (strictement vus, un introuvable n’y compte pas), `salles_completes`/`salles_autres` (salles hors essentiels, à au moins un film, entièrement vues ou introuvables).
      */
     get: {
       parameters: {
@@ -8064,6 +8082,18 @@ export interface paths {
               annee: number;
               /** @description Films vus, toutes salles confondues — un programme compte un, jamais ses bobines séparément */
               profondeur: number;
+              /** @description Ours, Lion ou Palme — null tant qu’aucun film de l’année n’est vu */
+              recompense: ("ours" | "lion" | "palme") | null;
+              /** @description Ma progression vers le Lion et la Palme, pour cette année */
+              progression: {
+                /** @description Essentiels strictement vus — un introuvable n’y compte pas, même s’il compte pour le Lion */
+                essentiels_vus: number;
+                essentiels_total: number;
+                /** @description Parmi salles_autres, celles entièrement vues ou introuvables */
+                salles_completes: number;
+                /** @description Salles hors essentiels, à au moins un film — une salle vide ne compte pas */
+                salles_autres: number;
+              };
               /** @description Cinq à huit phrases sur l’année, écrites une fois et ne bougeant plus */
               ouverture: string;
               faits: string[];

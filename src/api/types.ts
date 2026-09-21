@@ -7987,9 +7987,9 @@ export interface paths {
      * Ma progression dans le Voyage — la carte
      * @description `annee_en_cours` sépare les trois statuts : `ouverte` avant elle (je peux toujours y revenir creuser), `en_cours` sur elle, `verrouillee` après (rien ne s’y ouvre encore).
      *
-     * `visitee` dit si une ouverture existe déjà pour cette année, quel que soit son statut. `profondeur` compte les films de mon journal sortis cette année-là, y compris ceux vus avant d’y arriver ; un programme compte un, jamais ses bobines séparément.
+     * `visitee` dit si une ouverture existe déjà pour cette année, quel que soit son statut. `profondeur` compte les films de mon journal sortis cette année-là, y compris ceux vus avant d’y arriver ; un programme compte un, jamais ses bobines séparément. `affiche_url` est l’affiche du n°1 de mon podium cette année-là, nulle si la marche est vide.
      *
-     * Réponse mise en cache 60 s par membre, invalidée par une écriture au journal (`/me/journal`), l’ouverture d’une année et une fournée.
+     * Réponse mise en cache 60 s par membre, invalidée par une écriture au journal (`/me/journal`), l’ouverture d’une année, une fournée et une écriture au podium.
      */
     get: {
       responses: {
@@ -8012,6 +8012,8 @@ export interface paths {
                   visitee: boolean;
                   /** @description Films de mon journal sortis cette année-là ; un programme compte un */
                   profondeur: number;
+                  /** @description L’affiche du n°1 du podium — nulle si la marche 1 est vide */
+                  affiche_url: string | null;
                 })[];
             };
           };
@@ -8031,6 +8033,8 @@ export interface paths {
      * @description `prete` (`200`) si l’ouverture existe déjà pour ce membre : ses salles, dans l’ordre, avec chaque film (état et note calculés à la lecture). `en_preparation` (`202`) à la première visite d’une année ouverte ou en cours — la demande enfile l’ouverture, à redemander dans quelques secondes. `verrouillee` (`200`) après mon année en cours : rien ne s’enfile, même en visitant. `{ configure: false }` (`200`) si `ANTHROPIC_API_KEY` manque et que l’année n’a pas encore d’ouverture.
      *
      * `etat` d’un film vaut `vu`, `sur_le_plex`, `demande`, `a_demander` ou `introuvable`. Pour un programme, `etat` ne vaut `vu` que quand **toutes** ses bobines le sont — chaque bobine porte le sien.
+     *
+     * `podium` porte les trois marches (`PUT`/`DELETE /me/voyage/annees/{annee}/podium/{place}`), `null` pour une place vide — présent sur `prete` et `verrouillee` (toujours vide sur cette dernière, le podium ne se posant que sur une année non verrouillée).
      */
     get: {
       parameters: {
@@ -8100,14 +8104,30 @@ export interface paths {
                       }) | null;
                     })[];
                 })[];
-            }) | {
+              /** @description Les trois marches, dans l’ordre */
+              podium: (({
+                  place: number;
+                  tmdb_id: number | null;
+                  programme_id: string | null;
+                  title: string;
+                  cover_url: string | null;
+                }) | null)[];
+            }) | ({
               /** @enum {boolean} */
               configure: true;
               /** @enum {string} */
               statut: "verrouillee";
               annee: number;
               profondeur: number;
-            } | {
+              /** @description Toujours trois marches vides : le podium ne se pose que sur une année non verrouillée */
+              podium: (({
+                  place: number;
+                  tmdb_id: number | null;
+                  programme_id: string | null;
+                  title: string;
+                  cover_url: string | null;
+                }) | null)[];
+            }) | {
               /** @enum {boolean} */
               configure: false;
             };
@@ -8124,6 +8144,103 @@ export interface paths {
               annee: number;
             };
           };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annees/{annee}/podium/{place}": {
+    /**
+     * Poser un film ou un programme sur une marche du podium
+     * @description Corps `{ tmdb_id }` **ou** `{ programme_id }`, exactement l’un des deux. `tmdb_id` doit être dans mon journal avec cette année de sortie, sinon `400 VALIDATION`. `programme_id` doit être une ligne de mes salles de cette année (film ou programme) entièrement vue — même calcul d’état que `GET /me/voyage/annees/{annee}` — sinon `400 VALIDATION` ; d’un autre membre, d’une autre année, ou inconnue → `404`.
+     *
+     * Le podium se pose sur toute année **non verrouillée** (≤ mon année en cours), visitée ou non : `404` au-delà. Poser sur une marche déjà occupée remplace l’occupant ; poser un film ou un programme déjà présent sur une autre marche l’y **déplace** (l’ancienne marche se vide) — jamais de `409`.
+     *
+     * Répond le podium complet après l’écriture, et invalide le cache de `GET /me/voyage`.
+     */
+    put: {
+      parameters: {
+        path: {
+          annee: number;
+          place: number;
+        };
+      };
+      /** @description Le film ou le programme à poser sur cette marche */
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Un film de mon journal, sorti cette année-là */
+            tmdb_id?: number;
+            /**
+             * Format: uuid
+             * @description Un film ou un programme de mes salles de cette année, entièrement vu
+             */
+            programme_id?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Le podium de l’année après l’écriture */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Les trois marches, dans l’ordre */
+              podium: (({
+                  place: number;
+                  tmdb_id: number | null;
+                  programme_id: string | null;
+                  title: string;
+                  cover_url: string | null;
+                }) | null)[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+    /**
+     * Vider une marche du podium
+     * @description **Idempotent** : `204` que la marche portait un film, un programme, ou rien. Invalide le cache de `GET /me/voyage`.
+     */
+    delete: {
+      parameters: {
+        path: {
+          annee: number;
+          place: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
         };
         /** @description Default Response */
         400: {

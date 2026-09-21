@@ -4616,9 +4616,13 @@ export interface paths {
      *
      * `photo_url` est `profile_path` chez TMDB, en URL absolue, nulle si TMDB n’en a pas. `naissance`/`deces` sont `birthday`/`deathday`, nuls si TMDB ne les donne pas ou si la personne est vivante.
      *
-     * `presentation` est la **première phrase** de la biographie TMDB, en français avec repli sur l’anglais si elle y est vide, bornée à 200 caractères (coupée sur un mot, avec « … ») — chaîne vide si TMDB n’a ni l’une ni l’autre.
+     * `presentation` est la **première phrase** de la biographie TMDB, en français avec repli sur l’anglais si elle y est vide, **sans les groupes entre parenthèses qu’elle porte** (parenthèses comprises, espace recousue — la parenthèse de naissance qui ouvre tant de biographies francophones, « Georges Méliès (né le 8 décembre 1861…) est un illusionniste… » devenant « Georges Méliès est un illusionniste… » ; une phrase déjà sans parenthèse, à la forme « Georges Méliès, né le…, est un… », en ressort inchangée), la phrase suivante prise à sa place si ce retrait ne laisse plus que le nom, bornée à 200 caractères **après** ce retrait (coupée sur un mot, avec « … ») — chaîne vide si TMDB n’a ni l’une ni l’autre.
+     *
+     * `genre` vient de `gender` chez TMDB : 1 → `femme`, 2 → `homme`, tout le reste (0 non renseigné, 3 non binaire, champ absent) → `null`.
      *
      * Les films viennent de `crew` (`movie_credits`), les séries de `crew` (`tv_credits`, poste `Director`, une ligne par série datée — une série sans date d’antenne n’y figure pas), chacun mémorisé 24 h par personne comme `GET /me/realisateurs/{tmdbId}/films`, dont ce champ reprend exactement le calcul. **`vu` est toujours nul sur une série** : les séries se suivent par `/media`, pas par ce chemin ; `introuvable` y reste calculé, la marque ne distinguant pas film et série.
+     *
+     * `court` est vrai pour un film de 1 à 40 minutes chez TMDB (`discover/movie` filtré par réalisateur, mémorisé 30 jours par personne) — toujours faux sur une série, et faux aussi pour un film dont TMDB ignore la durée. Une panne de `discover` ne fait pas tomber la page : elle rend alors `court: false` partout, avec un `warn` dans le log.
      *
      * Chaque film ou série porte aussi `sur_le_plex`, `demande` et `plex_url` (lus comme `GET /me/voyage`, sur le Plex du propriétaire), `annee_ouverte` (`year` non nul et inférieur ou égal à mon année en cours dans le Voyage, 1895 par défaut), et `voyage` — la ligne `voyage_films` la plus ancienne où il figure parmi mes salles, `null` sinon.
      *
@@ -4645,8 +4649,10 @@ export interface paths {
               naissance: string | null;
               /** @description `deathday` chez TMDB, nul s’il est toujours vivant */
               deces: string | null;
-              /** @description Première phrase de la biographie TMDB en français, repli sur l’anglais si vide, bornée à 200 caractères (coupée sur un mot, avec « … ») — chaîne vide si TMDB n’a ni l’une ni l’autre */
+              /** @description Première phrase de la biographie TMDB en français, repli sur l’anglais si vide, sans les groupes entre parenthèses qu’elle porte (parenthèses comprises, espace recousue — la parenthèse de naissance qui ouvre tant de biographies francophones), la phrase suivante prise à la place si ce retrait ne laisse plus que le nom, bornée à 200 caractères après ce retrait (coupée sur un mot, avec « … ») — chaîne vide si TMDB n’a ni l’une ni l’autre */
               presentation: string;
+              /** @description `gender` chez TMDB (`/person/{id}`) : 1 → `femme`, 2 → `homme`, tout le reste (0, 3, absent) → `null` */
+              genre: ("femme" | "homme") | null;
               /** @description Vrai si je le suis (`user_directors`) */
               suivi: boolean;
               /** @description Films et séries qu’il a réalisés, mêlés, du plus ancien au plus récent */
@@ -4687,6 +4693,8 @@ export interface paths {
                    * @enum {string}
                    */
                   type: "movie" | "tv";
+                  /** @description Court métrage (1 à 40 minutes chez TMDB, `discover/movie` filtré par réalisateur, mémorisé 30 jours). Toujours faux sur une série ; faux aussi si TMDB ignore la durée ou si `discover` est en panne — la page ne tombe pas pour un ornement. */
+                  court: boolean;
                   /** @description Disponible sur le Plex du propriétaire, comme le Voyage */
                   sur_le_plex: boolean;
                   /** @description Demandé sur Seerr, pas encore disponible sur le Plex */

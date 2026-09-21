@@ -8015,6 +8015,14 @@ export interface paths {
                   /** @description L’affiche du n°1 du podium — nulle si la marche 1 est vide */
                   affiche_url: string | null;
                 })[];
+              /** @description Un ticket gagné et pas encore montré — à afficher une fois, puis `POST .../montre` */
+              ticket_a_montrer: {
+                /** @description L’année que ce ticket ouvre */
+                annee: number;
+                motif: string;
+                /** Format: date-time */
+                emis_le: string;
+              } | null;
             };
           };
         };
@@ -8035,6 +8043,8 @@ export interface paths {
      * `etat` d’un film vaut `vu`, `sur_le_plex`, `demande`, `a_demander` ou `introuvable`. Pour un programme, `etat` ne vaut `vu` que quand **toutes** ses bobines le sont — chaque bobine porte le sien.
      *
      * `podium` porte les trois marches (`PUT`/`DELETE /me/voyage/annees/{annee}/podium/{place}`), `null` pour une place vide — présent sur `prete` et `verrouillee` (toujours vide sur cette dernière, le podium ne se posant que sur une année non verrouillée).
+     *
+     * `maturite` (`prete` seulement) porte le dernier jugement du chroniqueur sur cette année — `null` tant qu’aucun film de l’année n’a encore été noté. `ticket` (`prete` seulement) porte le ticket vers `annee + 1`, s’il a été gagné — `null` sinon.
      */
     get: {
       parameters: {
@@ -8112,6 +8122,20 @@ export interface paths {
                   title: string;
                   cover_url: string | null;
                 }) | null)[];
+              maturite: {
+                mure: boolean;
+                /** @description Une seule phrase, au tutoiement, sans chiffres ni nom de salle entre guillemets — une invitation si mûre, une piste sinon */
+                motif: string;
+                /** Format: date-time */
+                jugee_le: string;
+              } | null;
+              ticket: ({
+                /** @description L’année que ce ticket ouvre — celle-ci + 1 */
+                annee: number;
+                /** Format: date-time */
+                emis_le: string;
+                utilise_le: string | null;
+              }) | null;
             }) | ({
               /** @enum {boolean} */
               configure: true;
@@ -8351,25 +8375,113 @@ export interface paths {
       };
     };
   };
-  "/me/voyage/annee-suivante": {
+  "/me/voyage/tickets": {
     /**
-     * Avancer mon année en cours — provisoire, remplacée par le ticket (étape 3)
-     * @description Avance `annee_en_cours` d’un an, plafonnée à l’année courante. **Provisoire** : le brief du 19 septembre 2026 prévoit qu’une année suivante ne s’ouvre normalement qu’avec un ticket, gagné par le jugement de maturité du chroniqueur (étape 3 du §8) — cette route tient sa place le temps que ce mécanisme existe, et disparaîtra à son profit.
-     *
-     * Je continue de pouvoir creuser une année déjà `ouverte` sans que ça la fasse bouger : seule cette route avance `annee_en_cours`.
+     * Mon portefeuille de tickets
+     * @description Tous mes tickets, gagnés par le jugement de maturité du chroniqueur (brief du 21 septembre 2026, étape 3), par année croissante — celle qu’ils ouvrent. Un ticket ne se périme pas : `montre_le` et `utilise_le` restent nuls jusqu’à `POST .../montre` et `POST .../utiliser`.
      */
-    post: {
+    get: {
       responses: {
-        /** @description Mon année en cours après avance — provisoire, en attendant le jugement de maturité et le ticket */
+        /** @description Mon portefeuille de tickets */
         200: {
           content: {
             "application/json": {
-              annee_en_cours: number;
+              /** @description Par année croissante */
+              tickets: ({
+                  /** @description L’année que ce ticket ouvre */
+                  annee: number;
+                  motif: string;
+                  /** Format: date-time */
+                  emis_le: string;
+                  montre_le: string | null;
+                  utilise_le: string | null;
+                })[];
             };
           };
         };
         /** @description Default Response */
         401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/tickets/{annee}/montre": {
+    /**
+     * Marquer un ticket comme montré
+     * @description Pose `montre_le` sur le ticket qui ouvre `annee`, la première fois qu’il s’affiche à l’écran (spec §5 : « une seule fois »). **Idempotent** : `204` même si `montre_le` était déjà posé, sans le réécrire. `404` sans ticket pour cette année — le mien, jamais celui d’un autre membre. Invalide le cache de `GET /me/voyage` (`ticket_a_montrer` redevient `null`).
+     */
+    post: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: never;
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/tickets/{annee}/utiliser": {
+    /**
+     * Encaisser un ticket — ouvre l’année et devient mon année en cours
+     * @description Pose `utilise_le` sur le ticket qui ouvre `annee`, et fait de `annee` mon `annee_en_cours` (en transaction). Je continue de pouvoir creuser l’ancienne année autant que je veux : rien ne l’en empêche, seule `annee_en_cours` a bougé.
+     *
+     * `404` sans ticket pour cette année, ou si le ticket est déjà utilisé — le mien, jamais celui d’un autre membre. Invalide le cache de `GET /me/voyage`.
+     */
+    post: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description Le ticket est encaissé — mon année en cours a avancé */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Devenue l’année de ce ticket */
+              annee_en_cours: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };

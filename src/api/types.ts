@@ -293,20 +293,22 @@ export interface paths {
   };
   "/reference/plex": {
     /**
-     * Films demandés sur Seerr et disponibles sur le Plex, pas encore vus
-     * @description Pour la Frise et « Ensuite ». La liste « à voir » du propriétaire, ce n’est pas une liste tenue à la main : c’est son Plex, alimenté par ce qu’il a demandé dans Seerr et qui y est déjà disponible.
+     * Films demandés sur Seerr, disponibles ou non, sur le Plex du propriétaire
+     * @description Pour la Frise, « Ensuite » et le Voyage. La liste « à voir » du propriétaire, ce n’est pas une liste tenue à la main : c’est son Plex, alimenté par ce qu’il a demandé dans Seerr.
      *
      * Lue en Redis, écrite par une tâche de fond qui relit Seerr au démarrage puis toutes les heures — jamais interrogé à la demande. Rien n’est écrit en base.
      *
-     * `configure` vaut faux tant que `SEERR_URL`, `SEERR_API_KEY` ou `SEERR_USER` manque, et `films` reste alors toujours vide. `calcule_le` est nul tant que la tâche n’a jamais tourné.
+     * `films` : les demandes **disponibles** (`media.status` chez Seerr), avec affiche TMDB et, quand Seerr les sert, `plex_url` (lien web) et `plex_app_url` (lien `plex://`, l’appli). `demandes` : les demandes **pas encore disponibles** — `tmdb_id` et date de la demande seulement, de quoi éviter de redemander (depuis le 19 septembre 2026 ; champ étendu, contrat non cassé).
+     *
+     * `configure` vaut faux tant que `SEERR_URL`, `SEERR_API_KEY` ou `SEERR_USER` manque, et les deux tableaux restent alors toujours vides. `calcule_le` est nul tant que la tâche n’a jamais tourné.
      */
     get: {
       responses: {
-        /** @description Les films du Plex du propriétaire, demandés sur Seerr, disponibles et pas encore vus */
+        /** @description Les films du Plex du propriétaire, demandés sur Seerr, disponibles et pas encore vus, et ceux encore en attente */
         200: {
           content: {
             "application/json": {
-              /** @description Faux si Seerr n’est pas configuré (SEERR_URL, SEERR_API_KEY, SEERR_USER) — films est alors toujours vide */
+              /** @description Faux si Seerr n’est pas configuré (SEERR_URL, SEERR_API_KEY, SEERR_USER) — films et demandes sont alors toujours vides */
               configure: boolean;
               /** @description Horodatage de la dernière passe de la tâche de fond. Nul si elle n’a jamais tourné, ou si Redis est vide */
               calcule_le: string | null;
@@ -325,7 +327,23 @@ export interface paths {
                    * @description Date de la demande sur Seerr
                    */
                   demande_le: string;
+                  /** @description Lien web vers la fiche Plex (`media.mediaUrl` chez Seerr), absent des instances qui n’en servent pas */
+                  plex_url?: string | null;
+                  /** @description Lien `plex://` vers l’appli (`media.iOSPlexUrl` chez Seerr), absent des instances qui n’en servent pas */
+                  plex_app_url?: string | null;
                 })[];
+              /**
+               * @description Demandées sur Seerr, pas encore disponibles — contrat étendu depuis le 19 septembre 2026, jamais cassé
+               * @default []
+               */
+              demandes: {
+                  tmdb_id: number;
+                  /**
+                   * Format: date-time
+                   * @description Date de la demande sur Seerr
+                   */
+                  demande_le: string;
+                }[];
             };
           };
         };
@@ -7904,92 +7922,12 @@ export interface paths {
       };
     };
   };
-  "/reference/chroniques/annees/{annee}": {
-    /**
-     * La chronique d’une année du Voyage
-     * @description Le récit et les essentiels d’une année, écrits une fois par Claude et ne bougeant plus.
-     *
-     * `200` si la chronique existe déjà. `202` si elle n’existe pas encore mais que le chroniqueur est configuré : la demande l’enfile (`chroniques:file`), à relire dans quelques secondes — c’est la tâche de fond (`plugins/chroniques.ts`) qui l’écrit, jamais cette route elle-même. `{ configure: false }` si `ANTHROPIC_API_KEY` n’est pas posée sur ce serveur : rien ne s’enfile alors.
-     *
-     * `essentiels` peut être vide — une année pauvre en a pu n’avoir aucun résolu sur TMDB, et c’est une réponse comme une autre, jamais retentée.
-     */
-    get: {
-      parameters: {
-        path: {
-          annee: number;
-        };
-      };
-      responses: {
-        /** @description Default Response */
-        200: {
-          content: {
-            "application/json": ({
-              /** @enum {boolean} */
-              configure: true;
-              /** @enum {string} */
-              statut: "prete";
-              annee: number;
-              /** @description 8 à 12 lignes, ton de chroniqueur enjoué : le cinéma et le monde cette année-là */
-              recit: string;
-              /** @description Trois à cinq faits marquants, cinéma et monde */
-              faits: string[];
-              /** @description Du plus important au moins — vide si aucun essentiel ne s’est résolu sur TMDB */
-              essentiels: ({
-                  /** @description Position dans la liste, du plus important au moins — 1 en tête */
-                  rang: number;
-                  /** @description Identifiant du film chez TMDB, une fois résolu par `matching.ts` */
-                  tmdb_id: number;
-                  /** @description Titre en français, tel que TMDB le donne */
-                  title: string;
-                  original_title: string | null;
-                  /** @description Année de sortie chez TMDB, nulle si TMDB ne la donne pas */
-                  year: number | null;
-                  /** @description Réalisateur, tel que Claude l’a cité */
-                  realisateur: string;
-                  /** @description Une ligne : pourquoi ce film compte pour cette année */
-                  pourquoi: string;
-                  /** @description Affiche en URL absolue, nulle si TMDB n’en a pas */
-                  cover_url: string | null;
-                })[];
-            }) | {
-              /** @enum {boolean} */
-              configure: false;
-            };
-          };
-        };
-        /** @description La chronique de cette année est en cours d’écriture — redemander dans quelques secondes */
-        202: {
-          content: {
-            "application/json": {
-              /** @enum {boolean} */
-              configure: true;
-              /** @enum {string} */
-              statut: "en_preparation";
-              annee: number;
-            };
-          };
-        };
-        /** @description Default Response */
-        400: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-        /** @description Default Response */
-        401: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-      };
-    };
-  };
   "/reference/chroniques/films/{tmdbId}": {
     /**
      * Le carton « Et pendant ce temps… » d’un film
      * @description Le plus souvent écrit après coup : journaliser un film (`POST /me/journal`) enfile son carton — mais n’importe quel `tmdb_id` peut être demandé ici directement, et sera enfilé de la même façon s’il manque.
      *
-     * Mêmes trois formes que `GET /reference/chroniques/annees/{annee}` : `200` prêt, `202` en préparation (enfilé), `{ configure: false }` sans clé Anthropic.
+     * Trois formes : `200` prêt, `202` en préparation (enfilé), `{ configure: false }` sans clé Anthropic. Global : ce carton ne dépend d’aucun membre.
      */
     get: {
       parameters: {
@@ -8046,16 +7984,12 @@ export interface paths {
   };
   "/me/voyage": {
     /**
-     * Ma progression dans le Voyage
-     * @description La frontière (`frontiere`) est la première année pas encore faite. Une année est faite quand sa chronique existe et que tous ses essentiels sont vus (mon journal) ou marqués introuvables — une année sans essentiel compte faite. `frontiere_statut` dit si sa chronique existe déjà (`ouverte`) ou vient d’être enfilée (`en_preparation`).
+     * Ma progression dans le Voyage — la carte
+     * @description `annee_en_cours` sépare les trois statuts : `ouverte` avant elle (je peux toujours y revenir creuser), `en_cours` sur elle, `verrouillee` après (rien ne s’y ouvre encore).
      *
-     * `annees` couvre 1895 à l’année courante. Pour une année verrouillée, `essentiels_total` et `essentiels_faits` restent nuls — leur décompte se lit une fois l’année ouverte — mais `vus` compte quand même ce que j’ai déjà vu de cette année-là, journalisé en avance.
+     * `visitee` dit si une ouverture existe déjà pour cette année, quel que soit son statut. `profondeur` compte les films de mon journal sortis cette année-là, y compris ceux vus avant d’y arriver ; un programme compte un, jamais ses bobines séparément.
      *
-     * `essentiels_apercu` n’apparaît que sur une année verrouillée dont la chronique existe déjà (le moteur en enfile une d’avance) : les affiches seules, sans titre, pour un carton « Prochainement » flouté. Absent quand la chronique manque encore — à distinguer d’un tableau vide, qui dit qu’aucun essentiel ne s’est résolu sur TMDB.
-     *
-     * `essentiels` (le détail par film) n’est présent que sur l’année ouverte, et seulement si sa chronique existe déjà : `GET /reference/chroniques/annees/{annee}` sert cette même liste, sans le `etat` ni la `note`, qui eux dépendent du membre.
-     *
-     * Réponse mise en cache 60 s par membre.
+     * Réponse mise en cache 60 s par membre, invalidée par une écriture au journal (`/me/journal`), l’ouverture d’une année et une fournée.
      */
     get: {
       responses: {
@@ -8063,45 +7997,251 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              /** @description Faux si `ANTHROPIC_API_KEY` n’est pas configurée — aucune nouvelle chronique ne s’écrit alors */
+              /** @description Faux si `ANTHROPIC_API_KEY` n’est pas configurée — aucune nouvelle ouverture ni fournée ne peut s’écrire alors */
               configure: boolean;
               /** @enum {number} */
               depart: 1895;
-              /** @description La première année pas encore faite */
-              frontiere: number;
-              /** @enum {string} */
-              frontiere_statut: "ouverte" | "en_preparation";
+              /** @description Mon année en cours — avant elle, tout est « ouverte » ; après, « verrouillee » */
+              annee_en_cours: number;
               /** @description De 1895 à l’année courante */
               annees: ({
                   annee: number;
                   /** @enum {string} */
-                  statut: "faite" | "ouverte" | "verrouillee";
-                  /** @description Films de mon journal sortis cette année-là, quelle que soit la date à laquelle je les ai vus */
-                  vus: number;
-                  /** @description Nombre d’essentiels de cette année — nul pour une année verrouillée ou dont la chronique manque encore */
-                  essentiels_total: number | null;
-                  /** @description Essentiels vus ou marqués introuvables — même nullité qu’`essentiels_total` */
-                  essentiels_faits: number | null;
-                  /** @description Détaillé seulement pour l’année ouverte, et seulement quand sa chronique existe déjà */
-                  essentiels?: ({
+                  statut: "ouverte" | "en_cours" | "verrouillee";
+                  /** @description Une ouverture a déjà été écrite pour cette année, quel que soit son statut */
+                  visitee: boolean;
+                  /** @description Films de mon journal sortis cette année-là ; un programme compte un */
+                  profondeur: number;
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annees/{annee}": {
+    /**
+     * Une année du Voyage — salles et films
+     * @description `prete` (`200`) si l’ouverture existe déjà pour ce membre : ses salles, dans l’ordre, avec chaque film (état et note calculés à la lecture). `en_preparation` (`202`) à la première visite d’une année ouverte ou en cours — la demande enfile l’ouverture, à redemander dans quelques secondes. `verrouillee` (`200`) après mon année en cours : rien ne s’enfile, même en visitant. `{ configure: false }` (`200`) si `ANTHROPIC_API_KEY` manque et que l’année n’a pas encore d’ouverture.
+     *
+     * `etat` d’un film vaut `vu`, `sur_le_plex`, `demande`, `a_demander` ou `introuvable`. Pour un programme, `etat` ne vaut `vu` que quand **toutes** ses bobines le sont — chaque bobine porte le sien.
+     */
+    get: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": ({
+              /** @enum {boolean} */
+              configure: true;
+              /** @enum {string} */
+              statut: "prete";
+              annee: number;
+              /** @description Films vus, toutes salles confondues — un programme compte un, jamais ses bobines séparément */
+              profondeur: number;
+              /** @description Cinq à huit phrases sur l’année, écrites une fois et ne bougeant plus */
+              ouverture: string;
+              faits: string[];
+              /** Format: date-time */
+              ecrite_le: string;
+              salles: ({
+                  /** Format: uuid */
+                  id: string;
+                  rang: number;
+                  nom: string;
+                  raison_d_etre: string;
+                  cle: ("essentiels" | "ailleurs") | null;
+                  /** @description Le chroniqueur n’a plus de film qui mérite d’y entrer */
+                  epuisee: boolean;
+                  /** @description « En voir plus » vient d’être demandé et s’écrit encore */
+                  fournee_en_cours: boolean;
+                  films: ({
+                      /** Format: uuid */
+                      id: string;
                       rang: number;
                       tmdb_id: number;
                       title: string;
+                      original_title: string | null;
                       year: number | null;
-                      cover_url: string | null;
                       realisateur: string;
-                      pourquoi: string;
+                      /** @description Deux phrases, une des cinq raisons du §4 de la spec ; nulle si le film était déjà vu quand le chroniqueur l’a proposé */
+                      raison: string | null;
+                      cover_url: string | null;
+                      /** @description Lien web vers le Plex du propriétaire, nul si le film n’y est pas */
+                      plex_url: string | null;
                       /** @enum {string} */
-                      etat: "vu" | "sur_le_plex" | "a_trouver" | "introuvable";
+                      etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
                       /** @description Ma note, si je l’ai vu et notée */
                       note: number | null;
-                    })[];
-                  /** @description Présent seulement pour une année **verrouillée** dont la chronique existe déjà — le moteur en enfile toujours une d’avance. Les affiches seules, sans titre : de quoi flouter le carton « Prochainement » de l’appli sans jamais nommer un film avant l’heure. Absent quand la chronique manque encore, et à distinguer d’un tableau vide (une année dont aucun essentiel ne s’est résolu sur TMDB). */
-                  essentiels_apercu?: ({
-                      /** @description Affiche en URL absolue, nulle si TMDB n’en a pas — l’affiche seule, jamais le titre */
-                      cover_url: string | null;
+                      programme: ({
+                        /** @description Durée totale, somme des bobines résolues sur TMDB */
+                        duree_min: number;
+                        bobines: ({
+                            tmdb_id: number;
+                            title: string;
+                            duree_min: number;
+                            cover_url: string | null;
+                            /** @description Lien web vers le Plex du propriétaire, nul si la bobine n’y est pas */
+                            plex_url: string | null;
+                            /** @enum {string} */
+                            etat: "vu" | "sur_le_plex" | "demande" | "a_demander" | "introuvable";
+                          })[];
+                      }) | null;
                     })[];
                 })[];
+            }) | {
+              /** @enum {boolean} */
+              configure: true;
+              /** @enum {string} */
+              statut: "verrouillee";
+              annee: number;
+              profondeur: number;
+            } | {
+              /** @enum {boolean} */
+              configure: false;
+            };
+          };
+        };
+        /** @description Première visite : l’ouverture vient d’être enfilée, à redemander dans quelques secondes */
+        202: {
+          content: {
+            "application/json": {
+              /** @enum {boolean} */
+              configure: true;
+              /** @enum {string} */
+              statut: "en_preparation";
+              annee: number;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/salles/{salleId}/plus": {
+    /**
+     * « En voir plus » dans une salle
+     * @description Enfile une fournée (`chroniques:file`) : trois à cinq films de plus dans cette salle, écrits par le chroniqueur — `202 { statut: "en_preparation" }`, qu’une fournée soit tout juste enfilée ou déjà en cours (le verrou Redis rend la même réponse dans les deux cas, sans réenfiler).
+     *
+     * `200 { statut: "epuisee" }` sans rien enfiler si la salle est déjà connue comme épuisée — la dernière fournée n’a rien ajouté, ou le chroniqueur l’a dit. `404` si cette salle n’est pas la mienne.
+     */
+    post: {
+      parameters: {
+        path: {
+          salleId: string;
+        };
+      };
+      responses: {
+        /** @description Le chroniqueur n’a plus de film à proposer ici : rien n’est enfilé */
+        200: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              statut: "epuisee";
+            };
+          };
+        };
+        /** @description La fournée vient d’être enfilée, ou en était déjà une en cours */
+        202: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              statut: "en_preparation";
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/depenses": {
+    /**
+     * Mes dépenses au chroniqueur, mois par mois
+     * @description Une ligne `appels_ia` par appel réussi (ouverture, fournée) que j’ai déclenché. Le carton d’un film n’y figure pas : il ne dépend d’aucun membre en particulier.
+     *
+     * `cout_centimes` est une estimation au tarif public d’Anthropic, en centimes de dollar — la facture du compte Anthropic fait foi.
+     */
+    get: {
+      responses: {
+        /** @description Mes appels au chroniqueur, mois par mois */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Du plus ancien au plus récent */
+              mois: {
+                  /** @description Année-mois, ISO, fuseau du serveur */
+                  mois: string;
+                  appels: number;
+                  input_tokens: number;
+                  output_tokens: number;
+                  /** @description Estimation en centimes de dollar — la facture Anthropic fait foi */
+                  cout_centimes: number;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annee-suivante": {
+    /**
+     * Avancer mon année en cours — provisoire, remplacée par le ticket (étape 3)
+     * @description Avance `annee_en_cours` d’un an, plafonnée à l’année courante. **Provisoire** : le brief du 19 septembre 2026 prévoit qu’une année suivante ne s’ouvre normalement qu’avec un ticket, gagné par le jugement de maturité du chroniqueur (étape 3 du §8) — cette route tient sa place le temps que ce mécanisme existe, et disparaîtra à son profit.
+     *
+     * Je continue de pouvoir creuser une année déjà `ouverte` sans que ça la fasse bouger : seule cette route avance `annee_en_cours`.
+     */
+    post: {
+      responses: {
+        /** @description Mon année en cours après avance — provisoire, en attendant le jugement de maturité et le ticket */
+        200: {
+          content: {
+            "application/json": {
+              annee_en_cours: number;
             };
           };
         };
@@ -8116,7 +8256,7 @@ export interface paths {
   };
   "/me/voyage/demander/{tmdbId}": {
     /**
-     * Demander un essentiel sur Seerr
+     * Demander un film sur Seerr
      * @description Relaie la demande à Seerr (`POST /api/v1/request`, pour l’utilisateur `SEERR_USER`) — rien ne s’écrit chez nous, ni suivi ni entrée de journal.
      *
      * `201` si Seerr crée la demande. `200` si elle existait déjà (Seerr répond `409`). `503 UPSTREAM_UNAVAILABLE` si Seerr ne répond pas ou refuse ; `503 SERVICE_UNCONFIGURED` si `SEERR_URL`, `SEERR_API_KEY` ou `SEERR_USER` manque sur ce serveur.

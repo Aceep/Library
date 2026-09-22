@@ -356,6 +356,42 @@ export interface paths {
       };
     };
   };
+  "/reference/reactions": {
+    /**
+     * Le catalogue des réactions du carnet
+     * @description Les treize réactions du carnet (`POST /me/journal`, `PATCH /me/journal/{id}`), avec leur clé, leur emoji et leur phrase — dans l’ordre d’affichage.
+     *
+     * Source unique (décision du 22 septembre 2026) : jusqu’ici, l’appli portait sa propre copie de ce vocabulaire, sans rien pour la tenir alignée sur le back qui écrit `carnet.reactions`. L’appli garde une copie compilée pour l’écran hors ligne, mais un test la compare à cette route et rougit à la moindre divergence.
+     *
+     * Constant pour une version donnée de l’API, sans cache : à lire une fois et à garder, comme `GET /reference/statuses`. `ReactionKeySchema` (le corps d’écriture du carnet) reste une clé libre — ce catalogue donne un sens aux clés qu’il connaît, il n’en interdit aucune autre.
+     */
+    get: {
+      responses: {
+        /** @description Le catalogue des réactions — l’exemple *est* la réponse, son contenu étant constant */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Le catalogue complet, dans l’ordre d’affichage */
+              reactions: {
+                  /** @description Clé de la réaction, telle qu’écrite dans `carnet.reactions` */
+                  cle: string;
+                  /** @description Emoji affiché à côté de la phrase */
+                  emoji: string;
+                  /** @description Le texte à afficher, rédigé côté serveur */
+                  phrase: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/auth/login": {
     /**
      * Ouvrir une session
@@ -8472,6 +8508,14 @@ export interface paths {
                 })[];
               /** @description Une composition vient d’être demandée et s’écrit encore */
               seance_en_cours: boolean;
+              /** @description Le carnet de cette année (brief du 22 septembre 2026), s’il a déjà été fabriqué */
+              carnet: {
+                /** Format: date-time */
+                fabrique_le: string;
+                pages: number;
+              } | null;
+              /** @description La fabrication du carnet de cette année tourne encore */
+              carnet_en_cours: boolean;
             }) | ({
               /** @enum {boolean} */
               configure: true;
@@ -9416,6 +9460,124 @@ export interface paths {
         };
         /** @description Default Response */
         503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annees/{annee}/carnet": {
+    /**
+     * Fabriquer le carnet de cette année — un PDF
+     * @description Lance la fabrication en tâche de fond (`carnet/fabriquer.ts`) : la couverture avec l’affiche du n°1 du podium, l’ouverture et ses paragraphes, le podium, les salles avec mes notes et mes réactions. `202 { statut: "en_preparation" }` toujours — cette route ne rend jamais le PDF, voir `GET /me/voyage/carnets/{annee}/pdf`.
+     *
+     * `404` si cette année n’a pas encore d’ouverture pour moi. `409 CONFLICT` si une fabrication est déjà en cours pour elle — `carnet_en_cours` sur `GET /me/voyage/annees/{annee}`, ou `en_cours` sur `GET /me/voyage/carnets`, disent quand redemander.
+     *
+     * Refaire (l’année a déjà un carnet) remplace la ligne : `fabrique_le` avance.
+     */
+    post: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description La fabrication du carnet vient d’être lancée */
+        202: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              statut: "en_preparation";
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/carnets": {
+    /**
+     * Mes carnets déjà fabriqués
+     * @description Par année croissante, sans leurs octets — `GET /me/voyage/carnets/{annee}/pdf` sert le fichier. `en_cours` liste les années dont la fabrication tourne encore.
+     */
+    get: {
+      responses: {
+        /** @description Mes carnets, tous ceux déjà fabriqués */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Par année croissante */
+              carnets: {
+                  annee: number;
+                  /** Format: date-time */
+                  fabrique_le: string;
+                  pages: number;
+                  taille_octets: number;
+                }[];
+              /** @description Les années dont la fabrication tourne encore */
+              en_cours: number[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/carnets/{annee}/pdf": {
+    /**
+     * Le PDF d’un carnet
+     * @description Le fichier lui-même, `application/pdf`, en pièce jointe (`carnet-1895.pdf`). `404` sans carnet pour cette année — le mien, jamais celui d’un autre membre : viser l’année d’un autre membre répond `404`, il n’existe pas de carnet à mon nom pour cette année-là.
+     */
+    get: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description Le PDF du carnet */
+        200: {
+          content: {
+            "application/pdf": unknown;
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };

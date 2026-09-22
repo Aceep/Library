@@ -8314,6 +8314,8 @@ export interface paths {
      * `recompense` et `progression` (`prete` seulement) : la récompense de cette année (voir `GET /me/voyage`) et de quoi dessiner sa barre — `essentiels_vus`/`essentiels_total` (strictement vus, un introuvable n’y compte pas), `salles_completes`/`salles_autres` (salles hors essentiels, à au moins un film, entièrement vues ou introuvables).
      *
      * `seances` (`prete` seulement, brief du 21 septembre 2026, « la séance ») porte mes séances composées, par rang décroissant — la plus récente d’abord —, chacune un `long` jamais vu et un `court` facultatif (`POST /me/voyage/annees/{annee}/seances`). `seance_en_cours` dit si une composition vient d’être demandée et s’écrit encore.
+     *
+     * `pistes` (`prete` seulement, brief du 22 septembre 2026) : des salles que le chroniqueur propose sans jamais en ouvrir une lui-même — vide possible, renouvelée trois à la fois par `POST /me/voyage/annees/{annee}/pistes`. Une piste utilisée pour ouvrir une salle (`POST /me/voyage/annees/{annee}/salles`, corps `piste`) en disparaît.
      */
     get: {
       parameters: {
@@ -8350,6 +8352,13 @@ export interface paths {
               faits: string[];
               /** Format: date-time */
               ecrite_le: string;
+              /** @description Des salles que le chroniqueur propose sans les ouvrir — vide possible, renouvelée par `POST /me/voyage/annees/:annee/pistes` */
+              pistes: {
+                  /** @description Le nom d’une salle que je n’ai pas encore ouverte */
+                  nom: string;
+                  /** @description Ce que cette salle rassemblerait, écrit pour moi */
+                  raison: string;
+                }[];
               salles: ({
                   /** Format: uuid */
                   id: string;
@@ -8810,7 +8819,9 @@ export interface paths {
   "/me/voyage/annees/{annee}/salles": {
     /**
      * « Ouvrir une nouvelle salle » sur une phrase
-     * @description Corps `{ demande }`, une phrase de 1 à 200 caractères (« la comédie italienne cette année-là »). Année verrouillée ou sans ouverture → `404`. Une demande `en_cours` existe déjà pour cette année → `409 CONFLICT`.
+     * @description Corps `{ demande, piste? }` : `demande` est une phrase de 1 à 200 caractères (« la comédie italienne cette année-là ») ; `piste` reprend, si j’en ai suivi une, le `nom` d’une piste de l’année (`GET /me/voyage/annees/{annee}`) — que `demande` la reprenne mot pour mot ou non. Année verrouillée ou sans ouverture → `404`. Une demande `en_cours` existe déjà pour cette année → `409 CONFLICT`.
+     *
+     * `piste` fournie et connue : retirée de la liste des pistes de l’année tout de suite, avant même que le chroniqueur ait répondu — une piste inconnue est ignorée, sans erreur.
      *
      * Enfile la génération (`salle:<userId>:<demandeId>`) et répond toujours `202 { statut: "en_preparation", demande_id }`. Douze salles déjà ouvertes cette année-là ? La demande se refuse dès sa génération, **sans appel au chroniqueur** — la réponse à cette route reste `202`, et `demande_salle` (`GET /me/voyage/annees/{annee}`) montre `refusee` juste après.
      *
@@ -8828,6 +8839,8 @@ export interface paths {
           "application/json": {
             /** @description Une phrase qui décrit la salle demandée */
             demande: string;
+            /** @description Le `nom` d’une piste de l’année (`GET /me/voyage/annees/:annee`) — retirée de la liste si elle existe encore, ignorée sinon */
+            piste?: string;
           };
         };
       };
@@ -8863,6 +8876,65 @@ export interface paths {
         };
         /** @description Default Response */
         409: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annees/{annee}/pistes": {
+    /**
+     * Renouveler les pistes de salles
+     * @description Appel **synchrone** au chroniqueur (contrairement au reste du Voyage) : modèle `CHRONIQUES_MODEL` — jamais `MATURITE_MODEL`, un texte qu’on lit. Trois salles que je n’ai pas ouvertes, choisies à partir des salles déjà ouvertes cette année-là, des pistes déjà proposées (à ne pas redonner) et de mes dix dernières notes de l’année.
+     *
+     * Les trois pistes rendues **remplacent** la liste précédente de l’année — `pistes` sur `GET /me/voyage/annees/{annee}` (prête). Utiliser une piste pour ouvrir une salle la retire de cette liste (`POST /me/voyage/annees/{annee}/salles`, corps `piste`), jamais cette route.
+     *
+     * `404` si cette année n’a pas encore d’ouverture pour moi, ou si elle est verrouillée. `503 SERVICE_UNCONFIGURED` si `ANTHROPIC_API_KEY` n’est pas posée sur ce serveur. `503 UPSTREAM_UNAVAILABLE` si le chroniqueur ne répond pas ou rend une sortie inexploitable — réessaie plus tard.
+     *
+     * Le coût de l’appel se journalise dans `appels_ia` (type `pistes`), comme les autres appels au chroniqueur — voir `GET /me/voyage/depenses`.
+     */
+    post: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description Les pistes de salles de cette année, après le renouvellement */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Trois pistes, qui remplacent la liste précédente de l’année */
+              pistes: {
+                  /** @description Le nom d’une salle que je n’ai pas encore ouverte */
+                  nom: string;
+                  /** @description Ce que cette salle rassemblerait, écrit pour moi */
+                  raison: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };
@@ -9268,7 +9340,7 @@ export interface paths {
   "/me/voyage/depenses": {
     /**
      * Mes dépenses au chroniqueur, mois par mois
-     * @description Une ligne `appels_ia` par appel réussi (ouverture, fournée) que j’ai déclenché. Le carton d’un film n’y figure pas : il ne dépend d’aucun membre en particulier.
+     * @description Une ligne `appels_ia` par appel réussi (ouverture, fournée, pistes) que j’ai déclenché. Le carton d’un film n’y figure pas : il ne dépend d’aucun membre en particulier.
      *
      * `cout_centimes` est une estimation au tarif public d’Anthropic, en centimes de dollar — la facture du compte Anthropic fait foi.
      */

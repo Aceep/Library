@@ -392,6 +392,55 @@ export interface paths {
       };
     };
   };
+  "/reference/decennies": {
+    /**
+     * Films emblématiques par décennie
+     * @description Pour habiller les mondes de la carte du Voyage dans l’appli : cinq films emblématiques par décennie, de 1890 à 2020, avec leur affiche et leur image de fond.
+     *
+     * La liste des films vit en clair côté back (`packages/shared/src/decennies.ts`), sous forme de titres et d’années — jamais un `tmdb_id` écrit à la main. Chaque entrée est résolue chez TMDB par recherche de titre, avec la même règle d’année exacte que le Voyage : un candidat dont l’année ne correspond pas **exactement** n’est pas retenu. **Un film non rapproché est omis de sa décennie**, jamais deviné.
+     *
+     * Résolue une fois puis mémorisée vingt-quatre heures (`reference:decennies`) : un appel TMDB par film à la première demande, aucun ensuite tant que le cache tient.
+     *
+     * `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
+     */
+    get: {
+      responses: {
+        /** @description Les films emblématiques de chaque décennie, pour habiller les mondes de la carte */
+        200: {
+          content: {
+            "application/json": {
+              /** @description De 1890 à 2020, croissant */
+              decennies: ({
+                  /** @description 1890, 1900… la décennie */
+                  decennie: number;
+                  /** @description Les films résolus — un film non rapproché sur TMDB est omis */
+                  films: ({
+                      tmdb_id: number;
+                      titre: string;
+                      annee: number;
+                      cover_url: string | null;
+                      /** @description Image de fond TMDB (w1280), servie telle quelle */
+                      backdrop_url: string | null;
+                    })[];
+                })[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
   "/auth/login": {
     /**
      * Ouvrir une session
@@ -3848,6 +3897,8 @@ export interface paths {
                     director: string | null;
                     /** @description Identifiant chez la source — le `tmdb_id` du film */
                     external_id: string;
+                    /** @description Image de fond TMDB (w1280), servie telle quelle — nulle si TMDB n’en a pas */
+                    backdrop_url: string | null;
                   };
                   /** @description La partie privée d’un visionnage */
                   carnet: {
@@ -3957,6 +4008,8 @@ export interface paths {
                 director: string | null;
                 /** @description Identifiant chez la source — le `tmdb_id` du film */
                 external_id: string;
+                /** @description Image de fond TMDB (w1280), servie telle quelle — nulle si TMDB n’en a pas */
+                backdrop_url: string | null;
               };
               /** @description La partie privée d’un visionnage */
               carnet: {
@@ -4010,6 +4063,8 @@ export interface paths {
                 director: string | null;
                 /** @description Identifiant chez la source — le `tmdb_id` du film */
                 external_id: string;
+                /** @description Image de fond TMDB (w1280), servie telle quelle — nulle si TMDB n’en a pas */
+                backdrop_url: string | null;
               };
               /** @description La partie privée d’un visionnage */
               carnet: {
@@ -4240,6 +4295,8 @@ export interface paths {
                 director: string | null;
                 /** @description Identifiant chez la source — le `tmdb_id` du film */
                 external_id: string;
+                /** @description Image de fond TMDB (w1280), servie telle quelle — nulle si TMDB n’en a pas */
+                backdrop_url: string | null;
               };
               /** @description La partie privée d’un visionnage */
               carnet: {
@@ -4597,6 +4654,8 @@ export interface paths {
                   release_date: string;
                   /** @description Affiche en URL absolue, taille `w500` */
                   cover_url: string | null;
+                  /** @description Image de fond en URL absolue, taille `w1280`, servie telle quelle — nulle si TMDB n’en a pas */
+                  backdrop_url: string | null;
                   /** @description Nul si je ne l’ai jamais journalisé */
                   vu: ({
                     /**
@@ -4707,6 +4766,8 @@ export interface paths {
                   release_date: string;
                   /** @description Affiche en URL absolue, taille `w500` */
                   cover_url: string | null;
+                  /** @description Image de fond en URL absolue, taille `w1280`, servie telle quelle — nulle si TMDB n’en a pas */
+                  backdrop_url: string | null;
                   /** @description Nul si je ne l’ai jamais journalisé */
                   vu: ({
                     /**
@@ -8254,6 +8315,8 @@ export interface paths {
                   profondeur: number;
                   /** @description L’affiche du n°1 du podium — nulle si la marche 1 est vide */
                   affiche_url: string | null;
+                  /** @description L’image de fond du n°1 du podium — nulle si la marche 1 est vide, un programme, ou sans image de fond */
+                  fond_url: string | null;
                   /** @description Ours, Lion ou Palme — une année sans ouverture ne peut avoir que l’Ours */
                   recompense: ("ours" | "lion" | "palme") | null;
                 })[];
@@ -8382,6 +8445,8 @@ export interface paths {
                       /** @description Deux phrases, une des cinq raisons du §4 de la spec ; nulle si le film était déjà vu quand le chroniqueur l’a proposé */
                       raison: string | null;
                       cover_url: string | null;
+                      /** @description Image de fond TMDB (w1280), résolue sur la fiche de ce `tmdb_id` si l’œuvre est déjà en bibliothèque — nulle sinon, ou si TMDB n’en a pas */
+                      backdrop_url: string | null;
                       /** @description Lien web vers le Plex du propriétaire, nul si le film n’y est pas */
                       plex_url: string | null;
                       /** @enum {string} */
@@ -8411,6 +8476,8 @@ export interface paths {
                   programme_id: string | null;
                   title: string;
                   cover_url: string | null;
+                  /** @description Image de fond TMDB (w1280) — résolue depuis la fiche du `tmdb_id`, nulle sur un `programme_id` ou si TMDB n’en a pas */
+                  backdrop_url: string | null;
                 }) | null)[];
               maturite: {
                 mure: boolean;
@@ -8539,6 +8606,8 @@ export interface paths {
                   programme_id: string | null;
                   title: string;
                   cover_url: string | null;
+                  /** @description Image de fond TMDB (w1280) — résolue depuis la fiche du `tmdb_id`, nulle sur un `programme_id` ou si TMDB n’en a pas */
+                  backdrop_url: string | null;
                 }) | null)[];
             }) | {
               /** @enum {boolean} */
@@ -8615,6 +8684,8 @@ export interface paths {
                   programme_id: string | null;
                   title: string;
                   cover_url: string | null;
+                  /** @description Image de fond TMDB (w1280) — résolue depuis la fiche du `tmdb_id`, nulle sur un `programme_id` ou si TMDB n’en a pas */
+                  backdrop_url: string | null;
                 }) | null)[];
             };
           };
@@ -10390,6 +10461,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -10488,6 +10561,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -10602,6 +10677,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -10700,6 +10777,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -10864,6 +10943,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -11024,6 +11105,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -12380,6 +12463,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -12478,6 +12563,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -12592,6 +12679,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -12690,6 +12779,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -12854,6 +12945,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;
@@ -13014,6 +13107,8 @@ export interface components {
       title: string;
       original_title: string | null;
       cover_url: string | null;
+      /** @description Image de fond TMDB (w1280), servie telle quelle — jamais recopiée, comme les logos de plateformes. Nulle hors film, ou si TMDB n’en a pas. */
+      backdrop_url: string | null;
       release_date: string | null;
       year: number | null;
       summary: string | null;

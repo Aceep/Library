@@ -399,7 +399,7 @@ export interface paths {
      *
      * La liste des films vit en clair côté back (`packages/shared/src/decennies.ts`), sous forme de titres et d’années — jamais un `tmdb_id` écrit à la main. Chaque entrée est résolue chez TMDB par recherche de titre, avec la même règle d’année exacte que le Voyage : un candidat dont l’année ne correspond pas **exactement** n’est pas retenu. **Un film non rapproché est omis de sa décennie**, jamais deviné.
      *
-     * Résolue une fois puis mémorisée vingt-quatre heures (`reference:decennies`) : un appel TMDB par film à la première demande, aucun ensuite tant que le cache tient.
+     * Résolue une fois, puis servie du cache — **y compris périmée** : au-delà de vingt-quatre heures, la valeur en cache (Redis, gardée sept jours) est rendue telle quelle tout de suite, et un rafraîchissement part derrière, sans que la réponse l’attende. Un seul rafraîchissement à la fois, verrouillé, quel que soit le nombre de lecteurs qui arrivent en même temps sur une valeur périmée. Une chauffe au démarrage (`plugins/decennies-warmup.ts`) calcule la première valeur si le cache est vide et `TMDB_API_KEY` configurée, pour qu’un lecteur ne tombe qu’exceptionnellement sur les quinze secondes d’une résolution à froid.
      *
      * `503` si `TMDB_API_KEY` n’est pas renseignée sur ce serveur.
      */

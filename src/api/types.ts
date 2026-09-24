@@ -8219,10 +8219,12 @@ export interface paths {
   };
   "/reference/chroniques/films/{tmdbId}": {
     /**
-     * Le carton « Et pendant ce temps… » d’un film
+     * Le carton d’un film
      * @description Le plus souvent écrit après coup : journaliser un film (`POST /me/journal`) enfile son carton — mais n’importe quel `tmdb_id` peut être demandé ici directement, et sera enfilé de la même façon s’il manque.
      *
      * Trois formes : `200` prêt, `202` en préparation (enfilé), `{ configure: false }` sans clé Anthropic. Global : ce carton ne dépend d’aucun membre.
+     *
+     * Centré sur le film et son réalisateur (brief du 24 septembre 2026, version 2) : la réalisation, les intentions du réalisateur, la réception et les innovations. Un carton resté à l’ancien format (« Et pendant ce temps… », version 1) est traité comme absent et régénéré, toujours en version 2.
      */
     get: {
       parameters: {
@@ -8240,10 +8242,10 @@ export interface paths {
               /** @enum {string} */
               statut: "prete";
               tmdb_id: number;
-              /** @description 4 à 6 lignes : le film dans son époque, sa réception, ce qu’il a changé */
-              contexte: string;
-              /** @description Trois faits de la même année, cinéma et monde */
-              faits: string[];
+              /** @description Une ligne */
+              titre: string;
+              /** @description 4 à 10 phrases : la réalisation, les intentions du réalisateur, la réception et les innovations du film, s’il y en a */
+              texte: string;
             } | {
               /** @enum {boolean} */
               configure: false;
@@ -8410,7 +8412,7 @@ export interface paths {
                 /** @description Salles hors essentiels, à au moins un film — une salle vide ne compte pas */
                 salles_autres: number;
               };
-              /** @description Cinq à huit phrases sur l’année, écrites une fois et ne bougeant plus */
+              /** @description De cinq à quinze phrases sur l’année, selon ce qu’elle a à dire, écrites une fois et ne bougeant plus */
               ouverture: string;
               faits: string[];
               /** Format: date-time */
@@ -8428,6 +8430,8 @@ export interface paths {
                   rang: number;
                   nom: string;
                   raison_d_etre: string;
+                  /** @description Un vrai paragraphe sur ce que la salle raconte de l’année — nul tant qu’il n’a pas été demandé (`POST .../contexte`) */
+                  contexte: string | null;
                   cle: ("essentiels" | "ailleurs") | null;
                   /** @description Le chroniqueur n’a plus de film qui mérite d’y entrer */
                   epuisee: boolean;
@@ -8493,29 +8497,6 @@ export interface paths {
                 emis_le: string;
                 utilise_le: string | null;
               }) | null;
-              /** @description Par ecrit_le croissant */
-              paragraphes: ({
-                  /** Format: uuid */
-                  id: string;
-                  tmdb_id: number | null;
-                  programme_id: string | null;
-                  /** @description Une ligne */
-                  titre: string;
-                  /** @description Trois à cinq phrases qui relient ce film à l’année et aux films déjà vus */
-                  texte: string;
-                  /** Format: date-time */
-                  ecrit_le: string;
-                  /** @description Le film auquel ce paragraphe se rattache */
-                  film: {
-                    title: string;
-                    cover_url: string | null;
-                  };
-                })[];
-              /** @description Les verrous : un paragraphe en cours d’écriture */
-              paragraphes_en_cours: ({
-                  tmdb_id: number | null;
-                  programme_id: string | null;
-                })[];
               /** @description La dernière demande de salle, tant qu’elle est en_cours ou refusée et non vue ; nulle sinon */
               demande_salle: ({
                 /** Format: uuid */
@@ -8584,14 +8565,6 @@ export interface paths {
                 })[];
               /** @description Une composition vient d’être demandée et s’écrit encore */
               seance_en_cours: boolean;
-              /** @description Le carnet de cette année (brief du 22 septembre 2026), s’il a déjà été fabriqué */
-              carnet: {
-                /** Format: date-time */
-                fabrique_le: string;
-                pages: number;
-              } | null;
-              /** @description La fabrication du carnet de cette année tourne encore */
-              carnet_en_cours: boolean;
             }) | ({
               /** @enum {boolean} */
               configure: true;
@@ -8800,69 +8773,29 @@ export interface paths {
       };
     };
   };
-  "/me/voyage/annees/{annee}/chronique": {
+  "/me/voyage/annees/{annee}/salles/{salleId}/contexte": {
     /**
-     * « Ajouter à la chronique » un paragraphe sur un film
-     * @description Corps `{ tmdb_id }` **ou** `{ programme_id }`, exactement l’un des deux. `tmdb_id` doit être un film de mon journal sorti cette année-là, sinon `400 VALIDATION`. `programme_id` doit être une ligne de mes salles de cette année (film ou programme) entièrement vue — même calcul d’état que `GET /me/voyage/annees/{annee}` — sinon `400 VALIDATION` ; d’un autre membre, d’une autre année, ou inconnue → `404`. Un film vu hors de toute salle a droit à son paragraphe tout autant qu’un film d’une salle.
+     * Le contexte d’une salle
+     * @description Appel **synchrone** au chroniqueur (modèle `CHRONIQUES_MODEL`), sur le modèle exact de la route des pistes. Si la colonne est déjà remplie, la rend telle quelle, sans appel. Sinon, génère un paragraphe de 5 à 10 phrases — ce que la salle raconte de l’année, ses films et ce qui les relie, le mouvement ou la tendance, sans reprendre l’ouverture de l’année —, l’écrit et le rend.
      *
-     * Année verrouillée ou sans ouverture → `404`.
+     * `404` si cette salle n’existe pas, n’est pas la mienne, ou n’est pas celle de l’année demandée. `503 SERVICE_UNCONFIGURED` si `ANTHROPIC_API_KEY` n’est pas posée sur ce serveur et que le contexte n’a pas déjà été écrit. `503 UPSTREAM_UNAVAILABLE` si le chroniqueur ne répond pas ou rend une sortie inexploitable — réessaie plus tard.
      *
-     * `200 { statut: "ecrit", paragraphe }` si un paragraphe existe déjà pour cette cible — jamais regénéré, aucun appel. Sinon enfile la génération (`paragraphe:<userId>:<annee>:<tmdbId>` ou `…:p:<programmeId>`, mêmes verrous que le reste du Voyage) et répond `202 { statut: "en_preparation" }`, qu’il vienne d’être enfilé ou qu’une génération soit déjà en cours.
+     * Le coût de l’appel se journalise dans `appels_ia` (type `contexte_salle`), comme les autres appels au chroniqueur.
      */
     post: {
       parameters: {
         path: {
           annee: number;
-        };
-      };
-      /** @description Le film ou le programme dont on ajoute le paragraphe à la chronique */
-      requestBody: {
-        content: {
-          "application/json": {
-            /** @description Un film de mon journal, vu, sorti cette année-là */
-            tmdb_id?: number;
-            /**
-             * Format: uuid
-             * @description Un film ou un programme de mes salles de cette année, entièrement vu
-             */
-            programme_id?: string;
-          };
+          salleId: string;
         };
       };
       responses: {
-        /** @description Ce paragraphe existait déjà — rendu sans appel */
+        /** @description Le contexte de cette salle */
         200: {
           content: {
             "application/json": {
-              /** @enum {string} */
-              statut: "ecrit";
-              /** @description Un paragraphe de la chronique, ajouté à la demande sur un film — jamais regénéré */
-              paragraphe: {
-                /** Format: uuid */
-                id: string;
-                tmdb_id: number | null;
-                programme_id: string | null;
-                /** @description Une ligne */
-                titre: string;
-                /** @description Trois à cinq phrases qui relient ce film à l’année et aux films déjà vus */
-                texte: string;
-                /** Format: date-time */
-                ecrit_le: string;
-                /** @description Le film auquel ce paragraphe se rattache */
-                film: {
-                  title: string;
-                  cover_url: string | null;
-                };
-              };
-            };
-          };
-        };
-        /** @description Le paragraphe vient d’être enfilé, ou en était déjà un en cours */
-        202: {
-          content: {
-            "application/json": {
-              /** @enum {string} */
-              statut: "en_preparation";
+              /** @description 5 à 10 phrases : ce que la salle raconte de l’année, ses films et ce qui les relie */
+              contexte: string;
             };
           };
         };
@@ -8880,6 +8813,12 @@ export interface paths {
         };
         /** @description Default Response */
         404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };
@@ -9603,124 +9542,6 @@ export interface paths {
         };
         /** @description Default Response */
         503: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-      };
-    };
-  };
-  "/me/voyage/annees/{annee}/carnet": {
-    /**
-     * Fabriquer le carnet de cette année — un PDF
-     * @description Lance la fabrication en tâche de fond (`carnet/fabriquer.ts`) : la couverture avec l’affiche du n°1 du podium, l’ouverture et ses paragraphes, le podium, les salles avec mes notes et mes réactions. `202 { statut: "en_preparation" }` toujours — cette route ne rend jamais le PDF, voir `GET /me/voyage/carnets/{annee}/pdf`.
-     *
-     * `404` si cette année n’a pas encore d’ouverture pour moi. `409 CONFLICT` si une fabrication est déjà en cours pour elle — `carnet_en_cours` sur `GET /me/voyage/annees/{annee}`, ou `en_cours` sur `GET /me/voyage/carnets`, disent quand redemander.
-     *
-     * Refaire (l’année a déjà un carnet) remplace la ligne : `fabrique_le` avance.
-     */
-    post: {
-      parameters: {
-        path: {
-          annee: number;
-        };
-      };
-      responses: {
-        /** @description La fabrication du carnet vient d’être lancée */
-        202: {
-          content: {
-            "application/json": {
-              /** @enum {string} */
-              statut: "en_preparation";
-            };
-          };
-        };
-        /** @description Default Response */
-        400: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-        /** @description Default Response */
-        401: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-        /** @description Default Response */
-        404: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-        /** @description Default Response */
-        409: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-      };
-    };
-  };
-  "/me/voyage/carnets": {
-    /**
-     * Mes carnets déjà fabriqués
-     * @description Par année croissante, sans leurs octets — `GET /me/voyage/carnets/{annee}/pdf` sert le fichier. `en_cours` liste les années dont la fabrication tourne encore.
-     */
-    get: {
-      responses: {
-        /** @description Mes carnets, tous ceux déjà fabriqués */
-        200: {
-          content: {
-            "application/json": {
-              /** @description Par année croissante */
-              carnets: {
-                  annee: number;
-                  /** Format: date-time */
-                  fabrique_le: string;
-                  pages: number;
-                  taille_octets: number;
-                }[];
-              /** @description Les années dont la fabrication tourne encore */
-              en_cours: number[];
-            };
-          };
-        };
-        /** @description Default Response */
-        401: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-      };
-    };
-  };
-  "/me/voyage/carnets/{annee}/pdf": {
-    /**
-     * Le PDF d’un carnet
-     * @description Le fichier lui-même, `application/pdf`, en pièce jointe (`carnet-1895.pdf`). `404` sans carnet pour cette année — le mien, jamais celui d’un autre membre : viser l’année d’un autre membre répond `404`, il n’existe pas de carnet à mon nom pour cette année-là.
-     */
-    get: {
-      parameters: {
-        path: {
-          annee: number;
-        };
-      };
-      responses: {
-        /** @description Le PDF du carnet */
-        200: {
-          content: {
-            "application/pdf": unknown;
-          };
-        };
-        /** @description Default Response */
-        401: {
-          content: {
-            "application/json": components["schemas"]["ApiError"];
-          };
-        };
-        /** @description Default Response */
-        404: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };

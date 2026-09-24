@@ -43224,6 +43224,17 @@
                         "seance_en_cours": {
                           "type": "boolean",
                           "description": "Une composition vient d’être demandée et s’écrit encore"
+                        },
+                        "generique": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Le générique de fin d’année — mon parcours dans l’année, nul tant qu’il n’a pas été demandé (`POST .../generique`)"
                         }
                       },
                       "required": [
@@ -43243,7 +43254,8 @@
                         "ticket",
                         "demande_salle",
                         "seances",
-                        "seance_en_cours"
+                        "seance_en_cours",
+                        "generique"
                       ],
                       "additionalProperties": false,
                       "description": "L’année, prête à afficher"
@@ -43522,7 +43534,8 @@
                           "court": null
                         }
                       ],
-                      "seance_en_cours": false
+                      "seance_en_cours": false,
+                      "generique": "Tu as ouvert 1941 sur Citizen Kane, et l’année n’a plus voulu te lâcher : Welles en premier, Bogart et Huston juste après, deux façons de regarder l’Amérique se raconter elle-même. Les essentiels sont bouclés, et cette constance t’a valu le Lion. Le Faucon maltais t’attend encore, à demander — l’ouverture parlait d’une grammaire neuve, tu l’as trouvée dans chaque contre-plongée de Kane."
                     }
                   }
                 }
@@ -45971,6 +45984,107 @@
             }
           },
           "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/voyage/annees/{annee}/generique": {
+      "post": {
+        "summary": "Le générique de fin d’année",
+        "tags": [
+          "voyage"
+        ],
+        "description": "Appel **synchrone** au chroniqueur (modèle `CHRONIQUES_MODEL`), sur le modèle exact de la route du contexte de salle. Si `generique` est déjà posé sur l’année, le rend tel quel, sans appel. Sinon génère un texte de 5 à 15 phrases — mon parcours dans l’année : l’ordre des films vus, mes coups de cœur et mes déceptions, ce que mes réactions et remarques en disent, les salles bouclées, ma récompense, et ce qui a répondu ou non à l’ouverture —, l’écrit et le rend.\n\nSert aux années déjà bouclées avant ce brief, et au cas où la génération en arrière-plan (déclenchée à l’octroi du ticket) aurait échoué.\n\n`404` si cette année n’a pas encore d’ouverture pour moi. `409 CONFLICT` si elle n’a pas encore son ticket (le jugement de maturité ne l’a pas encore accordé). `503 SERVICE_UNCONFIGURED` si `ANTHROPIC_API_KEY` n’est pas posée sur ce serveur et que le générique n’a pas déjà été écrit. `503 UPSTREAM_UNAVAILABLE` si le chroniqueur ne répond pas ou rend une sortie inexploitable — réessaie plus tard.\n\nLe coût de l’appel se journalise dans `appels_ia` (type `generique`), comme les autres appels au chroniqueur.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1895,
+              "maximum": 2027
+            },
+            "in": "path",
+            "name": "annee",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Le générique de fin d’année",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generique": {
+                      "type": "string",
+                      "description": "De cinq à quinze phrases : mon parcours dans cette année — l’ordre des films vus, mes coups de cœur, ce qui a répondu à l’ouverture"
+                    }
+                  },
+                  "required": [
+                    "generique"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Le générique de fin d’année"
+                },
+                "examples": {
+                  "Réponse type": {
+                    "value": {
+                      "generique": "Tu as ouvert 1941 sur Citizen Kane, et l’année n’a plus voulu te lâcher : Welles en premier, Bogart et Huston juste après, deux façons de regarder l’Amérique se raconter elle-même. Les essentiels sont bouclés, et cette constance t’a valu le Lion. Le Faucon maltais t’attend encore, à demander — l’ouverture parlait d’une grammaire neuve, tu l’as trouvée dans chaque contre-plongée de Kane."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Default Response",
             "content": {
               "application/json": {

@@ -8565,6 +8565,8 @@ export interface paths {
                 })[];
               /** @description Une composition vient d’être demandée et s’écrit encore */
               seance_en_cours: boolean;
+              /** @description Le générique de fin d’année — mon parcours dans l’année, nul tant qu’il n’a pas été demandé (`POST .../generique`) */
+              generique: string | null;
             }) | ({
               /** @enum {boolean} */
               configure: true;
@@ -9536,6 +9538,66 @@ export interface paths {
         };
         /** @description Default Response */
         401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        503: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+      };
+    };
+  };
+  "/me/voyage/annees/{annee}/generique": {
+    /**
+     * Le générique de fin d’année
+     * @description Appel **synchrone** au chroniqueur (modèle `CHRONIQUES_MODEL`), sur le modèle exact de la route du contexte de salle. Si `generique` est déjà posé sur l’année, le rend tel quel, sans appel. Sinon génère un texte de 5 à 15 phrases — mon parcours dans l’année : l’ordre des films vus, mes coups de cœur et mes déceptions, ce que mes réactions et remarques en disent, les salles bouclées, ma récompense, et ce qui a répondu ou non à l’ouverture —, l’écrit et le rend.
+     *
+     * Sert aux années déjà bouclées avant ce brief, et au cas où la génération en arrière-plan (déclenchée à l’octroi du ticket) aurait échoué.
+     *
+     * `404` si cette année n’a pas encore d’ouverture pour moi. `409 CONFLICT` si elle n’a pas encore son ticket (le jugement de maturité ne l’a pas encore accordé). `503 SERVICE_UNCONFIGURED` si `ANTHROPIC_API_KEY` n’est pas posée sur ce serveur et que le générique n’a pas déjà été écrit. `503 UPSTREAM_UNAVAILABLE` si le chroniqueur ne répond pas ou rend une sortie inexploitable — réessaie plus tard.
+     *
+     * Le coût de l’appel se journalise dans `appels_ia` (type `generique`), comme les autres appels au chroniqueur.
+     */
+    post: {
+      parameters: {
+        path: {
+          annee: number;
+        };
+      };
+      responses: {
+        /** @description Le générique de fin d’année */
+        200: {
+          content: {
+            "application/json": {
+              /** @description De cinq à quinze phrases : mon parcours dans cette année — l’ordre des films vus, mes coups de cœur, ce qui a répondu à l’ouverture */
+              generique: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ApiError"];
+          };
+        };
+        /** @description Default Response */
+        409: {
           content: {
             "application/json": components["schemas"]["ApiError"];
           };

@@ -62,3 +62,13 @@ jobs:
       # part.
       - name: Build
         run: npm run build
+
+  image-nas:
+    name: L'image du NAS sert le Journal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      # Sans Journal puis avec un faux : voir l'en-tête du script.
+      - name: Essai de l'image
+        run: scripts/essai-image-nas.sh

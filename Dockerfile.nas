@@ -6,6 +6,12 @@
 # et `/covers` vers l'API du même réseau Compose, ce qui met le front et l'API
 # sous une seule origine.
 
+# Le Journal (dépôt biblio-journal), déjà construit. Vide par défaut : construite
+# seule, l'image est celle d'avant, avec un /journal/ vide. `livrer.yml` (dépôt
+# de l'API) remplace cet étage par le `dist/` du Journal, contexte nommé
+# `journal` de `docker/build-push-action`.
+FROM scratch AS journal
+
 FROM node:24-bookworm-slim AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -18,6 +24,7 @@ RUN npm run build
 
 FROM nginx:stable-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=journal / /usr/share/nginx/html/journal/
 COPY nginx.nas.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

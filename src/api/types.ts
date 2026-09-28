@@ -4853,7 +4853,7 @@ export interface paths {
      *
      * **Idempotent.** Marquer un film déjà marqué ne crée pas de seconde ligne et répond `204` comme la première fois — l’unicité `(membre, film)` en base le garantit de toute façon.
      *
-     * La marque est strictement personnelle : elle ne modifie que `GET /me/realisateurs/{tmdbId}/films` **pour moi**, jamais pour un autre membre. Invalide aussi le cache de `GET /me/voyage` : un film marqué introuvable peut compléter une salle du Voyage (Lion, Palme).
+     * La marque est strictement personnelle : elle ne modifie que `GET /me/realisateurs/{tmdbId}/films` **pour moi**, jamais pour un autre membre. Invalide aussi le cache de `GET /me/voyage` : un film marqué introuvable peut compléter une salle du Voyage (Lion, Palme) — et, si c’est « Les essentiels » de mon année en cours qui se complète, accorde d’office le ticket vers l’année suivante, sans appel au chroniqueur (revue du Voyage, 28 septembre 2026).
      */
     put: {
       parameters: {
@@ -8286,7 +8286,9 @@ export interface paths {
      *
      * `visitee` dit si une ouverture existe déjà pour cette année, quel que soit son statut. `profondeur` compte les films de mon journal sortis cette année-là, y compris ceux vus avant d’y arriver ; un programme compte un, jamais ses bobines séparément. `affiche_url` est l’affiche du n°1 de mon podium cette année-là, nulle si la marche est vide.
      *
-     * `recompense` vaut `ours` (profondeur ≥ 1, même sans ouverture), `lion` (« Les essentiels » entièrement vus ou introuvables) ou `palme` (`lion`, et au moins deux autres salles, à au moins un film, complètes au même sens) — `null` sinon.
+     * `recompense` vaut `ours` (profondeur ≥ 3, même sans ouverture — un seul film vu, même en avance, ne suffit plus depuis le 28 septembre 2026), `lion` (« Les essentiels » entièrement vus ou introuvables, accordé alors sans appel au chroniqueur) ou `palme` (`lion`, et au moins deux autres salles, à au moins un film, complètes au même sens) — `null` sinon.
+     *
+     * `progression` porte `essentiels_vus`/`essentiels_total`/`salles_completes`/`salles_autres`, même forme que sur la fiche (`GET /me/voyage/annees/{annee}`) — `null` pour une année verrouillée ou pas encore ouverte (`visitee: false`).
      *
      * `tampons` porte le passeport : une ligne par décennie bouclée (`decennie` croissant, `boucle_le`), où chacune de ses années a un `ours` et où le ticket de la première année de la décennie suivante est `utilise_le`.
      *
@@ -8321,6 +8323,16 @@ export interface paths {
                   fond_url: string | null;
                   /** @description Ours, Lion ou Palme — une année sans ouverture ne peut avoir que l’Ours */
                   recompense: ("ours" | "lion" | "palme") | null;
+                  /** @description Même forme que `progression` sur la fiche (`GET /me/voyage/annees/{annee}`) — nulle pour une année verrouillée ou pas encore ouverte (`visitee: false`) */
+                  progression: {
+                    /** @description Essentiels strictement vus — un introuvable n’y compte pas, même s’il compte pour le Lion */
+                    essentiels_vus: number;
+                    essentiels_total: number;
+                    /** @description Parmi salles_autres, celles entièrement vues ou introuvables */
+                    salles_completes: number;
+                    /** @description Salles hors essentiels, à au moins un film — une salle vide ne compte pas */
+                    salles_autres: number;
+                  } | null;
                 })[];
               /** @description Un ticket gagné et pas encore montré — à afficher une fois, puis `POST .../montre` */
               ticket_a_montrer: {

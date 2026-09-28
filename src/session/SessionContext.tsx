@@ -53,9 +53,16 @@ export function SessionProvider({ session, children }: { session: Session; child
     try {
       await endpoints.logout()
     } finally {
-      // Le cache entier appartient à la session qui se ferme.
-      queryClient.clear()
+      // La session d'abord : `QueryClient.clear()` ne rappelle pas
+      // l'observateur actif quand elle suit un `setQueryData` sur la même clé
+      // (mesuré sur @tanstack/query-core 5.101.4), mais le rappelle bien dans
+      // ce sens — c'est ce qui fait basculer `GatedApp` vers l'écran de
+      // connexion. `removeQueries` épargne ensuite la session qu'on vient de
+      // poser, pour ne pas la faire disparaître derrière elle.
       queryClient.setQueryData(SESSION_QUERY_KEY, null)
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== SESSION_QUERY_KEY[0],
+      })
     }
   }, [queryClient])
 

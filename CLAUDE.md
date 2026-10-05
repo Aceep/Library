@@ -230,6 +230,12 @@ casse si on s'en écarte.
 - Les contraintes du back se commentent **là où elles s'appliquent**, avec leur
   conséquence (`répond 400`, `répond 409 si…`, `idempotent, répond 204`).
 
+## Lire sans gaspiller
+
+La consigne de lecture vaut pour tout sous-agent, sans que le brief la répète : chercher par
+`grep` avant de lire ; lire par plage (`offset`, `limit`) tout fichier de plus de 500 lignes ; ne
+pas relire un fichier déjà lu, sauf s’il vient de changer.
+
 ## Avant de commiter
 
 ```bash
